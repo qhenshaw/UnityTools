@@ -1,17 +1,17 @@
-# Editor Tools
-[![Unity 2021.3+](https://img.shields.io/badge/unity-2021.3%2B-blue.svg)](https://unity3d.com/get-unity/download)
+# Unity Tools
+[![Unity 6+](https://img.shields.io/badge/unity-6%2B-blue.svg)](https://unity3d.com/get-unity/download)
 [![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](LICENSE.md)
 
 This package comes with several useful tools focused on organization, level design, and lighting.
 
 ## System Requirements
-Unity 2021.3+. Will likely work on earlier versions but this is the version I tested with. 
-Currently requires Odin Inspector for custom editor windows, may remove requirement in the future.
+Unity 6+. Will likely work on earlier versions but this is the version I tested with. 
+Currently requires Odin Inspector for custom editor windows, it won't compile without Odin.
 
 ## Installation
 Use the Package Manager and use Add package from git URL, using the following: 
 ```
-https://github.com/qhenshaw/EditorTools.git
+https://github.com/qhenshaw/UnityTools.git
 ```
 
 ## Included
@@ -19,12 +19,6 @@ The follows tools are included in the paackage. The Prefab Placer tool requires 
 
 ### Custom Hierarchy Drawer
 Redraws any items in the hierarchy that have ```= ``` at the start of their name with bold text and a darker background. Useful for highlighting empty category transforms.
-
-### Prefab Swapper
-```
-Open through Tools => Prefab Swapper
-```
-This tool allows you to swap GameObjects in the scene with Prefabs, optionally copying the rotation and scale of the original.
 
 ### Prefab Placer (requires Odin Inspector plugin)
 ```
@@ -56,4 +50,19 @@ Select the BaseColor/PackMap/NormalMap textures in the project view and create t
 A helper component for working with multiple additive scenes. Automatically load scenes in the editor, and in playmode/builds.
 Add an AdditiveSceneManager to your scene through the right-click menu, then select all required scenes from the dropdown.
 Scenes will load automatically in the editor and during Awake in play mode.
+```
+
+### Object Pooling
+```
+A simple lazy initialization object pooling implementation.
+```
+
+### Debug Menu
+```
+An attribute driven visual debug menu.
+```
+
+### Game Events
+```
+A scriptable object based event system, with editor window for reviewing, editing, and creating new events.
 ```

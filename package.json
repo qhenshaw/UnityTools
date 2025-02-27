@@ -1,11 +1,11 @@
 {
   "displayName": "Unity Tools",
   "author": "Quin Henshaw",
-  "version": "2.9.0",
+  "version": "3.0.0",
   "name": "com.qhenshaw.unitytools",
-  "documentationUrl": "https://github.com/qhenshaw/editortools",
-  "changelogUrl": "https://github.com/qhenshaw/editortools/blob/main/CHANGELOG.md",
-  "licensesUrl": "https://github.com/qhenshaw/editortools/blob/main/LICENSE.md",
-  "description": "A collection of useful Editor tools.",
-  "unity": "2021.3"
+  "documentationUrl": "https://github.com/qhenshaw/unitytools",
+  "changelogUrl": "https://github.com/qhenshaw/unitytools/blob/main/CHANGELOG.md",
+  "licensesUrl": "https://github.com/qhenshaw/unitytools/blob/main/LICENSE.md",
+  "description": "A collection of useful tools for Unity.",
+  "unity": "6000.0"
 }

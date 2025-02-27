@@ -1,5 +1,9 @@
 # Changelog
 
+[3.0.0] - 2025-02-27
+- Reorganized entire package
+- Added GameEvents, DebugMenu, ObjectPooling, and ServiceLocator
+
 [2.9.0] - 2025-02-27
 - Removed redundant prefab swapper
 - Added Service Locator component
