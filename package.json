@@ -1,8 +1,8 @@
 {
-  "displayName": "Editor Tools",
+  "displayName": "Unity Tools",
   "author": "Quin Henshaw",
   "version": "2.9.0",
-  "name": "com.qhenshaw.editortools",
+  "name": "com.qhenshaw.unitytools",
   "documentationUrl": "https://github.com/qhenshaw/editortools",
   "changelogUrl": "https://github.com/qhenshaw/editortools/blob/main/CHANGELOG.md",
   "licensesUrl": "https://github.com/qhenshaw/editortools/blob/main/LICENSE.md",
