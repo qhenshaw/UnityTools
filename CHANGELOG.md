@@ -1,5 +1,8 @@
 # Changelog
 
+[3.1.0] - 2025-02-28
+- Added PrefabSpawner component
+
 [3.0.0] - 2025-02-27
 - Reorganized entire package
 - Added GameEvents, DebugMenu, ObjectPooling, and ServiceLocator
