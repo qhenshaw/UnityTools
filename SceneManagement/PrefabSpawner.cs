@@ -1,5 +1,6 @@
 using Sirenix.OdinInspector;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace SceneManagement
 {
@@ -7,8 +8,18 @@ namespace SceneManagement
     [DisallowMultipleComponent]
     public class PrefabSpawner : MonoBehaviour
     {
+        private enum ParentMode
+        {
+            None,
+            SameScene,
+            Self,
+            SameParent
+        }
+
         [SerializeField, AssetsOnly] private GameObject _prefab;
         [SerializeField] private bool _spawnOnStart = true;
+        [SerializeField] private ParentMode _parentMode = ParentMode.SameScene;
+        [SerializeField] private bool _destroySpawner = true;
         [SerializeField] private bool _autoName = true;
 
         [Header("Preview")]
@@ -17,10 +28,9 @@ namespace SceneManagement
 
         private void OnValidate()
         {
-            if (_autoName && _prefab != null)
-            {
-                gameObject.name = $"{_prefab.name} Spawner";
-            }
+            if (!_autoName) return;
+            if (_prefab == null) return;
+            gameObject.name = $"{_prefab.name} Spawner";
         }
 
         private void Start()
@@ -31,13 +41,29 @@ namespace SceneManagement
 
         public GameObject Spawn()
         {
-            GameObject instantiated = Instantiate(_prefab, transform.position, Quaternion.identity);
-            return instantiated;
+            return Spawn(_prefab);
         }
 
         public GameObject Spawn(GameObject prefab)
         {
             GameObject instantiated = Instantiate(prefab, transform.position, Quaternion.identity);
+            switch (_parentMode)
+            {
+                case ParentMode.None:
+                default:
+                    break;
+                case ParentMode.SameScene:
+                    SceneManager.MoveGameObjectToScene(instantiated, gameObject.scene);
+                    break;
+                case ParentMode.Self:
+                    instantiated.transform.SetParent(transform);
+                    break;
+                case ParentMode.SameParent:
+                    if(transform.parent != null) instantiated.transform.SetParent(transform.parent);
+                    else SceneManager.MoveGameObjectToScene(instantiated, gameObject.scene);
+                    break;
+            }
+            if (_destroySpawner && _parentMode != ParentMode.Self) Destroy(gameObject);
             return instantiated;
         }
 
@@ -49,9 +75,7 @@ namespace SceneManagement
             material.color = _color;
             MeshPreview.DrawImmediate(_prefab, transform.position, transform.rotation, material);
         }
-#endif
 
-#if UNITY_EDITOR
         [UnityEditor.MenuItem("GameObject/Prefab Spawner", false, 0)]
         static void CreateCustomGameObject(UnityEditor.MenuCommand menuCommand)
         {

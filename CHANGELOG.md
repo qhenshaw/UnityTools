@@ -1,5 +1,10 @@
 # Changelog
 
+[3.1.1] - 2025-03-07
+- Fixed HideChildren not working at runtime
+- Fixed mesh preview parented mesh offsets incorrect
+- Added parenting options to PrefabSpawner
+
 [3.1.0] - 2025-02-28
 - Added PrefabSpawner component
 

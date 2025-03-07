@@ -34,7 +34,7 @@ namespace SceneManagement
 
                 if (mesh == null) continue;
 
-                Vector3 relativePosition = transform.MultiplyVector(t.localPosition);
+                Vector3 relativePosition = transform.MultiplyVector(t.position - gameObject.transform.position);
                 if (!useOffset) relativePosition = Vector3.zero;
                 Matrix4x4 matrix = Matrix4x4.TRS(position + relativePosition, rotation * t.rotation, t.localScale);
                 for (int j = 0; j < mesh.subMeshCount; j++)

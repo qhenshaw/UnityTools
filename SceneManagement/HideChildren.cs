@@ -7,14 +7,19 @@ namespace SceneManagement
         [SerializeField] private bool _isHidden = true;
         [SerializeField] private HideFlags _hideFlags = HideFlags.HideInHierarchy | HideFlags.HideInInspector;
 
+#if UNITY_EDITOR
         private void OnValidate()
+        {
+            SetHideState();
+        }
+
+        private void Awake()
         {
             SetHideState();
         }
 
         private void SetHideState()
         {
-            if (!Application.isEditor) return;
             HideFlags flags = _isHidden ? _hideFlags : HideFlags.None;
             SetChildrenHideFlags(gameObject, flags);
         }
@@ -29,4 +34,5 @@ namespace SceneManagement
             }
         }
     }
+#endif
 }
