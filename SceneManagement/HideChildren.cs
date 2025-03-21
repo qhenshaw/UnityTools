@@ -33,6 +33,7 @@ namespace SceneManagement
                 tranforms[i].gameObject.hideFlags = hideFlags;
             }
         }
-    }
 #endif
+    }
+
 }
