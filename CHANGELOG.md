@@ -1,4 +1,8 @@
 # Changelog
+[3.1.2]
+[3.1.3] - 2025-03-21
+- Fixed error stopping builds
+- Added new Scene button to AdditiveSceneManager
 
 [3.1.1] - 2025-03-07
 - Fixed HideChildren not working at runtime
