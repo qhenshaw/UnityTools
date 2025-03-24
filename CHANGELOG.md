@@ -1,4 +1,7 @@
 # Changelog
+[3.1.4]
+- Removed error from Service Locator TryGet function
+
 [3.1.2]
 [3.1.3] - 2025-03-21
 - Fixed error stopping builds

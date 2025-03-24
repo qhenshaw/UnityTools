@@ -74,7 +74,6 @@ namespace ServiceAccess
                 service = (T)serviceObject;
                 return true;
             }
-            Debug.LogError($"{_owner.name}[{_logPrefix}]: Service not registered: {type.Name}", _owner);
             service = null;
             return false;
         }
