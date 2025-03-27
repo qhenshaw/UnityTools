@@ -17,7 +17,8 @@ namespace SceneManagement
     [DefaultExecutionOrder(-10000)]
     public class AdditiveSceneManager : MonoBehaviour
     {
-        [field: SerializeField, ValueDropdown("GetAllScenes"), InlineButton("AddNewScene", "New")] public List<string> SceneList { get; private set; }
+        [ShowInInspector, InlineButton("AddNewScene", "Add New")] private string _newSceneName;
+        [field: SerializeField] public List<string> SceneList { get; private set; }
 
         private void Awake()
         {
@@ -50,7 +51,6 @@ namespace SceneManagement
                 if (!CheckIfSceneLoaded(sceneName))
                 {
                     Scene loadedScene = UnityEditor.SceneManagement.EditorSceneManager.OpenScene(scenePath, UnityEditor.SceneManagement.OpenSceneMode.Additive);
-                    SetExpanded(loadedScene, false);
                     loaded.Add(sceneName);
                 }
             }
@@ -77,6 +77,11 @@ namespace SceneManagement
         private void AddNewScene()
         {
 #if UNITY_EDITOR
+            if(String.IsNullOrEmpty(_newSceneName))
+            {
+                Debug.LogError("New scene requires name.");
+                return;
+            }
             Scene activeScene = SceneManager.GetActiveScene();
             string path = activeScene.path.Replace(activeScene.name + ".unity", "");
             Scene newScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
@@ -88,7 +93,7 @@ namespace SceneManagement
                 return;
             }
 
-            newScene.name = $"{activeScene.name}-{index}";
+            newScene.name = $"{activeScene.name}-{_newSceneName}";
             EditorSceneManager.SaveScene(newScene, path + "/" + newScene.name + ".unity");
             EditorSceneManager.SetActiveScene(activeScene);
             SceneList.Add(newScene.path);
@@ -106,56 +111,5 @@ namespace SceneManagement
 
             return -1;
         }
-
-#if UNITY_EDITOR
-        private static IEnumerable GetAllScenes()
-        {
-            return UnityEditor.AssetDatabase.FindAssets("t:Scene")
-                .Select(x => UnityEditor.AssetDatabase.GUIDToAssetPath(x))
-                .Select(x => new ValueDropdownItem(x, x));
-        }
-
-        private string GetScenePath(string sceneName)
-        {
-            return UnityEditor.AssetDatabase.FindAssets("t:Scene")
-                .Select(x => UnityEditor.AssetDatabase.GUIDToAssetPath(x)).FirstOrDefault();
-        }
-
-        private void SetExpanded(Scene scene, bool expand)
-        {
-
-            foreach (var window in Resources.FindObjectsOfTypeAll<SearchableEditorWindow>())
-            {
-                if (window.GetType().Name != "SceneHierarchyWindow")
-                    continue;
-
-                var method = window.GetType().GetMethod("SetExpandedRecursive",
-                    System.Reflection.BindingFlags.Public |
-                    System.Reflection.BindingFlags.NonPublic |
-                    System.Reflection.BindingFlags.Instance, null,
-                    new[] { typeof(int), typeof(bool) }, null);
-
-                if (method == null)
-                {
-                    Debug.LogError(
-                        "Could not find method 'UnityEditor.SceneHierarchyWindow.SetExpandedRecursive(int, bool)'.");
-                    return;
-                }
-
-                var field = scene.GetType().GetField("m_Handle",
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-
-                if (field == null)
-                {
-                    Debug.LogError("Could not find field 'int UnityEngine.SceneManagement.Scene.m_Handle'.");
-                    return;
-                }
-
-                var sceneHandle = field.GetValue(scene);
-                method.Invoke(window, new[] { sceneHandle, expand });
-            }
-
-        }
-#endif
     }
 }

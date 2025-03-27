@@ -1,4 +1,7 @@
 # Changelog
+[3.1.5] - 2025-3-26
+- Streamlined adding new scenes to AdditiveSceneManager
+
 [3.1.4]
 - Removed error from Service Locator TryGet function
 

@@ -26,7 +26,7 @@ namespace SceneManagement.Editor
         [MenuItem("GameObject/Additive Scene Manager", false, 0)]
         static void CreateCustomGameObject(MenuCommand menuCommand)
         {
-            GameObject go = new GameObject("= Additive Scene Manager");
+            GameObject go = new GameObject("Additive Scene Manager");
             go.AddComponent<AdditiveSceneManager>();
             GameObjectUtility.SetParentAndAlign(go, menuCommand.context as GameObject);
             Undo.RegisterCreatedObjectUndo(go, "Create " + go.name);
