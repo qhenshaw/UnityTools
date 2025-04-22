@@ -8,6 +8,9 @@ This package comes with several useful tools focused on organization, level desi
 Unity 6+. Will likely work on earlier versions but this is the version I tested with. 
 Currently requires Odin Inspector for custom editor windows, it won't compile without Odin.
 
+> [!WARNING]
+> Requires Odin Inspector for custom editor functionality, feel free to fork and rewrite with Naughty Attributes or similar.
+
 ## Installation
 Use the Package Manager and use Add package from git URL, using the following: 
 ```
