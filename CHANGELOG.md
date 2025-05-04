@@ -1,4 +1,7 @@
 # Changelog
+[3.2.0] - 2025-5-03
+- Added simple state machine implementation
+
 [3.1.5] - 2025-3-26
 - Streamlined adding new scenes to AdditiveSceneManager
 
