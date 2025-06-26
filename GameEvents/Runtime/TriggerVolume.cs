@@ -12,6 +12,7 @@ namespace GameEvents
     [RequireComponent(typeof(BoxCollider))]
     public class TriggerVolume : MonoBehaviour
     {
+        [SerializeField] private string _triggerLayer = "Trigger";
         [SerializeField] private string _tagFilter = "Player";
         [SerializeField] private bool _doOnce = true;
         [field: SerializeField] public bool Done { get; set; }
@@ -27,6 +28,8 @@ namespace GameEvents
             {
                 collider.isTrigger = true;
             }
+
+            gameObject.layer = LayerMask.NameToLayer(_triggerLayer);
         }
 
         private void OnTriggerEnter(Collider other)
