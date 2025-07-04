@@ -1,8 +1,14 @@
 # Changelog
-[3.2.0] - 2025-5-03
+[3.3.0] - 2025-07-03
+- Added functional debug menu sample
+
+[3.2.1] - 2025-06-26
+- Added auto layer change to TriggerVolume
+
+[3.2.0] - 2025-05-03
 - Added simple state machine implementation
 
-[3.1.5] - 2025-3-26
+[3.1.5] - 2025-03-26
 - Streamlined adding new scenes to AdditiveSceneManager
 
 [3.1.4]

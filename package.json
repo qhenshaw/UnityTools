@@ -1,11 +1,25 @@
 {
   "displayName": "Unity Tools",
   "author": "Quin Henshaw",
-  "version": "3.2.1",
+  "version": "3.3.0",
   "name": "com.qhenshaw.unitytools",
   "documentationUrl": "https://github.com/qhenshaw/unitytools",
   "changelogUrl": "https://github.com/qhenshaw/unitytools/blob/main/CHANGELOG.md",
   "licensesUrl": "https://github.com/qhenshaw/unitytools/blob/main/LICENSE.md",
   "description": "A collection of useful tools for Unity.",
-  "unity": "6000.0"
+  "unity": "6000.0",
+  "dependencies": {
+    "com.unity.textmeshpro": "3.0.0",
+	"com.unity.ugui": "2.0.0",
+    "com.unity.inputsystem": "1.0.0",
+	"com.unity.cinemachine": "3.0.0",
+	"com.unity.2d.sprite": "1.0.0"
+  },
+  "samples": [
+	{
+      "displayName": "Demo Debug Menu",
+      "description": "An example Debug Menu prefab, ready to drop into your scenes.",
+      "path": "Samples~/DemoDebugMenu"
+    }
+  ]
 }
