@@ -1,4 +1,8 @@
 # Changelog
+
+[3.4.0] - 2025-08-10
+- Added runtime mesh combine tool for optimization
+
 [3.3.0] - 2025-07-03
 - Added functional debug menu sample
 
