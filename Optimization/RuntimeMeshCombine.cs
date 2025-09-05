@@ -90,6 +90,8 @@ namespace UnityTools.Optimization
             {
                 GameObject mfGO = combinedMeshFilters[i].gameObject;
                 Destroy(combinedMeshFilters[i]);
+                Destroy(combinedMeshFilters[i].GetComponent("ProBuilderMesh"));
+                Destroy(combinedMeshFilters[i].GetComponent("ProBuilderShape"));
                 Destroy(combinedMeshFilters[i].GetComponent<MeshRenderer>());
 
                 MonoBehaviour[] monos = mfGO.GetComponents<MonoBehaviour>();

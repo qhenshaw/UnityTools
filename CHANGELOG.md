@@ -1,5 +1,8 @@
 # Changelog
 
+[3.4.1] - 2025-09-04
+- Added ProBuilder support for runtime mesh combine
+
 [3.4.0] - 2025-08-10
 - Added runtime mesh combine tool for optimization
 
