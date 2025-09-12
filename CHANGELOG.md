@@ -1,5 +1,8 @@
 # Changelog
 
+[3.5.0] - 2025-09-11
+- Added gradient texture baker
+
 [3.4.1] - 2025-09-04
 - Added ProBuilder support for runtime mesh combine
 
