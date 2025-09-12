@@ -1,5 +1,8 @@
 # Changelog
 
+[3.5.1] - 2025-09-12
+- Added property to expose GameEventAsset reference in Caller/Listener
+
 [3.5.0] - 2025-09-11
 - Added gradient texture baker
 

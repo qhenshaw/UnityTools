@@ -10,6 +10,8 @@ namespace GameEvents
         [SerializeField] private T _value;
         [SerializeField] private GameEventAsset<T> _gameEventAsset;
 
+        public GameEventAsset<T> EventAsset => _gameEventAsset;
+
         private void Awake()
         {
             if (HasEventFlag(GameEventRaiseFlag.Awake)) _gameEventAsset.Invoke(_value);

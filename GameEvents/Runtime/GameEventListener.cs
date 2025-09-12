@@ -11,6 +11,8 @@ namespace GameEvents
         [SerializeField] private bool _useFilter;
         [SerializeField] private T[] _filterValues;
 
+        public GameEventAsset<T> EventAsset => _gameEventAsset;
+
         public UnityEvent<T> OnGameEventInvoked;
 
         private void OnEnable()
