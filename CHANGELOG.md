@@ -1,5 +1,8 @@
 # Changelog
 
+[3.5.2] - 2025-09-29
+- Fixed mesh combine tool destroying GOs with colliders remaining
+
 [3.5.1] - 2025-09-12
 - Added property to expose GameEventAsset reference in Caller/Listener
 

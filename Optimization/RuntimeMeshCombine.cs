@@ -94,7 +94,7 @@ namespace UnityTools.Optimization
                 Destroy(combinedMeshFilters[i].GetComponent("ProBuilderShape"));
                 Destroy(combinedMeshFilters[i].GetComponent<MeshRenderer>());
 
-                MonoBehaviour[] monos = mfGO.GetComponents<MonoBehaviour>();
+                Component[] monos = mfGO.GetComponents<Component>();
                 if (monos.Length == 0) Destroy(mfGO);
             }
         }
