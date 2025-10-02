@@ -1,5 +1,8 @@
 # Changelog
 
+[3.5.3] - 2025-10-02
+- Added HDR to gradient editor
+
 [3.5.2] - 2025-09-29
 - Fixed mesh combine tool destroying GOs with colliders remaining
 

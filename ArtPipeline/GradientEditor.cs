@@ -10,7 +10,7 @@ namespace ArtPipeline
     [CreateAssetMenu(menuName = "Color Gradient Editor")]
     public class GradientEditor : ScriptableObject
     {
-        [SerializeField] private Gradient _gradient;
+        [SerializeField, GradientUsage(true)] private Gradient _gradient;
         [SerializeField] private Vector2Int _size = new Vector2Int(128, 4);
         [SerializeField] private string _fileName = "New Gradient";
 
