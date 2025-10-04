@@ -1,5 +1,8 @@
 # Changelog
 
+[3.6.0] - 2025-10-04
+- Added vertex painting component
+
 [3.5.3] - 2025-10-02
 - Added HDR to gradient editor
 
