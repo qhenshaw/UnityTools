@@ -1,5 +1,8 @@
 # Changelog
 
+[3.7.0] - 2025-11-06
+- Added a code-oriented global messaging service
+
 [3.6.0] - 2025-10-04
 - Added vertex painting component
 
