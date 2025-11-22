@@ -7,6 +7,7 @@ using UnityEditor;
 
 namespace SceneManagement
 {
+    [DisallowMultipleComponent]
     public class LightbakeSettings : MonoBehaviour
     {
 #if UNITY_EDITOR

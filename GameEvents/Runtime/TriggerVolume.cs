@@ -59,7 +59,7 @@ namespace GameEvents
         }
 
 #if UNITY_EDITOR
-        [MenuItem("GameObject/Volume/Trigger Volume", false, 0)]
+        [MenuItem("GameObject/Volume/Trigger Volume")]
         static void CreateCustomGameObject(MenuCommand menuCommand)
         {
             GameObject go = new GameObject("Trigger Volume");

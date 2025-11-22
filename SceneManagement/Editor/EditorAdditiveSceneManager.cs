@@ -23,7 +23,7 @@ namespace SceneManagement.Editor
             sceneManager?.LoadSceneList();
         }
 
-        [MenuItem("GameObject/Additive Scene Manager", false, 0)]
+        [MenuItem("GameObject/Scene Management/Additive Scene Manager", false, 5)]
         static void CreateCustomGameObject(MenuCommand menuCommand)
         {
             GameObject go = new GameObject("Additive Scene Manager");

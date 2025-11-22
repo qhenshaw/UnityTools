@@ -2,6 +2,7 @@ using UnityEngine;
 
 namespace SceneManagement
 {
+    [DisallowMultipleComponent]
     public class HideChildren : MonoBehaviour
     {
         [SerializeField] private bool _isHidden = true;

@@ -15,6 +15,7 @@ using UnityEditor.SceneManagement;
 namespace SceneManagement
 {
     [DefaultExecutionOrder(-10000)]
+    [DisallowMultipleComponent]
     public class AdditiveSceneManager : MonoBehaviour
     {
         [ShowInInspector, InlineButton("AddNewScene", "Add New")] private string _newSceneName;
