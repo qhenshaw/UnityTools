@@ -1,5 +1,9 @@
 # Changelog
 
+[4.0.0] - 2025-11-06
+- Added new Streaming Scene Manager system, removed old scene loading components
+- Migrated Vertex Painter tool to Unity's Tool/Overlay API
+
 [3.7.0] - 2025-11-06
 - Added a code-oriented global messaging service
 
