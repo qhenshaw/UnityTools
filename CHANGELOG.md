@@ -1,6 +1,9 @@
 # Changelog
 
-[4.0.0] - 2025-11-06
+[4.0.1] - 2025-27-06
+- Added "MHER" as option for PBR material creation from textue names
+
+[4.0.0] - 2025-23-06
 - Added new Streaming Scene Manager system, removed old scene loading components
 - Migrated Vertex Painter tool to Unity's Tool/Overlay API
 

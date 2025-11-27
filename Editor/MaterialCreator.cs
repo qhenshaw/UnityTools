@@ -12,6 +12,7 @@ namespace EditorTools.Editor
         private static string[] _texurePatterns = new[] { "basecolor", "normaldx" };
         private static string[] _textureNames = new[] { "Base Color", "Normal Map", "Mask Map" };
         private static string[] _parameterNames = new[] { "_MainTex", "_Normal", "_Mask" };
+        private static string[] _maskMapChannelNames = new[] { "height", "metal", "emiss", "rough", "smooth", "ao", "occlu", "mher" };
 
         [MenuItem("Assets/Create/VFS Uber material setup", false, -230)]
         public static void CreateUberMaterial()
@@ -101,15 +102,13 @@ namespace EditorTools.Editor
         }
 
         private static bool CheckMaskMap(Texture texture)
-        {
-            string[] channelNames = new[] { "height", "metal", "emiss", "rough", "smooth", "ao", "occlu"};
-            
-            int successTarget = 3;
+        {            
+            int successTarget = 1;
             int successCount = 0;
             
-            for (int i = 0; i < channelNames.Length; i++)
+            for (int i = 0; i < _maskMapChannelNames.Length; i++)
             {
-                string channel = channelNames[i];
+                string channel = _maskMapChannelNames[i];
                 if(texture.name.ToLower().Contains(channel)) successCount++;
             }
 
