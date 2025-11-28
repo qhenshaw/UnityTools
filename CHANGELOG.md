@@ -1,9 +1,13 @@
 # Changelog
 
-[4.0.1] - 2025-27-06
+[4.0.2] - 2025-11-28
+- Added vertex painting support for probduiler meshes
+- Fixed painting radius being larger than visualization
+
+[4.0.1] - 2025-11-27
 - Added "MHER" as option for PBR material creation from textue names
 
-[4.0.0] - 2025-23-06
+[4.0.0] - 2025-11-23
 - Added new Streaming Scene Manager system, removed old scene loading components
 - Migrated Vertex Painter tool to Unity's Tool/Overlay API
 

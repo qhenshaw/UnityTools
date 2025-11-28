@@ -10,7 +10,7 @@ using UnityEngine.UIElements;
 
 namespace ArtPipeline.Editor
 {
-    [EditorTool("Vertex Painter", typeof(MeshFilter))]
+    [EditorTool("Vertex Painter", typeof(MeshRenderer))]
     public class VertexPaintertool : EditorTool
     {
         [SerializeField] private Texture2D _toolIcon;
@@ -132,7 +132,7 @@ namespace ArtPipeline.Editor
             _newColors.Clear();
             for (int i = 0; i < _vertices.Count; i++)
             {
-                float sqrDistance = Vector3.Distance(_vertices[i], hitLocalPos);
+                float sqrDistance = Vector3.SqrMagnitude(_vertices[i] - hitLocalPos);
                 if (sqrDistance > sqrMaxDistance) continue;
 
                 float distance = Mathf.Sqrt(sqrDistance);
