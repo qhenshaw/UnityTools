@@ -51,6 +51,7 @@ namespace ObjectPooling
         // usually happens when pool overflows
         private void OnDestroyItem(IPoolable obj)
         {
+			if(obj == null || obj.GameObject == null) return;
             GameObject.Destroy(obj.GameObject);
         }
     }

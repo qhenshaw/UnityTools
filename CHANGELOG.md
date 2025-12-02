@@ -1,5 +1,8 @@
 # Changelog
 
+[4.0.3] - 2025-12-01
+- Added fix for null ref from pooled object when editor stops
+
 [4.0.2] - 2025-11-28
 - Added vertex painting support for probduiler meshes
 - Fixed painting radius being larger than visualization
