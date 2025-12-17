@@ -18,6 +18,7 @@ namespace SceneManagement
         public static StreamingSceneManager Instance { get; private set; }
 
         [SerializeField] private bool _unloadUnusedAssets = true;
+        [SerializeField] private bool _disableInsteadOfUnload = false;
         [SerializeField] private string[] _persistent;
         [SerializeField] private string[] _initial;
 
@@ -77,26 +78,52 @@ namespace SceneManagement
 
         private IEnumerator UnloadAsyncRoutine(string sceneName)
         {
-            if (!CheckIfSceneLoaded(sceneName)) yield break;
             if (_persistent.Contains(sceneName)) yield break;
 
-            AsyncOperation asyncUnload = SceneManager.UnloadSceneAsync(sceneName);
-            while(!asyncUnload.isDone)
+            if(_disableInsteadOfUnload)
             {
-                yield return null;
+                SetSceneObjectsActive(sceneName, false);
+                yield break;
             }
 
-            if (_unloadUnusedAssets) Resources.UnloadUnusedAssets();
+            if(CheckIfSceneLoaded(sceneName))
+            {
+                AsyncOperation asyncUnload = SceneManager.UnloadSceneAsync(sceneName);
+                while (!asyncUnload.isDone)
+                {
+                    yield return null;
+                }
+
+                if (_unloadUnusedAssets) Resources.UnloadUnusedAssets();
+            }
         }
 
         private IEnumerator LoadAsyncRoutine(string sceneName, LoadSceneMode loadSceneMode = LoadSceneMode.Additive)
         {
-            if (CheckIfSceneLoaded(sceneName))  yield break;
-
-            AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(sceneName, loadSceneMode);
-            while (!asyncLoad.isDone)
+            if (!CheckIfSceneLoaded(sceneName))
             {
-                yield return null;
+                AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(sceneName, loadSceneMode);
+                while (!asyncLoad.isDone)
+                {
+                    yield return null;
+                }
+            }
+
+            if (_disableInsteadOfUnload)
+            {
+                SetSceneObjectsActive(sceneName, true);
+                yield break;
+            }
+        }
+
+        private void SetSceneObjectsActive(string sceneName, bool active)
+        {
+            Scene scene = SceneManager.GetSceneByName(sceneName);
+            if (scene == null) return;
+            GameObject[] rootObjects = scene.GetRootGameObjects();
+            foreach (GameObject go in rootObjects)
+            {
+                go.SetActive(active);
             }
         }
 
