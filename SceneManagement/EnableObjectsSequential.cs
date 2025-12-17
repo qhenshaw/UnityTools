@@ -16,7 +16,12 @@ namespace SceneManagement
         {
             if (_objects == null || _objects.Count == 0)
             {
-                Transform[] children = GetComponentsInChildren<Transform>();
+                Transform[] children = new Transform[transform.childCount];
+                for (int i = 0; i < children.Length; i++)
+                {
+                    children[i] = transform.GetChild(i);
+                }
+
                 foreach (Transform t in children)
                 {
                     if (t == transform) continue;

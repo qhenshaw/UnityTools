@@ -17,7 +17,8 @@ namespace SceneManagement
     {
         public static StreamingSceneManager Instance { get; private set; }
 
-        [SerializeField] private bool _logFailures = false;
+        [SerializeField] private bool _unloadUnusedAssets = true;
+        [SerializeField] private bool _disableInsteadOfUnload = false;
         [SerializeField] private string[] _persistent;
         [SerializeField] private string[] _initial;
 
@@ -32,44 +33,16 @@ namespace SceneManagement
 
             Instance = this;
 
-            LoadPersistent();
-            LoadInitial();
-        }
-
-        private void LoadPersistent()
-        {
-            LoadSet(_persistent);
-        }
-
-        private void LoadInitial()
-        {
-            LoadSet(_initial);
-        }
-
-        private bool CheckIfSceneLoaded(string sceneName)
-        {
-            Scene scene = SceneManager.GetSceneByName(sceneName);
-            return scene.IsValid();
-        }
-
-        public void Unload(string sceneName)
-        {
-            if (!CheckIfSceneLoaded(sceneName))
-            {
-                if (_logFailures) Debug.LogWarning($"Scene not loaded, cannot unload: {sceneName}");
-                return;
-            }
-
-            if (_persistent.Contains(sceneName))
-            {
-                if (_logFailures) Debug.LogWarning($"Attempting to unload persistent scene: {sceneName}");
-                return;
-            }
-
-            SceneManager.UnloadSceneAsync(sceneName);
+            string[] initialScenes = _persistent.Concat(_initial).ToArray();
+            LoadSet(initialScenes);
         }
 
         public void LoadSet(string[] sceneNames)
+        {
+            StartCoroutine(LoadSetRoutine(sceneNames));
+        }
+
+        private IEnumerator LoadSetRoutine(string[] sceneNames)
         {
             List<string> unload = new List<string>();
             for (int i = 0; i < SceneManager.sceneCount; i++)
@@ -88,32 +61,69 @@ namespace SceneManagement
 
             foreach (string sceneName in sceneNames)
             {
-                Load(sceneName);
+                yield return StartCoroutine(LoadAsyncRoutine(sceneName));
             }
 
             foreach (string sceneName in unload)
             {
-                Unload(sceneName);
+                yield return StartCoroutine(UnloadAsyncRoutine(sceneName));
             }
         }
 
-        public void Load(string sceneName, LoadSceneMode loadSceneMode = LoadSceneMode.Additive)
+        private bool CheckIfSceneLoaded(string sceneName)
         {
-            if (CheckIfSceneLoaded(sceneName))
+            Scene scene = SceneManager.GetSceneByName(sceneName);
+            return scene.IsValid();
+        }
+
+        private IEnumerator UnloadAsyncRoutine(string sceneName)
+        {
+            if (_persistent.Contains(sceneName)) yield break;
+
+            if(_disableInsteadOfUnload)
             {
-                if (_logFailures) Debug.LogWarning($"Scene already loaded: {sceneName}");
-                return;
+                SetSceneObjectsActive(sceneName, false);
+                yield break;
             }
 
-            StartCoroutine(LoadAsyncRoutine(sceneName, loadSceneMode));
+            if(CheckIfSceneLoaded(sceneName))
+            {
+                AsyncOperation asyncUnload = SceneManager.UnloadSceneAsync(sceneName);
+                while (!asyncUnload.isDone)
+                {
+                    yield return null;
+                }
+
+                if (_unloadUnusedAssets) Resources.UnloadUnusedAssets();
+            }
         }
 
         private IEnumerator LoadAsyncRoutine(string sceneName, LoadSceneMode loadSceneMode = LoadSceneMode.Additive)
         {
-            AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(sceneName, loadSceneMode);
-            while (!asyncLoad.isDone)
+            if (!CheckIfSceneLoaded(sceneName))
             {
-                yield return null;
+                AsyncOperation asyncLoad = SceneManager.LoadSceneAsync(sceneName, loadSceneMode);
+                while (!asyncLoad.isDone)
+                {
+                    yield return null;
+                }
+            }
+
+            if (_disableInsteadOfUnload)
+            {
+                SetSceneObjectsActive(sceneName, true);
+                yield break;
+            }
+        }
+
+        private void SetSceneObjectsActive(string sceneName, bool active)
+        {
+            Scene scene = SceneManager.GetSceneByName(sceneName);
+            if (scene == null) return;
+            GameObject[] rootObjects = scene.GetRootGameObjects();
+            foreach (GameObject go in rootObjects)
+            {
+                go.SetActive(active);
             }
         }
 
