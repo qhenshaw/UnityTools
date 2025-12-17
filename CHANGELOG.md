@@ -1,5 +1,10 @@
 # Changelog
 
+[4.1.0] - 2025-12-16
+- Improved async performance of StreamingSceneManager
+- EnableObjectsSequential now gathers only root of child objects
+- Added option to disable scenes instead of unloading them when streaming additive scenes
+
 [4.0.3] - 2025-12-01
 - Added fix for null ref from pooled object when editor stops
 
