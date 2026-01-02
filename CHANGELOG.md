@@ -1,4 +1,6 @@
 # Changelog
+[4.2.0] - 2026-01-02
+- Added GlobalVariable and DataReference systems
 
 [4.1.0] - 2025-12-16
 - Improved async performance of StreamingSceneManager

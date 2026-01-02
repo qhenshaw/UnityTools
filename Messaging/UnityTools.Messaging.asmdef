@@ -1,6 +1,6 @@
 {
     "name": "Messaging",
-    "rootNamespace": "Messaging",
+    "rootNamespace": "UnityTools.Messaging",
     "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
