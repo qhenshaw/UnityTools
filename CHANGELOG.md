@@ -1,4 +1,7 @@
 # Changelog
+[4.3.0] - 2026-01-03
+- Added transition add/remove for state machine
+
 [4.2.0] - 2026-01-02
 - Added GlobalVariable and DataReference systems
 
