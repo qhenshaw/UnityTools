@@ -186,7 +186,7 @@ MonoBehaviour:
   m_BlockingObjects: 0
   m_BlockingMask:
     serializedVersion: 2
-    m_Bits: 311
+    m_Bits: 55
 --- !u!114 &7633551885415234869
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -199,13 +199,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 16499c254c805f94890c52259629e567, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _toggleKey: 96
+  _toggleKey: 4
   _closedCursorMode: 1
   _closedCursorVisible: 0
   _panel: {fileID: 639296212764259040}
   _buttonLayout: {fileID: 5384899532260486327}
-  _buttonPrefab: {fileID: 7146341940759792543, guid: 51f49524b400bdf4b869ca1389844146,
-    type: 3}
+  _buttonPrefab: {fileID: 7146341940759792543, guid: fd5effb008cde9a4b9a2fb845e85b1d0, type: 3}
   _pauseOnOpen: 0
   _openActionMap: UI
   _closeActionMap: Player
@@ -389,6 +388,7 @@ MonoBehaviour:
   m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
+  m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
   m_lineSpacingMax: 0

@@ -37,7 +37,7 @@ namespace DebugMenu
             }
         }
 
-        [SerializeField] private KeyCode _toggleKey = KeyCode.Tilde;
+        [SerializeField] private Key _toggleKey = Key.Backquote;
         [SerializeField] private CursorLockMode _closedCursorMode = CursorLockMode.Locked;
         [SerializeField] private bool _closedCursorVisible = false;
         [SerializeField] private Transform _panel;
@@ -67,7 +67,7 @@ namespace DebugMenu
 #if DEBUG_MENU
         private void Update()
         {
-            if (Input.GetKeyDown(_toggleKey))
+            if (Keyboard.current[_toggleKey].wasPressedThisFrame)
             {
                 if (!_panel.gameObject.activeInHierarchy) Open();
                 else Close();

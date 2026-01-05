@@ -1,5 +1,8 @@
 # Changelog
-[4.3.1] - 2026-01-0
+[4.3.2] - 2026-01-05
+- Updated DebugMenu to work with new Input System
+
+[4.3.1] - 2026-01-05
 - Fixed bad parameter named in MessagingService add listener method
 - Switched MessagingService to RuntimeInitializeOnLoad setup
 
