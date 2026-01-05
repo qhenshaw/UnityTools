@@ -7,27 +7,19 @@ namespace UnityTools.Messaging
 {
     public class MessagingService
     {
-        private static MessagingService _instance;
-        public static MessagingService Instance
-        {
-            get
-            {
-                if (_instance == null) CreateInstance();
-                return _instance;
-            }
-        }
+        public static MessagingService Instance { get; private set; }
 
         private Dictionary<Enum, IList> Channels { get; set; }
 
-        private static MessagingService CreateInstance()
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void Initialize()
         {
             MessagingService service = new MessagingService();
             service.Channels = new Dictionary<Enum, IList>();
-            _instance = service;
-            return service;
+            Instance = service;
         }
 
-        public void AddListener<T>(Enum tag, Action<T> onPlayerDamage)
+        public void AddListener<T>(Enum tag, Action<T> listenerMethod)
         {
             if (!Channels.ContainsKey(tag))
             {
@@ -36,7 +28,7 @@ namespace UnityTools.Messaging
                 Channels.Add(tag, list);
             }
 
-            Channels[tag].Add(onPlayerDamage);
+            Channels[tag].Add(listenerMethod);
         }
 
         public void Send<T>(Enum tag, T payload)

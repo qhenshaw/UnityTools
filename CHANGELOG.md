@@ -1,4 +1,8 @@
 # Changelog
+[4.3.1] - 2026-01-0
+- Fixed bad parameter named in MessagingService add listener method
+- Switched MessagingService to RuntimeInitializeOnLoad setup
+
 [4.3.0] - 2026-01-03
 - Added transition add/remove for state machine
 
