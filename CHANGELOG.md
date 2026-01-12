@@ -1,4 +1,9 @@
 # Changelog
+[4.3.3] - 2026-01-12
+- Fixed HasValue check in GlobalVariable
+- Fixed EnableLogging not working in StateMachine
+- Renamed SCT to SST
+
 [4.3.2] - 2026-01-05
 - Updated DebugMenu to work with new Input System
 

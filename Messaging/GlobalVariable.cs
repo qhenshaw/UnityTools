@@ -28,7 +28,7 @@ namespace UnityTools.Messaging
             }
         }
 
-        public bool HasValue => GlobalVariableService.Instance.HasValue(Tag);
+        public bool HasValue => GlobalVariableService.Instance.HasValue(Tag) && !Value.Equals(null);
 
         public GlobalVariable(Enum tag)
         {
@@ -38,7 +38,7 @@ namespace UnityTools.Messaging
         public GlobalVariable(Enum tag, T value)
         {
             Tag = tag;
-            _value = value;
+            Value = value;
         }
 
         public event EventHandler<T> OnUpdated;

@@ -33,7 +33,7 @@ namespace SceneManagement
         [MenuItem("GameObject/Scene Management/Streaming Scene Transition", false, 5)]
         static void CreateCustomGameObject(MenuCommand menuCommand)
         {
-            GameObject go = new GameObject("SCT");
+            GameObject go = new GameObject("SST");
             go.AddComponent<StreamingSceneTransition>();
             BoxCollider collier = go.AddComponent<BoxCollider>();
             collier.size = new Vector3(3f, 3f, 3f);

@@ -37,7 +37,7 @@ namespace SimpleStateMachine
 
         public T Binding { get; private set; }
         public State<T> CurrentState { get; private set; }
-        public bool LogChanges { get; set; } = false;
+        public bool EnableLogging { get; set; } = false;
         public bool UpdateConditionsCheck { get; set; } = true;
         public bool FixedUpdateConditionsCheck { get; set; } = false;
 
@@ -45,9 +45,14 @@ namespace SimpleStateMachine
 
         private List<StateTransition> _transitions = new List<StateTransition>();
 
-        public StateMachine(T target)
+        public StateMachine(T binding)
         {
-            Binding = target;
+            Binding = binding;
+        }
+
+        public StateMachine(T binding, bool enableLogging) : this(binding)
+        {
+            EnableLogging = enableLogging;
         }
 
         public void AddTransition<U,V>(Func<bool> condition) where U : State<T> where V : State<T>
@@ -77,18 +82,19 @@ namespace SimpleStateMachine
             if(CurrentState != null)
             {
                 CurrentState.Exit();
-                if (LogChanges) Log($"{Binding} SM Exiting State: {CurrentState}", Binding);
+                Log($"{Binding} SM Exiting State: {CurrentState}", Binding);
             }
 
             State<T> state = (State<T>)Activator.CreateInstance(newState, new object[] { this, Binding });
             CurrentState = state;
             CurrentState.Enter();
-            if (LogChanges) Log($"{Binding} SM Entering State: {CurrentState}", Binding);
+            Log($"{Binding} SM Entering State: {CurrentState}", Binding);
             OnStateChanged?.Invoke(this, CurrentState);
         }
 
         private void Log(string message, object target)
         {
+            if (!EnableLogging) return;
             if (target is UnityEngine.Object uo) Debug.Log(message, uo);
             else Debug.Log(message);
         }
