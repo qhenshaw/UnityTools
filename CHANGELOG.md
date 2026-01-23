@@ -1,4 +1,7 @@
 # Changelog
+[4.3.4] - 2026-01-23
+- Fixed enumeration error when removing listener during message send
+
 [4.3.3] - 2026-01-12
 - Fixed HasValue check in GlobalVariable
 - Fixed EnableLogging not working in StateMachine

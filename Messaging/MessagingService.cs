@@ -36,7 +36,9 @@ namespace UnityTools.Messaging
             if (!Channels.ContainsKey(tag)) return;
 
             IList list = Channels[tag];
-            foreach (var item in list)
+            List<object> copy = new List<object>();
+            foreach (var item in list) copy.Add(item);
+            foreach (var item in copy)
             {
                 if(item is Action<T> action)
                 {
