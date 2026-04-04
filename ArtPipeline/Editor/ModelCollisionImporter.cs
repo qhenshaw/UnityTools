@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 
-namespace EditorTools.Editor
+namespace ArtPipeline.Editor
 {
     public class ModelCollisionImporter : AssetPostprocessor
     {
@@ -11,6 +11,9 @@ namespace EditorTools.Editor
 
         private void OnPostprocessModel(GameObject gameObject)
         {
+            ArtAssetImportSettings settings = ArtAssetImportSettings.GetOrCreateSettings();
+            if (!settings.GenerateUCXColliders) return;
+
             Transform[] children = gameObject.GetComponentsInChildren<Transform>();
             for (int i = 0; i < children.Length; i++)
             {

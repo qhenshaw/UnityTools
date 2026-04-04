@@ -1,4 +1,8 @@
 # Changelog
+[4.4.0] - 2026-04-03
+- Added Art Asset Import Settings to project settings menu to configure default model import settings
+- Moved art pipeline related scripts to ArtPipeline namespace
+
 [4.3.4] - 2026-01-23
 - Fixed enumeration error when removing listener during message send
 

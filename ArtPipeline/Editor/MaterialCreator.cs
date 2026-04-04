@@ -1,11 +1,9 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using System.Text.RegularExpressions;
 using System;
 
-namespace EditorTools.Editor
+namespace ArtPipeline.Editor
 {
     public class MaterialCreator
     {
