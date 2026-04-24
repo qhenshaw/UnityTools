@@ -23,12 +23,12 @@ namespace EditorTools.Editor
             Color fontColor = _normalTextColor;
             Color backgroundColor = _backgroundColor;
 
-            var obj = EditorUtility.InstanceIDToObject(instanceID);
+            var obj = EditorUtility.EntityIdToObject(instanceID);
             if (obj != null && obj.name.Length >= 2)
             {
                 if (obj.name.Substring(0, 2).Equals("= "))
                 {
-                    if (Selection.instanceIDs.Contains(instanceID))
+                    if (Selection.entityIds.Contains(instanceID))
                     {
                         fontColor = _selectedTextColor;
                         backgroundColor = _selectedBackgroundColor;

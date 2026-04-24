@@ -1,4 +1,9 @@
 # Changelog
+
+[4.4.1] - 2026-04-24
+- Replaced deprected instance ID calls in cutom hierarchy drawer
+- Added first import check for model importer settings
+
 [4.4.0] - 2026-04-03
 - Added Art Asset Import Settings to project settings menu to configure default model import settings
 - Moved art pipeline related scripts to ArtPipeline namespace
