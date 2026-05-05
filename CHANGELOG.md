@@ -1,5 +1,8 @@
 # Changelog
 
+[4.4.2] - 2026-05-05
+- Temporary bypass of art import settings load that's throwing errors
+
 [4.4.1] - 2026-04-24
 - Replaced deprected instance ID calls in cutom hierarchy drawer
 - Added first import check for model importer settings

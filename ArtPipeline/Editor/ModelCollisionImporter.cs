@@ -11,8 +11,8 @@ namespace ArtPipeline.Editor
 
         private void OnPostprocessModel(GameObject gameObject)
         {
-            ArtAssetImportSettings settings = ArtAssetImportSettings.GetOrCreateSettings();
-            if (!settings.GenerateUCXColliders) return;
+            //ArtAssetImportSettings settings = ArtAssetImportSettings.GetOrCreateSettings();
+            //if (!settings.GenerateUCXColliders) return;
 
             Transform[] children = gameObject.GetComponentsInChildren<Transform>();
             for (int i = 0; i < children.Length; i++)
