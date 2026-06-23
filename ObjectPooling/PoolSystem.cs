@@ -51,7 +51,7 @@ namespace ObjectPooling
             IPoolable pooled = _poolHandlers[prefab].Pool.Get();
             pooled.Transform.position = position;
             pooled.Transform.rotation = rotation;
-            pooled.Transform.parent = parent;
+            if (parent != null) pooled.Transform.parent = parent;
             return pooled;
         }
     }

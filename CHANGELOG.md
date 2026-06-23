@@ -1,5 +1,9 @@
 # Changelog
 
+[4.4.3] - 2026-06-23
+- Fixed error from PoolSystem when stopping play
+- Changed default PoolSystem behaviour to keep PooledObjects parented
+
 [4.4.2] - 2026-05-05
 - Temporary bypass of art import settings load that's throwing errors
 

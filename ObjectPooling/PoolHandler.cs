@@ -49,10 +49,10 @@ namespace ObjectPooling
 
         // called when object is destroyed (permanently removed from pool)
         // usually happens when pool overflows
-        private void OnDestroyItem(IPoolable obj)
+        private void OnDestroyItem(IPoolable poolable)
         {
-			if(obj == null || obj.GameObject == null) return;
-            GameObject.Destroy(obj.GameObject);
+            if (poolable == null || (poolable is UnityEngine.Object obj && !obj) || poolable.GameObject == null) return;
+            GameObject.Destroy(poolable.GameObject);
         }
     }
 }
