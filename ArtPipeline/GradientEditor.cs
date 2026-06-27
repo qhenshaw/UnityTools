@@ -12,7 +12,6 @@ namespace ArtPipeline
     {
         [SerializeField, GradientUsage(true)] private Gradient _gradient;
         [SerializeField] private Vector2Int _size = new Vector2Int(128, 4);
-        [SerializeField] private string _fileName = "New Gradient";
 
 #if UNITY_EDITOR
         public void BakeGradient()
@@ -38,7 +37,7 @@ namespace ArtPipeline
             byte[] bytes = newTexture.EncodeToPNG();
             string path = AssetDatabase.GetAssetPath(this);
             string directory = Path.GetDirectoryName(path);
-            path = directory + "/" + _fileName + ".png";
+            path = directory + "/" + name + ".png";
             File.WriteAllBytes(path, bytes);
             AssetDatabase.Refresh();
 
