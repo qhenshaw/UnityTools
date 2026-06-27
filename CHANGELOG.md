@@ -1,5 +1,11 @@
 # Changelog
 
+[4.5.0] - 2026-06-26
+- Added new custom Toolbar buttons to give easier access to:
+  - Time Scale
+  - Auto and manual compile/refresh
+  - Scene switching
+
 [4.4.3] - 2026-06-23
 - Fixed error from PoolSystem when stopping play
 - Changed default PoolSystem behaviour to keep PooledObjects parented
