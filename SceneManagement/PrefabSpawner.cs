@@ -1,6 +1,10 @@
-using Sirenix.OdinInspector;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.Search;
+
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace SceneManagement
 {
@@ -16,7 +20,7 @@ namespace SceneManagement
             SameParent
         }
 
-        [SerializeField, AssetsOnly] private GameObject _prefab;
+        [SerializeField, SearchContext("p: t:Prefab")] private GameObject _prefab;
         [SerializeField] private bool _spawnOnStart = true;
         [SerializeField] private ParentMode _parentMode = ParentMode.SameScene;
         [SerializeField] private bool _destroySpawner = true;
@@ -67,6 +71,12 @@ namespace SceneManagement
             return instantiated;
         }
 
+        public void SetPrefab(GameObject prefab)
+        {
+            _prefab = prefab;
+            OnValidate();
+        }
+
 #if UNITY_EDITOR
         private void Update()
         {
@@ -76,14 +86,43 @@ namespace SceneManagement
             MeshPreview.DrawImmediate(_prefab, transform.position, transform.rotation, material);
         }
 
-        [UnityEditor.MenuItem("GameObject/Prefab Spawner", false, 0)]
-        static void CreateCustomGameObject(UnityEditor.MenuCommand menuCommand)
+        [MenuItem("GameObject/Prefab Spawner", false, 0)]
+        static void CreateCustomGameObject(MenuCommand menuCommand)
         {
             GameObject go = new GameObject("Prefab Spawner");
             go.AddComponent<PrefabSpawner>();
-            UnityEditor.GameObjectUtility.SetParentAndAlign(go, menuCommand.context as GameObject);
-            UnityEditor.Undo.RegisterCreatedObjectUndo(go, "Create " + go.name);
-            UnityEditor.Selection.activeObject = go;
+            GameObjectUtility.SetParentAndAlign(go, menuCommand.context as GameObject);
+            Undo.RegisterCreatedObjectUndo(go, "Create " + go.name);
+            Selection.activeObject = go;
+        }
+
+        [MenuItem("GameObject/Replace with Prefab Spawner", false, 0)]
+        private static void ReplaceWithPrefabSpawner(MenuCommand menuCommand)
+        {
+            if(Selection.activeObject == null)
+            {
+                Debug.LogWarning("No prefab selected to replace.");
+                return;
+            }
+            GameObject prefab = PrefabUtility.GetCorrespondingObjectFromSource(Selection.activeObject) as GameObject;
+            if (prefab == null)
+            {
+                Debug.LogWarning("Selected object is not a prefab.");
+                return;
+            }
+
+            GameObject go = new GameObject("Prefab Spawner");
+            PrefabSpawner spawner = go.AddComponent<PrefabSpawner>();
+            spawner.SetPrefab(prefab);
+            spawner.transform.position = Selection.activeTransform.position;
+            Undo.RegisterCreatedObjectUndo(go, "Create " + go.name);
+
+            if (Selection.activeGameObject != null)
+            {
+                Undo.DestroyObjectImmediate(Selection.activeGameObject);
+            }
+
+            Selection.activeObject = go;
         }
 #endif
     }
