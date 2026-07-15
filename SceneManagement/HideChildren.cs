@@ -5,36 +5,45 @@ namespace SceneManagement
     [DisallowMultipleComponent]
     public class HideChildren : MonoBehaviour
     {
-        [SerializeField] private bool _isHidden = true;
-        [SerializeField] private HideFlags _hideFlags = HideFlags.HideInHierarchy | HideFlags.HideInInspector;
+        [field: SerializeField] public bool IsHidden { get; set; } = true;
+        [field: SerializeField] public bool ShowInPrefabMode { get; set; } = true;
 
-#if UNITY_EDITOR
+        private static HideFlags _hiddenFlags = HideFlags.HideInHierarchy | HideFlags.HideInInspector;
+        private static HideFlags _visibleFlags = HideFlags.None;
+
         private void OnValidate()
         {
-            SetHideState();
+            SetChildrenHideFlags(gameObject, IsHidden);
         }
 
         private void Awake()
         {
-            SetHideState();
+            SetChildrenHideFlags(gameObject, IsHidden);
         }
 
-        private void SetHideState()
+        public void SetHidden(bool hidden)
         {
-            HideFlags flags = _isHidden ? _hideFlags : HideFlags.None;
-            SetChildrenHideFlags(gameObject, flags);
+            IsHidden = hidden;
+            SetChildrenHideFlags(gameObject, hidden);
         }
 
-        public static void SetChildrenHideFlags(GameObject gameObject, HideFlags hideFlags = HideFlags.HideInHierarchy | HideFlags.HideInInspector)
+        public static void SetChildrenHideFlags(GameObject gameObject, bool hidden)
         {
+            HideFlags flags = hidden ? _hiddenFlags : _visibleFlags;
             Transform[] tranforms = gameObject.GetComponentsInChildren<Transform>();
             for (int i = 0; i < tranforms.Length; i++)
             {
                 if (tranforms[i].gameObject == gameObject) continue;
-                tranforms[i].gameObject.hideFlags = hideFlags;
+                tranforms[i].gameObject.hideFlags = flags;
+            }
+
+            Component[] components = gameObject.GetComponents<Component>();
+            for (int i = 0; i < components.Length; i++)
+            {
+                if (components[i] is Transform) continue;
+                if (components[i] is HideChildren) continue;
+                components[i].hideFlags = flags;
             }
         }
-#endif
     }
-
 }
