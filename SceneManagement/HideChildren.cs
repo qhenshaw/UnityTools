@@ -3,6 +3,7 @@ using UnityEngine;
 namespace SceneManagement
 {
     [DisallowMultipleComponent]
+    [ExecuteAlways]
     public class HideChildren : MonoBehaviour
     {
         [field: SerializeField] public bool IsHidden { get; set; } = true;
@@ -25,6 +26,14 @@ namespace SceneManagement
         {
             IsHidden = hidden;
             SetChildrenHideFlags(gameObject, hidden);
+        }
+
+        private void OnDestroy()
+        {
+            if(!Application.isPlaying)
+            {
+                SetChildrenHideFlags(gameObject, false);
+            }
         }
 
         public static void SetChildrenHideFlags(GameObject gameObject, bool hidden)
