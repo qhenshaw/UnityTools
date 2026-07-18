@@ -11,7 +11,7 @@ using Sirenix.OdinInspector.Editor;
 using UnityEditor.SceneManagement;
 #endif
 
-namespace EditorTools.Editor
+namespace EditorTools
 {
     [ExecuteAlways]
     public class PrefabPlacer : OdinEditorWindow

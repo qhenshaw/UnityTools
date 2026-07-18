@@ -2,7 +2,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-namespace EditorTools.Editor
+namespace EditorTools
 {
     [InitializeOnLoad]
     public class CustomHierarchy : MonoBehaviour
