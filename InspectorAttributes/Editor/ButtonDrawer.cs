@@ -10,20 +10,16 @@ namespace InspectorAttributes.Editors
         private const BindingFlags MethodFlags =
             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
-        // Height of one button row.
-        private const float ButtonHeight = 22f;
-        // Small gap above the button so it doesn't crowd the field above it.
+        private const float ButtonHeight = 20f;
         private const float TopPadding = 2f;
 
         public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
         {
-            // Reserve space for the button; hide the field itself (height 0 would clip, so use button height).
             return ButtonHeight + TopPadding;
         }
 
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
-            // Only valid on string fields — the value is the method name.
             if (property.propertyType != SerializedPropertyType.String)
             {
                 EditorGUI.HelpBox(position,
@@ -33,16 +29,16 @@ namespace InspectorAttributes.Editors
             }
 
             var attr = (ButtonAttribute)attribute;
-            string method = property.stringValue;   // e.g. "SpawnEnemies"
+            string method = property.stringValue;
             bool isPlaying = Application.isPlaying;
             bool canClick = isPlaying || attr.AllowEditMode;
 
-            // Nicify "spawnEnemies" / "SpawnEnemies" → "Spawn Enemies" unless overridden.
             string btnLabel = !string.IsNullOrEmpty(attr.Label)
                 ? attr.Label
                 : ObjectNames.NicifyVariableName(method);
 
-            Rect btnRect = new Rect(position.x, position.y + TopPadding, position.width, ButtonHeight);
+            int width = attr.Width > 0 ? attr.Width : (int)position.width;
+            Rect btnRect = new Rect(position.x, position.y + TopPadding, width, ButtonHeight);
 
             EditorGUI.BeginDisabledGroup(!canClick);
 
@@ -51,7 +47,6 @@ namespace InspectorAttributes.Editors
 
             EditorGUI.EndDisabledGroup();
 
-            // Tooltip when disabled so the user understands why.
             if (!canClick)
             {
                 var tip = new GUIContent(string.Empty,
@@ -60,11 +55,8 @@ namespace InspectorAttributes.Editors
             }
         }
 
-        // ── Invocation ────────────────────────────────────────────────────────────
-
         private static void Invoke(SerializedProperty property, string methodName, ButtonAttribute attr)
         {
-            // Walk up to the root object that owns this serialized property.
             object owner = GetOwner(property);
             if (owner == null)
             {
@@ -98,26 +90,17 @@ namespace InspectorAttributes.Editors
                 EditorUtility.SetDirty(unityObj);
         }
 
-        /// <summary>
-        /// Resolves the actual C# object that owns the field — handles nested classes
-        /// and SerializedObject wrapping.
-        /// </summary>
         private static object GetOwner(SerializedProperty property)
         {
-            // property.serializedObject.targetObject is the root UnityEngine.Object.
             object current = property.serializedObject.targetObject;
-
-            // Walk the property path for nested structs/classes, e.g. "subData.spawnButton".
             string path = property.propertyPath.Replace(".Array.data[", "[");
             string[] parts = path.Split('.');
 
-            // Stop one part early — the last part IS the field itself, we want its owner.
             for (int i = 0; i < parts.Length - 1; i++)
             {
                 string part = parts[i];
                 if (part.Contains("["))
                 {
-                    // Array element: fieldName[index]
                     string fieldName = part[..part.IndexOf('[')];
                     int index = int.Parse(part[(part.IndexOf('[') + 1)..^1]);
                     var fi = current?.GetType().GetField(fieldName, MethodFlags);

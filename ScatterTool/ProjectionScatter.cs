@@ -1,18 +1,17 @@
 using UnityEngine;
+
+#if UNITY_EDITOR
+using UnityEditor;
 using InspectorAttributes;
 using UnityEngine.Search;
 using System.Collections.Generic;
 using System;
 using Random = UnityEngine.Random;
-
-
-#if UNITY_EDITOR
-using UnityEditor;
 #endif
 
 namespace ScatterTool
 {
-    [ExecuteAlways]
+    [ExecuteAlways, DisallowMultipleComponent]
     public class ProjectionScatter : MonoBehaviour
     {
 #if UNITY_EDITOR
@@ -91,22 +90,62 @@ namespace ScatterTool
             }
         }
 
+        [System.Serializable]
+        public class PositionOffset
+        {
+            public enum OffsetMode
+            {
+                None,
+                Surface,
+                World
+            }
+
+            public OffsetMode Mode = OffsetMode.None;
+            public Vector3 FixedOffset = Vector3.zero;
+            public Vector2 RandomX = new Vector2(0f, 0f);
+            public Vector2 RandomY = new Vector2(0f, 0f);
+            public Vector2 RandomZ = new Vector2(0f, 0f);
+
+            public Vector3 GetOffset(Vector3 normal, Vector3 tangent)
+            {
+                Vector3 offset = FixedOffset;
+                offset.x += Random.Range(RandomX.x, RandomX.y);
+                offset.y += Random.Range(RandomY.x, RandomY.y);
+                offset.z += Random.Range(RandomZ.x, RandomZ.y);
+                switch (Mode)
+                {
+                    case OffsetMode.None:
+                        return Vector3.zero;
+                    case OffsetMode.Surface:
+                        Quaternion rotation = Quaternion.LookRotation(tangent, normal);
+                        return rotation * offset;
+                    case OffsetMode.World:
+                        return offset;
+                    default:
+                        return offset;
+                }
+            }
+        }
+
         private struct ScatterPoint
         {
             public Vector3 Position;
             public Vector3 Normal;
             public Vector3 Tangent;
+            public Quaternion Rotation;
+            public float Scale;
             public float Weight;
+            public int PrefabIndex;
         }
 
         [System.Serializable]
-        private class ValueRange
+        public class ValueRange
         {
             public float Min;
             public float Max;
             public bool BasedOnWeight;
             public AnimationCurve WeightCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
-            [Button("Reset Curve", allowEditMode: true), SerializeField]
+            [Button("Reset Curve", true, 90), SerializeField]
             public string _resetCurve = nameof(ResetCurve);
 
             public void ResetCurve()
@@ -135,31 +174,84 @@ namespace ScatterTool
             }
         }
 
-        [SerializeField] private Texture2D _scatterMap;
-        [SerializeField] private int _seed = 0;
-        [SerializeField] private bool _randomSeed = false;
-        [SerializeField] private Vector2 _size = new Vector2(5f, 5f);
-        [SerializeField] private float _projectionDistance = 10f;
-        [SerializeField] private LayerMask _projectionMask;
-        [SerializeField] private float _jitter = 0.4f;
-        [SerializeField] private float _updateRate = 5f;
-        [SerializeField] private float _weightCutoff = 0.1f;
-        [SerializeField] private bool _autoBake;
-        [SerializeField, Range(0.1f, 8f)] private float _density = 1f;
-        [SerializeField] private NormalFilter _normalFilter;
-        [SerializeField] private RotationRange _rotationRange;
-        [SerializeField] private ValueRange _scaleRange = new ValueRange(1f, 2f, true);
-        [SerializeField, SearchContext("p: t:Prefab")] private GameObject[] _prefabs;
+        [System.Serializable]
+        public class PrefabItem
+        {
+            [SearchContext("p: t:Prefab")] public GameObject Prefab;
+            [Range(0f, 10f)] public float Weight = 1f;
+            public ValueRange ScaleRange = new ValueRange(1f, 1f, true);
+            [Range(0f, 10f)] public float ScaleMultiplier = 1f;
 
-        [Button("Clear", allowEditMode: true), SerializeField]
+            public float GetScale(float weight)
+            {
+                return ScaleRange.GetValue(weight) * ScaleMultiplier;
+            }
+        }
+
+        [SerializeField] private int _seed = 0;
+        [SerializeField] private bool _autoBake = true;
+        [SerializeField, Range(4, 32)] private int _resolution = 16;
+        [SerializeField, Range(0.1f, 8f)] private float _density = 1f;  
+        [SerializeField] private Vector3 _size = new Vector3(5f, 5f, 5f);
+        [SerializeField, HideInInspector] private Bounds _bounds = new Bounds(new Vector3(0f, 0f, 2.5f), new Vector3(5f, 5f, 5f));
+        [SerializeField] private LayerMask _projectionMask;
+        private bool _ignoreSpawned = true;
+        [SerializeField, Range(0f, 1f)] private float _jitter = 1f;
+        private float _updateRate = 5f;
+        [SerializeField, Range(0.01f, 1f)] private float _weightCutoff = 0.01f;
+        [SerializeField, Range(0.1f, 10f)] private float _scaleMultiplier = 1f;
+        [SerializeField] private PrefabItem[] _prefabs;
+        [SerializeField] private NormalFilter _normalFilter;
+        [SerializeField] private PositionOffset _positionOffset;
+        [SerializeField] private RotationRange _rotationRange;
+        [field: SerializeField] public int InstanceCount { get; private set; } = 0;
+
+#pragma warning disable 0414
+        [Button("Clear", allowEditMode: true, 60), SerializeField]
         private string _clear = nameof(Clear);
 
-        [Button("Bake", allowEditMode: true), SerializeField]
+        [Button("Bake", allowEditMode: true, 60), SerializeField]
         private string _bake = nameof(Bake);
+#pragma warning restore 0414
 
-        private Mesh _quadMesh;
-        private Color32[] _pixels;
-        private float[] _weights;
+        public int TotalWeights => _resolution * _resolution;
+
+        public float[] Weights
+        {
+            get
+            {
+                if (_weights == null || _weights.Length != TotalWeights)
+                {
+                    _weights = new float[TotalWeights];
+                    IsDirty = true;
+                }
+                return _weights;
+            }
+        }
+
+        public Bounds LocalBounds
+        {
+            get => _bounds;
+            set => _bounds = value;
+        }
+
+        public Vector3 Size
+        {
+            get => _size;
+            set
+            {
+                _size = value;
+                _bounds.size = new Vector3(Mathf.Max(0.1f, _size.x), Mathf.Max(0.1f, _size.y), Mathf.Max(0.1f, _size.z));
+                _bounds.center = new Vector3(0f, 0f, _bounds.size.z / 2f);
+                IsDirty = true;
+            }
+        }
+
+        public float ProjectionDistance => _bounds.size.z;
+
+        public bool IsDirty { get => _isDirty; set => _isDirty = value; }
+
+        [HideInInspector, SerializeField] private float[] _weights;
         private ScatterPoint[] _scatterPoints;
         private Vector3 _previousPosition;
         private Quaternion _previousRotation;
@@ -170,17 +262,23 @@ namespace ScatterTool
 
         private void Reset()
         {
-            _projectionDistance = LayerMask.NameToLayer("Default");
+            _projectionMask = LayerMask.GetMask("Default");
         }
 
         private void OnValidate()
         {
             _isDirty = true;
+            transform.localScale = Vector3.one;
+            _size = new Vector3(Mathf.Max(0.1f, _size.x), Mathf.Max(0.1f, _size.y), Mathf.Max(0.1f, _size.z));
+            _bounds.center = new Vector3(0f, 0f, Size.z / 2f);
+            _bounds.size = Size;
         }
 
         private void Update()
         {
             if (!Application.isEditor || Application.isPlaying) return;
+
+            transform.localScale = Vector3.one;
 
             if (transform.position != _previousPosition || 
                 transform.rotation != _previousRotation ||
@@ -203,71 +301,77 @@ namespace ScatterTool
         private void UpdatePoints()
         {
             if (!Application.isEditor || Application.isPlaying) return;
-            if (_scatterMap == null) return;
+            if (_prefabs == null || _prefabs.Length == 0) return;
 
             for (int i = 0; i < _prefabs.Length; i++)
             {
-                if (_prefabs[i] == null) return;
+                if (_prefabs[i].Prefab == null) return;
             }
 
-            int total = _scatterMap.width * _scatterMap.height;
             if(_density <= 0f) _density = 0.1f;
             int safeDensity = Mathf.Max(1, Mathf.RoundToInt(_density));
-            int densityTotal = Mathf.RoundToInt(total * safeDensity);
-            if (_pixels == null || _pixels.Length != total) _pixels = new Color32[total];
-            if (_weights == null || _weights.Length != total) _weights = new float[total];
+            int densityTotal = Mathf.RoundToInt(TotalWeights * safeDensity);
+            if (_weights == null || _weights.Length != TotalWeights) _weights = new float[TotalWeights];
             if (_scatterPoints == null || _scatterPoints.Length != densityTotal) _scatterPoints = new ScatterPoint[densityTotal];
-
-            _pixels = _scatterMap.GetPixels32();
-            for (int i = 0; i < _pixels.Length; i++)
-            {
-                _weights[i] = _pixels[i].r / 255f;
-            }
-
-            if (_randomSeed) _seed = Random.Range(int.MinValue, int.MaxValue);
-            Random.InitState(_seed);
 
             for (int i = 0; i < _scatterPoints.Length; i++)
             {
                 _scatterPoints[i].Weight = 0f;
             }
 
-            int scatterCount = 0;
-            Vector2 spreadMax = new Vector2(1f / _scatterMap.width, 1f / _scatterMap.height);
+            Clear();
+
+            InstanceCount = 0;
+            Vector2 spreadMax = new Vector2(1f / _resolution, 1f / _resolution);
             for (int i = 0; i < _weights.Length; i++)
             {
                 float weight = _weights[i];
                 if (weight > _weightCutoff)
                 {
-                    Vector2 normalizedCoord = LinearToNormalizedV2Coord(i, _scatterMap.width, _scatterMap.height);
+                    Vector2 normalizedCoord = LinearToNormalizedV2Coord(i, _resolution, _resolution);
                     for (int j = 0; j < safeDensity; j++)
                     {
+                        Random.InitState(GetNormalizedCoordSeed(normalizedCoord) + j * 10000);
                         if(_density < 1f && Random.value > _density) continue;
-                        Vector2 spread = new Vector2(Random.Range(-_jitter, _jitter) * spreadMax.x, Random.Range(-_jitter, _jitter) * spreadMax.y);
-                        Vector2 jitterCoord = normalizedCoord + spread;
+                        Vector2 jitterAmount = Random.insideUnitCircle * _jitter * spreadMax;
+                        Vector2 jitterCoord = normalizedCoord + jitterAmount;
                         Vector3 worldPos = NormalizedV2CoordToWorld(jitterCoord);
                         Vector3 direction = transform.forward;
                         Vector3 hitLocation = worldPos;
 
-                        int hitCount = Physics.RaycastNonAlloc(worldPos, direction, _raycastHits, _projectionDistance, _projectionMask);
+                        int hitCount = Physics.RaycastNonAlloc(worldPos, direction, _raycastHits, _bounds.size.z, _projectionMask);
                         if (hitCount >= 1)
                         {
-                            if(!GetClosestNonChildHit(_raycastHits, hitCount, transform, out RaycastHit hit)) continue;
+                            RaycastHit hit;
+                            if (!_ignoreSpawned)
+                            {
+                                Array.Sort(_raycastHits, 0, hitCount, DistanceComparer.Instance);
+                                hit = _raycastHits[0];
+                            }
+                            else if (!GetClosestNonChildHit(_raycastHits, hitCount, transform, out hit))
+                            {
+                                continue;
+                            }
+
                             if (_normalFilter.Filter(hit.normal, transform.forward))
                             {
-                                Vector3 cross = Vector3.Cross(hit.normal, direction);
-                                if(cross.magnitude < 0.1f)
+                                Vector3 tangent = Vector3.Cross(hit.normal, direction);
+                                if(tangent.magnitude < 0.1f)
                                 {
-                                    cross = (cross + new Vector3(0f, 0f, 0.01f)).normalized;
+                                    tangent = (tangent + new Vector3(0f, 0f, 0.01f)).normalized;
                                 }
+                                int prefabIndex = GetRandomWeightedPrefabIndex();
                                 ScatterPoint scatterPoint = new ScatterPoint
                                 {
-                                    Position = hit.point,
+                                    Position = hit.point + _positionOffset.GetOffset(hit.normal, tangent),
                                     Normal = hit.normal,
-                                    Tangent = cross,
-                                    Weight = weight
+                                    Tangent = tangent,
+                                    Rotation = _rotationRange.GetRotation(hit.normal, tangent),
+                                    Scale = _prefabs[prefabIndex].GetScale(weight) * _scaleMultiplier,
+                                    Weight = weight,
+                                    PrefabIndex = prefabIndex,
                                 };
-                                _scatterPoints[scatterCount++] = scatterPoint;
+                                _scatterPoints[InstanceCount++] = scatterPoint;
                             }
                         }
                     }
@@ -275,6 +379,34 @@ namespace ScatterTool
             }
 
             if(_autoBake) Bake();
+        }
+
+        private int GetRandomWeightedPrefabIndex()
+        {
+            float totalWeight = 0f;
+            for (int i = 0; i < _prefabs.Length; i++)
+            {
+                totalWeight += _prefabs[i].Weight;
+            }
+            float randomValue = Random.Range(0f, totalWeight);
+            float cumulativeWeight = 0f;
+            for (int i = 0; i < _prefabs.Length; i++)
+            {
+                cumulativeWeight += _prefabs[i].Weight;
+                if (randomValue <= cumulativeWeight)
+                {
+                    return i;
+                }
+            }
+
+            return 0;
+        }
+
+        private int GetNormalizedCoordSeed(Vector2 normalizedCoord)
+        {
+            int x = Mathf.FloorToInt(normalizedCoord.x * 5646575);
+            int y = Mathf.FloorToInt(normalizedCoord.y * 8686435);
+            return x + y + _seed;
         }
 
         private bool GetClosestNonChildHit(RaycastHit[] hits, int hitCount, Transform parent, out RaycastHit validHit)
@@ -311,66 +443,24 @@ namespace ScatterTool
         public void Bake()
         {
             Clear();
+            Random.InitState(_seed);
             for (int i = 0; i < _scatterPoints.Length; i++)
             {
                 ScatterPoint point = _scatterPoints[i];
                 if (point.Weight > _weightCutoff && _prefabs.Length > 0)
                 {
-                    int prefabIndex = Random.Range(0, _prefabs.Length);
-                    GameObject prefab = _prefabs[prefabIndex];
+                    PrefabItem prefabItem = _prefabs[point.PrefabIndex];
+                    GameObject prefab = prefabItem.Prefab;
                     if (prefab != null)
                     {
                         GameObject instance = PrefabUtility.InstantiatePrefab(prefab, transform) as GameObject;
                         instance.transform.position = point.Position;
-                        instance.transform.rotation = _rotationRange.GetRotation(point.Normal, point.Tangent);
+                        instance.transform.rotation = point.Rotation;
                         instance.transform.localScale = new Vector3(1f / transform.localScale.x, 1f / transform.localScale.y, 1f / transform.localScale.z);
-                        instance.transform.localScale *= _scaleRange.GetValue(point.Weight);
+                        instance.transform.localScale *= point.Scale;
                     }
                 }
             }
-        }
-
-        private void OnDrawGizmosSelected()
-        {
-            Gizmos.color = Color.white;
-            Gizmos.DrawWireMesh(GetQuadMesh(), transform.position, transform.rotation, new Vector3(_size.x * transform.localScale.x, _size.y * transform.localScale.y, 1f));
-            Gizmos.DrawWireMesh(GetQuadMesh(), transform.position + transform.forward * _projectionDistance, transform.rotation, new Vector3(_size.x * transform.localScale.x, _size.y * transform.localScale.y, 1f));
-            Gizmos.DrawRay(NormalizedV2CoordToWorld(new Vector2(0f, 0f)), transform.forward * _projectionDistance);
-            Gizmos.DrawRay(NormalizedV2CoordToWorld(new Vector2(1f, 0f)), transform.forward * _projectionDistance);
-            Gizmos.DrawRay(NormalizedV2CoordToWorld(new Vector2(0f, 1f)), transform.forward * _projectionDistance);
-            Gizmos.DrawRay(NormalizedV2CoordToWorld(new Vector2(1f, 1f)), transform.forward * _projectionDistance);
-
-            if (_scatterMap == null) return;
-            if (_weights == null) return;
-            if (_scatterPoints == null) return;
-
-            for (int i = 0; i < _weights.Length; i++)
-            {
-                float weight = _weights[i];
-                if (weight > _weightCutoff)
-                {
-                    Vector2 normalizedCoord = LinearToNormalizedV2Coord(i, _scatterMap.width, _scatterMap.height);
-                    Vector3 worldPos = NormalizedV2CoordToWorld(normalizedCoord);
-                    Gizmos.color = new Color(1f, 1f, 1f, weight);
-                    Gizmos.DrawSphere(worldPos, 0.05f);
-                }
-            }
-
-            for (int i = 0; i < _scatterPoints.Length; i++)
-            {
-                float weight = _scatterPoints[i].Weight;
-                Gizmos.color = new Color(1f, 0f, 0f, weight);
-                Gizmos.DrawSphere(_scatterPoints[i].Position, 0.05f);
-            }
-        }
-
-        private Mesh GetQuadMesh()
-        {
-            if(_quadMesh == null)
-            {
-                _quadMesh = Resources.GetBuiltinResource<Mesh>("Quad.fbx");
-            }
-            return _quadMesh;
         }
 
         private Vector2 LinearToNormalizedV2Coord(int index, int width, int height)
@@ -382,8 +472,77 @@ namespace ScatterTool
 
         private Vector3 NormalizedV2CoordToWorld(Vector2 normalizedCoord)
         {
-            Vector3 localPos = new Vector3((normalizedCoord.x - 0.5f) * _size.x, (normalizedCoord.y - 0.5f) * _size.y, 0f);
+            Vector3 localPos = new Vector3((normalizedCoord.x - 0.5f) * _bounds.size.x, (normalizedCoord.y - 0.5f) * _bounds.size.y, 0f);
             return transform.TransformPoint(localPos);
+        }
+
+        public bool GetMouseHit(Ray mouseRay, out RaycastHit hit)
+        {
+            Vector3 planeNormal = -transform.forward;
+            Plane projectionPlane = new Plane(planeNormal, transform.position);
+            if (projectionPlane.Raycast(mouseRay, out float enter))
+            {
+                Vector3 hitPoint = mouseRay.GetPoint(enter);
+                Vector3 localHitPoint = transform.InverseTransformPoint(hitPoint);
+                Vector2 normalizedCoord = new Vector2((localHitPoint.x / _bounds.size.x) + 0.5f, (localHitPoint.y / _bounds.size.y) + 0.5f);
+                if (normalizedCoord.x >= 0f && normalizedCoord.x <= 1f && normalizedCoord.y >= 0f && normalizedCoord.y <= 1f)
+                {
+                    hit = new RaycastHit();
+                    hit.point = hitPoint;
+                    hit.normal = planeNormal;
+                    return true;
+                }
+            }
+            hit = new RaycastHit();
+            return false;
+        }
+
+        public Vector3 GetWorldPositionFromWeightIndex(int weightIndex)
+        {
+            Vector2 normalizedCoord = LinearToNormalizedV2Coord(weightIndex, _resolution, _resolution);
+            return NormalizedV2CoordToWorld(normalizedCoord);
+        }
+
+        public void SetWeight(int weightIndex, float weight)
+        {
+            Weights[weightIndex] = Mathf.Clamp01(weight);
+            _isDirty = true;
+        }
+
+        public void SetWeights(float[] newWeights)
+        {
+            if (newWeights.Length != Weights.Length)
+            {
+                Debug.LogError("New weights array length does not match the existing weights array length.");
+                return;
+            }
+            for (int i = 0; i < Weights.Length; i++)
+            {
+                Weights[i] = Mathf.Clamp01(newWeights[i]);
+            }
+
+            IsDirty = true;
+        }
+
+        public void Flood(float value)
+        {
+            for (int i = 0; i < Weights.Length; i++)
+            {
+                Weights[i] = Mathf.Clamp01(value);
+            }
+            IsDirty = true;
+        }
+
+        [MenuItem("GameObject/Projection Scatter Tool", false, 0)]
+        static void CreateCustomGameObject(MenuCommand menuCommand)
+        {
+            GameObject go = new GameObject("Projection Scatter");
+            ProjectionScatter ps = go.AddComponent<ProjectionScatter>();
+            ps._seed = Random.Range(0, int.MaxValue);
+            GameObjectUtility.SetParentAndAlign(go, menuCommand.context as GameObject);
+            go.transform.forward = Vector3.down;
+            Undo.RegisterCreatedObjectUndo(go, "Create " + go.name);
+            Selection.activeObject = go;
         }
 #endif
     }
