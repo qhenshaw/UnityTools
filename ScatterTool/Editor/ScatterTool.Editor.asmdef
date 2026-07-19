@@ -1,0 +1,18 @@
+{
+    "name": "ScatterTool.Editor",
+    "rootNamespace": "ScatterTool.Editor",
+    "references": [
+        "GUID:d252ca968a9f2c646bc421f9dd28ac88"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -4,14 +4,14 @@ using UnityEngine;
 using UnityEditor;
 using UnityEngine.Rendering;
 
-namespace EditorTools.Editor
+namespace EditorTools
 {
     public class ReflectionProbeHelper
     {
         [MenuItem("GameObject/Light/Surround with Reflection Probe", false, priority = -100)]
         static void SurroundWithReflectionProbe(MenuCommand menuCommand)
         {
-            if(BoundsUtils.TryGetSelectionBounds(out Bounds bounds, 2f))
+            if(BoundsUtils.TryGetSelectionBounds(out Bounds bounds, 4f))
             {
                 Selection.objects = null;
                 GameObject gameObject = new GameObject("Reflection Probe");
@@ -27,7 +27,7 @@ namespace EditorTools.Editor
         [MenuItem("GameObject/Light/Surround with Probe Volume", false, priority = -99)]
         static void SurroundWithProbeVolume(MenuCommand menuCommand)
         {
-            if (BoundsUtils.TryGetSelectionBounds(out Bounds bounds, 2f))
+            if (BoundsUtils.TryGetSelectionBounds(out Bounds bounds, 4f))
             {
                 Selection.objects = null;
                 GameObject gameObject = new GameObject("Probe Volume");
