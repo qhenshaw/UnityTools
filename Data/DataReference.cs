@@ -11,7 +11,9 @@ namespace UnityTools.Data
     [Serializable]
     public class DataReference<T> where T : ScriptableObject
     {
+#pragma warning disable CS0414
         [SerializeField, Button("Create New", true, 80)] private string _createNewButton = nameof(CreateNew);
+#pragma warning restore CS0414
         [field: SerializeField]
         public T Persistent { get; private set; }
 

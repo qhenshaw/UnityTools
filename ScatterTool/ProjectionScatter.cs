@@ -168,7 +168,9 @@ namespace ScatterTool
             [Range(0.01f, 10f)] public float Multiplier;
             public bool BasedOnWeight;
             public AnimationCurve WeightCurve;
+#pragma warning disable CS0414
             [Button("Reset Curve", true, 90), SerializeField] private string _resetCurve = "";
+#pragma warning restore CS0414
 
             public void OnBeforeSerialize() { }
 

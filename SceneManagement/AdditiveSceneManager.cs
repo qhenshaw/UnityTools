@@ -15,10 +15,12 @@ namespace SceneManagement
     [DisallowMultipleComponent]
     public class AdditiveSceneManager : MonoBehaviour
     {
+#pragma warning disable CS0414
         [SerializeField] private string _newSceneName;
         [SerializeField, Button("Add New Scene", true)] private string _addNewSceneButton = nameof(AddNewScene);
         [field: SerializeField] public List<string> SceneList { get; private set; }
         [SerializeField, Button("Load Scene List", true)] private string _loadSceneListButton = nameof(LoadSceneList);
+#pragma warning restore CS0414
 
         private void Awake()
         {
