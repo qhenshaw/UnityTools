@@ -74,8 +74,7 @@ namespace ScatterTool.Editor
             float strength = ProjectionScatterOverlay.Strength;
             AnimationCurve falloffCurve = ProjectionScatterOverlay.Falloff;
             float dotSize = ProjectionScatterOverlay.DotSize;
-
-            Handles.color = Color.white;
+            float dotOpacity = ProjectionScatterOverlay.DotOpacity;
 
             if (Event.current.isKey && Event.current.keyCode == KeyCode.LeftControl)
             {
@@ -89,6 +88,8 @@ namespace ScatterTool.Editor
                 }
                 Event.current.Use();
             }
+
+            Handles.color = new Color(1f, 1f, 1f, dotOpacity);
 
             _newWeights.Clear();
             float weightModifier = _controlPressed ? -1f : 1f;
@@ -129,6 +130,7 @@ namespace ScatterTool.Editor
 
             using (new Handles.DrawingScope())
             {
+                Handles.color = Color.white;
                 Handles.DrawWireDisc(hitInfo.point, hitInfo.normal, radius);
             }
 
@@ -149,10 +151,11 @@ namespace ScatterTool.Editor
     public class ProjectionScatterOverlay : Overlay, ITransientOverlay
     {
         public static bool IsVisible { get; set; } = false;
-        public static float Radius { get; private set; } = 1f;
-        public static float Strength { get; private set; } = 1f;
+        public static float Radius { get; private set; } = 2f;
+        public static float Strength { get; private set; } = 0.3f;
         public static AnimationCurve Falloff { get; private set; } = new AnimationCurve(new Keyframe[] { new Keyframe(0f, 1f, 0f, 0f), new Keyframe(1f, 0f, -3f, 3f) });
-        public static float DotSize { get; private set; } = 0.1f;
+        public static float DotSize { get; private set; } = 0.05f;
+        public static float DotOpacity { get; private set; } = 0.5f;
 
         public static event EventHandler OnResetMask;
         public static event EventHandler OnFloodMask;
@@ -160,7 +163,7 @@ namespace ScatterTool.Editor
         public bool visible => IsVisible;
 
         private CurveField _falloff;
-        private Vector2 _defaultSize = new Vector2(400f, 180f);
+        private Vector2 _defaultSize = new Vector2(400f, 200f);
 
         public override void OnCreated()
         {
@@ -181,11 +184,11 @@ namespace ScatterTool.Editor
             };
 
             var radius = new FloatField("Radius");
-            radius.value = 1f;
+            radius.value = Radius;
             radius.RegisterCallback<ChangeEvent<float>>((evt) => Radius = evt.newValue);
 
             var strength = new Slider("Strength", 0f, 1f);
-            strength.value = 1f;
+            strength.value = Strength;
             strength.RegisterCallback<ChangeEvent<float>>((evt) => Strength = evt.newValue);
 
             _falloff = new CurveField("Falloff");
@@ -197,8 +200,12 @@ namespace ScatterTool.Editor
             };
 
             var dotSize = new FloatField("Dot Size");
-            dotSize.value = 0.1f;
+            dotSize.value = DotSize;
             dotSize.RegisterCallback<ChangeEvent<float>>((evt) => DotSize = evt.newValue);
+
+            var dotOpacity = new Slider("Dot Opacity", 0f, 1f);
+            dotOpacity.value = DotOpacity;
+            dotOpacity.RegisterCallback<ChangeEvent<float>>((evt) => DotOpacity = evt.newValue);
 
             var notes = new Label($"Left click to paint mask {Environment.NewLine}" +
                                   $"Ctrl + Left click to erase mask");
@@ -216,6 +223,7 @@ namespace ScatterTool.Editor
             panel.Add(strength);
             panel.Add(_falloff);
             panel.Add(dotSize);
+            panel.Add(dotOpacity);
             panel.Add(CreateHorizontalLine());
             panel.Add(notes);
 
