@@ -10,6 +10,7 @@ namespace UnityTools.Messaging
         public static MessagingService Instance { get; private set; }
 
         private Dictionary<Enum, IList> Channels { get; set; }
+        private List<object> Copy { get; set; } = new List<object>();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void Initialize()
@@ -36,9 +37,9 @@ namespace UnityTools.Messaging
             if (!Channels.ContainsKey(tag)) return;
 
             IList list = Channels[tag];
-            List<object> copy = new List<object>();
-            foreach (var item in list) copy.Add(item);
-            foreach (var item in copy)
+            Copy.Clear();
+            foreach (var item in list) Copy.Add(item);
+            foreach (var item in Copy)
             {
                 if(item is Action<T> action)
                 {
