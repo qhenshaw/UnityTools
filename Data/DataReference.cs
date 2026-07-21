@@ -1,6 +1,6 @@
-using Sirenix.OdinInspector;
 using UnityEngine;
 using System;
+using InspectorAttributes;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -8,14 +8,14 @@ using UnityEditor;
 
 namespace UnityTools.Data
 {
-    [Serializable, BoxGroup, InlineProperty, LabelWidth(100f)]
+    [Serializable]
     public class DataReference<T> where T : ScriptableObject
     {
-        [field: SerializeField, Required, InlineEditor, HideIf("_runtime")]
-        [field: InlineButton("CreateNew", "New", Icon = SdfIconType.PlusSquare, ShowIf = "@!Persistent")]
+        [SerializeField, Button("Create New", true, 80)] private string _createNewButton = nameof(CreateNew);
+        [field: SerializeField]
         public T Persistent { get; private set; }
 
-        [SerializeField, InlineEditor, ShowIf("_runtime")]
+        [SerializeField]
         private T _runtime;
         public T Runtime
         {
