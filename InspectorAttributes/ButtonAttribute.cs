@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace InspectorAttributes
 {
-    [AttributeUsage(AttributeTargets.Field)]
+    [AttributeUsage(AttributeTargets.Field, Inherited = true, AllowMultiple = false)]
     public class ButtonAttribute : PropertyAttribute
     {
         public string Label { get; }
