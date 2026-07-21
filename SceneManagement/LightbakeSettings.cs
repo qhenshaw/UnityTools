@@ -1,7 +1,8 @@
-using Sirenix.OdinInspector;
 using UnityEngine;
-using UnityEngine.Rendering;
+
 #if UNITY_EDITOR
+using InspectorAttributes;
+using UnityEngine.Rendering;
 using UnityEditor;
 #endif
 
@@ -20,16 +21,29 @@ namespace SceneManagement
             DynamicBakeReflections
         }
 
-        [SerializeField, InlineButton(nameof(ApplyPreset), "Apply")] private LightBakePreset _preset;
-        [SerializeField]
-        private StaticEditorFlags _flags = StaticEditorFlags.ContributeGI |
-                                           StaticEditorFlags.BatchingStatic |
-                                           StaticEditorFlags.ReflectionProbeStatic |
-                                           StaticEditorFlags.OccluderStatic |
-                                           StaticEditorFlags.OccludeeStatic;
+        [SerializeField] private LightBakePreset _preset;
+        [SerializeField] private StaticEditorFlags _flags;
         [SerializeField] private ReceiveGI _bakeMode = ReceiveGI.LightProbes;
         [SerializeField] private ShadowCastingMode _shadowCastingMode = ShadowCastingMode.On;
         [SerializeField] private bool _staticShadowCaster = true;
+        [SerializeField, Button("Apply", true)] private string _applyButton = nameof(ApplyCurrentSettings);
+
+        private LightBakePreset _previousPreset;
+
+        private void Reset()
+        {
+            _preset = LightBakePreset.FullStatic;
+            ApplyPreset();
+        }
+
+        private void OnValidate()
+        {
+            if(_previousPreset != _preset)
+            {
+                ApplyPreset();
+                _previousPreset = _preset;
+            }
+        }
 
         private void ApplyPreset()
         {
@@ -74,11 +88,8 @@ namespace SceneManagement
                     _staticShadowCaster = false;
                     break;
             }
-
-            ApplyCurrentSettings();
         }
 
-        [Button]
         public void ApplyCurrentSettings()
         {
             Debug.Log($"Lighting settings applied under object: {gameObject.name}", gameObject);

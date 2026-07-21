@@ -1,14 +1,11 @@
-using Sirenix.OdinInspector;
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using InspectorAttributes;
+using System;
 
 #if UNITY_EDITOR
-using UnityEditor;
 using UnityEditor.SceneManagement;
 #endif
 
@@ -18,15 +15,16 @@ namespace SceneManagement
     [DisallowMultipleComponent]
     public class AdditiveSceneManager : MonoBehaviour
     {
-        [ShowInInspector, InlineButton("AddNewScene", "Add New")] private string _newSceneName;
+        [SerializeField] private string _newSceneName;
+        [SerializeField, Button("Add New Scene", true)] private string _addNewSceneButton = nameof(AddNewScene);
         [field: SerializeField] public List<string> SceneList { get; private set; }
+        [SerializeField, Button("Load Scene List", true)] private string _loadSceneListButton = nameof(LoadSceneList);
 
         private void Awake()
         {
             LoadSceneList();
         }
 
-        [Button]
         public void LoadSceneList()
         {
             List<string> loaded = new List<string>();
