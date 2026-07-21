@@ -27,18 +27,26 @@ namespace ScatterTool
         }
 
         [System.Serializable]
-        private class NormalFilter
+        public class NormalFilter : ISerializationCallbackReceiver
         {
             public enum NormalFilterMode
             {
-                None,
+                Custom,
                 Projector,
-                Custom
+                None,
             }
 
             public NormalFilterMode Mode = NormalFilterMode.Custom;
             public Vector3 CustomDirection = new Vector3(0f, 1f, 0f);
             public float AngleThreshold = 45f;
+
+            public void OnBeforeSerialize() { }
+
+            public void OnAfterDeserialize()
+            {
+                if (CustomDirection.magnitude < 0.01f) CustomDirection = new Vector3(0f, 1f, 0f);
+                if (AngleThreshold <= 0f) AngleThreshold = 45f;
+            }
 
             public bool Filter(Vector3 normal, Vector3 projectorForward)
             {
@@ -57,18 +65,29 @@ namespace ScatterTool
         }
 
         [System.Serializable]
-        private class RotationRange
+        public class RotationRange : ISerializationCallbackReceiver
         {
             public enum RotationMode
             {
                 Surface,
-                World
+                World,
+                None,
             }
 
             public RotationMode Mode = RotationMode.Surface;
             public Vector2 RangeX = new Vector2(0f, 0f);
             public Vector2 RangeY = new Vector2(0f, 360f);
             public Vector2 RangeZ = new Vector2(0f, 0f);
+
+            public void OnBeforeSerialize() { }
+
+            public void OnAfterDeserialize()
+            {
+                if (Mode != RotationMode.None && RangeY.x == 0f && RangeY.y == 0f)
+                {
+                    RangeY = new Vector2(0f, 360f);
+                }
+            }
 
             public Quaternion GetRotation(Vector3 normal, Vector3 tangent)
             {
@@ -79,6 +98,9 @@ namespace ScatterTool
                         baseRotation = Quaternion.LookRotation(tangent, normal);
                         break;
                     case RotationMode.World:
+                        baseRotation = Quaternion.identity;
+                        break;
+                    case RotationMode.None:
                         baseRotation = Quaternion.identity;
                         break;
                 }
@@ -139,52 +161,69 @@ namespace ScatterTool
         }
 
         [System.Serializable]
-        public class ValueRange
+        public class ValueRange : ISerializationCallbackReceiver
         {
             public float Min;
             public float Max;
+            [Range(0.01f, 10f)] public float Multiplier;
             public bool BasedOnWeight;
-            public AnimationCurve WeightCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
-            [Button("Reset Curve", true, 90), SerializeField]
-            public string _resetCurve = nameof(ResetCurve);
+            public AnimationCurve WeightCurve;
+            [Button("Reset Curve", true, 90), SerializeField] private string _resetCurve = "";
+
+            public void OnBeforeSerialize() { }
+
+            public void OnAfterDeserialize()
+            {
+                if (Min <= 0f && Max <= 0f && Multiplier <= 0f)
+                {
+                    Min = 0.5f;
+                    Max = 1f;
+                    Multiplier = 1f;
+                    BasedOnWeight = true;
+                    WeightCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+                }
+                _resetCurve = nameof(ResetCurve);
+            }
 
             public void ResetCurve()
             {
                 WeightCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
-            }
-
-            public ValueRange(float min, float max, bool basedOnWeight)
-            {
-                Min = min;
-                Max = max;
-                BasedOnWeight = basedOnWeight;
-            }
+            }            
 
             public float GetValue(float weight)
             {
                 if (BasedOnWeight)
                 {
                     float curved = WeightCurve.Evaluate(weight);
-                    return Mathf.Lerp(Min, Max, curved);
+                    return Mathf.Lerp(Min, Max, curved) * Multiplier;
                 }
                 else
                 {
-                    return Random.Range(Min, Max);
+                    return Random.Range(Min, Max) * Multiplier;
                 }
             }
         }
 
         [System.Serializable]
-        public class PrefabItem
+        public class PrefabItem : ISerializationCallbackReceiver
         {
             [SearchContext("p: t:Prefab")] public GameObject Prefab;
             [Range(0f, 10f)] public float Weight = 1f;
-            public ValueRange ScaleRange = new ValueRange(1f, 1f, true);
-            [Range(0f, 10f)] public float ScaleMultiplier = 1f;
+            public NormalFilter NormalFilter;
+            public PositionOffset PositionOffset;
+            public RotationRange RotationRange;
+            public ValueRange ScaleRange;
+
+            public void OnBeforeSerialize() { }
+
+            public void OnAfterDeserialize()
+            {
+                if (Weight <= 0f) Weight = 1f;
+            }
 
             public float GetScale(float weight)
             {
-                return ScaleRange.GetValue(weight) * ScaleMultiplier;
+                return ScaleRange.GetValue(weight);
             }
         }
 
@@ -201,9 +240,6 @@ namespace ScatterTool
         [SerializeField, Range(0.01f, 1f)] private float _weightCutoff = 0.01f;
         [SerializeField, Range(0.1f, 10f)] private float _scaleMultiplier = 1f;
         [SerializeField] private PrefabItem[] _prefabs;
-        [SerializeField] private NormalFilter _normalFilter;
-        [SerializeField] private PositionOffset _positionOffset;
-        [SerializeField] private RotationRange _rotationRange;
         [field: SerializeField] public int InstanceCount { get; private set; } = 0;
 
 #pragma warning disable 0414
@@ -353,21 +389,22 @@ namespace ScatterTool
                                 continue;
                             }
 
-                            if (_normalFilter.Filter(hit.normal, transform.forward))
+                            int prefabIndex = GetRandomWeightedPrefabIndex();
+                            PrefabItem prefabItem = _prefabs[prefabIndex];
+                            if (prefabItem.NormalFilter.Filter(hit.normal, transform.forward))
                             {
                                 Vector3 tangent = Vector3.Cross(hit.normal, direction);
                                 if(tangent.magnitude < 0.1f)
                                 {
                                     tangent = (tangent + new Vector3(0f, 0f, 0.01f)).normalized;
                                 }
-                                int prefabIndex = GetRandomWeightedPrefabIndex();
                                 ScatterPoint scatterPoint = new ScatterPoint
                                 {
-                                    Position = hit.point + _positionOffset.GetOffset(hit.normal, tangent),
+                                    Position = hit.point + prefabItem.PositionOffset.GetOffset(hit.normal, tangent),
                                     Normal = hit.normal,
                                     Tangent = tangent,
-                                    Rotation = _rotationRange.GetRotation(hit.normal, tangent),
-                                    Scale = _prefabs[prefabIndex].GetScale(weight) * _scaleMultiplier,
+                                    Rotation = prefabItem.RotationRange.GetRotation(hit.normal, tangent),
+                                    Scale = prefabItem.GetScale(weight) * _scaleMultiplier,
                                     Weight = weight,
                                     PrefabIndex = prefabIndex,
                                 };
@@ -442,6 +479,7 @@ namespace ScatterTool
 
         public void Bake()
         {
+            if (_scatterPoints == null || _scatterPoints.Length == 0) return;
             Clear();
             Random.InitState(_seed);
             for (int i = 0; i < _scatterPoints.Length; i++)
