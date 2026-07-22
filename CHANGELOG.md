@@ -1,5 +1,15 @@
 # Changelog
 
+[5.0.0] - 2026-07-22
+- Removed Odin Inspector dependencies for package
+- Added new HideChildren component that can hide scene/prefab child GOs and event components
+- Added mew Projection Scatter tool for non-destructive rapid set dressing
+- Reduced GC alloc of MessagingService by 90%
+- Removed the following deprecated features:
+  - GameEvents, replaced my MessagingService
+  - Prefab Placer tool, replaced by Projection Scatter tool
+  - Export Project to Zip menu item
+
 [4.5.0] - 2026-06-26
 - Added new custom Toolbar buttons to give easier access to:
   - Time Scale
