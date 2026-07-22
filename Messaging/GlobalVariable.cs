@@ -1,16 +1,14 @@
-using Sirenix.OdinInspector;
 using UnityEngine;
 using System;
 
 namespace UnityTools.Messaging
 {
-    [Serializable, InlineProperty, HideLabel]
+    [Serializable]
     public class GlobalVariable<T>
     {
-        [field: SerializeField, HorizontalGroup("Box/Horiz"), BoxGroup("Box", ShowLabel = false), HideLabel, HideInInspector] public Enum Tag { get; private set; }
-        [field: SerializeField, HorizontalGroup("Box/Horiz"), BoxGroup("Box", ShowLabel = false), LabelText("@_label", SdfIconType.Link45deg)] private T _value;
-
-        private string _label => $"Global: {Tag}";
+        public Enum Tag { get; private set; }
+        [SerializeField] private string _tag;
+        [field: SerializeField] private T _value;
 
         public T Value
         {
@@ -33,12 +31,14 @@ namespace UnityTools.Messaging
         public GlobalVariable(Enum tag)
         {
             Tag = tag;
+            _tag = tag.ToString();
         }
 
         public GlobalVariable(Enum tag, T value)
         {
             Tag = tag;
             Value = value;
+            _tag = tag.ToString();
         }
 
         public event EventHandler<T> OnUpdated;

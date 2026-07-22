@@ -1,5 +1,3 @@
-using Sirenix.OdinInspector;
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -11,13 +9,18 @@ namespace ServiceAccess
         [field: SerializeField] private bool _logChanges = true;
         [SerializeField] private List<Object> _registerOnAwake = new List<Object>();
 
-        [ShowInInspector] private ServiceRegistry _localServices;
+        private ServiceRegistry _localServices;
         public ServiceRegistry LocalServices
         {
             get
             {
                 if (_localServices == null) _localServices = new ServiceRegistry(_logChanges, false, gameObject);
                 return _localServices;
+            }
+
+            private set
+            {
+                _localServices = value;
             }
         }
 

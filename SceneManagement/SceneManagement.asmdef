@@ -1,7 +1,9 @@
 {
     "name": "SceneManagement",
     "rootNamespace": "SceneManagement",
-    "references": [],
+    "references": [
+        "GUID:64b01bc802468004990f810413075ca2"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

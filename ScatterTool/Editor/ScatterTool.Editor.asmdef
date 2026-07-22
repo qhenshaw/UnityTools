@@ -1,10 +1,12 @@
 {
-    "name": "UnityTools.Data",
-    "rootNamespace": "UnityTools.Data",
+    "name": "ScatterTool.Editor",
+    "rootNamespace": "ScatterTool.Editor",
     "references": [
-        "GUID:64b01bc802468004990f810413075ca2"
+        "GUID:d252ca968a9f2c646bc421f9dd28ac88"
     ],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

@@ -1,5 +1,4 @@
-﻿using Sirenix.OdinInspector;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -13,7 +12,8 @@ namespace ServiceAccess
         private string _logPrefix;
         private Object _owner;
         private Dictionary<Type, object> _services = new Dictionary<Type, object>();
-        [ShowInInspector] public IEnumerable<object> ServicesList => _services.Values;
+        public List<string> ServiceNames = new List<string>();
+        public IEnumerable<object> ServicesList => _services.Values;
 
         public ServiceRegistry(bool logChanges, bool isGlobal, Object owner)
         {
@@ -21,6 +21,7 @@ namespace ServiceAccess
             _logPrefix = isGlobal ? "Global" : "Local";
             _owner = owner;
             _services = new Dictionary<Type, object>();
+            ServiceNames = new List<string>();
         }
 
         public ServiceRegistry Register<T>(T service)
@@ -39,6 +40,7 @@ namespace ServiceAccess
             }
             if (_logChanges) Debug.Log($"{_owner.name}[{_logPrefix}]: Service registered: {type.Name}", _owner);
             _services.Add(type, service);
+            ServiceNames.Add(type.Name);
 
             return this;
         }
@@ -49,6 +51,7 @@ namespace ServiceAccess
             if (_services.ContainsKey(type))
             {
                 _services.Remove(type);
+                ServiceNames.Remove(type.Name);
                 return this;
             }
             else
