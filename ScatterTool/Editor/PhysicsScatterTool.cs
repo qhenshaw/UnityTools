@@ -72,13 +72,26 @@ namespace ScatterTool.Editor
             Physics.simulationMode = SimulationMode.Script;
             IsSimulating = true;
 
+            var selected = Selection.gameObjects;
+            foreach (GameObject go in selected)
+            {
+                if (!go.TryGetComponent(out Rigidbody rb))
+                {
+                    rb = go.AddComponent<Rigidbody>();
+                    rb.mass = 1f;
+                    rb.linearDamping = 0.5f;
+                    rb.angularDamping = 0.05f;
+                    rb.useGravity = false;
+                    rb.isKinematic = false;
+                }
+            }
+
             Rigidbody[] rigidbodies = FindObjectsByType<Rigidbody>(FindObjectsSortMode.None);
             foreach (Rigidbody rb in rigidbodies)
             {
                 rb.isKinematic = true;
             }
 
-            var selected = Selection.gameObjects;
             foreach (GameObject go in selected)
             {
                 if (go.TryGetComponent(out Rigidbody rigidbody))
@@ -563,7 +576,7 @@ namespace ScatterTool.Editor
 
                     EditorUtility.SetDirty(transform);
 
-                    if (go.TryGetComponent(out Rigidbody rb))
+                    if (go.TryGetComponent(out Rigidbody rb) && !rb.isKinematic)
                     {
                         rb.linearVelocity = Vector3.zero;
                         rb.angularVelocity = Vector3.zero;
@@ -580,7 +593,10 @@ namespace ScatterTool.Editor
             foreach (GameObject gameObject in gameObjects)
             {
                 GameObject prefab = PrefabUtility.GetCorrespondingObjectFromSource(gameObject);
-                GameObject spawned = PrefabUtility.InstantiatePrefab(prefab, gameObject.scene) as GameObject;
+                GameObject spawned;
+                if (prefab != null) spawned = PrefabUtility.InstantiatePrefab(prefab, gameObject.scene) as GameObject;
+                else spawned = Instantiate(gameObject, gameObject.scene) as GameObject;
+                spawned.name = gameObject.name;
                 spawned.transform.SetParent(gameObject.transform.parent);
                 spawned.transform.SetPositionAndRotation(gameObject.transform.position, gameObject.transform.rotation);
                 Undo.RegisterCreatedObjectUndo(spawned, "Copy " + spawned.name);
@@ -659,6 +675,11 @@ namespace ScatterTool.Editor
             foreach (Rigidbody rb in rigidbodies)
             {
                 SerializedObject serializedObj = new SerializedObject(rb);
+                bool isRbAdded = PrefabUtility.IsAddedComponentOverride(rb);
+                if (isRbAdded)
+                {
+                    PrefabUtility.RevertAddedComponent(rb, InteractionMode.AutomatedAction);
+                }
 
                 SerializedProperty kinematicProp = serializedObj.FindProperty("m_IsKinematic");
                 if (kinematicProp != null && kinematicProp.isInstantiatedPrefab)
