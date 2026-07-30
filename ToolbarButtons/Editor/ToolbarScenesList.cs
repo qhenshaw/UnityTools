@@ -14,6 +14,7 @@ namespace UnityTools.ToolbarButtons
 #pragma warning disable UDR0001 // Domain Reload Analyzer
         const string _id = "Scene Selector";
         static string[] _paths = new string[0];
+        static string[] _buildPaths = new string[0];
 
         static ToolbarScenesList()
         {
@@ -28,40 +29,61 @@ namespace UnityTools.ToolbarButtons
         [MainToolbarElement(_id, defaultDockPosition = MainToolbarDockPosition.Middle)]
         public static IEnumerable<MainToolbarElement> Combined()
         {
-            yield return CreateSceneSelectorDropdown();
-            yield return FindSceneButton();
+            var selector = SceneSelectorDropdown();
+            selector.populateContextMenu = (menu) =>
+            {
+                menu.AppendAction("Find Scene", (a) => FindScene());
+                menu.AppendAction("Restart Scene", (a) => RestartScene());
+            };
+            yield return selector;
+            yield return PlayFromDropdown();
         }
 
-        public static MainToolbarElement FindSceneButton()
+        public static void FindScene()
         {
-            var icon = EditorGUIUtility.IconContent("d_SearchWindow@2x").image as Texture2D;
-            var content = new MainToolbarContent(icon, "Find");
-            var button = new MainToolbarButton(content, () =>
+            string activeSceneName = GetActiveSceneName();
+            if (activeSceneName == "Untitled")
             {
-                string activeSceneName = GetActiveSceneName();
-                if (activeSceneName == "Untitled")
+                Debug.LogWarning("Active scene is untitled. Please save the scene first.");
+                return;
+            }
+            else
+            {
+                string scenePath = _paths.FirstOrDefault(path => Path.GetFileNameWithoutExtension(path) == activeSceneName);
+                if (!string.IsNullOrEmpty(scenePath))
                 {
-                    Debug.LogWarning("Active scene is untitled. Please save the scene first.");
-                    return;
+                    EditorGUIUtility.PingObject(AssetDatabase.LoadAssetAtPath<SceneAsset>(scenePath));
                 }
                 else
                 {
-                    string scenePath = _paths.FirstOrDefault(path => Path.GetFileNameWithoutExtension(path) == activeSceneName);
-                    if (!string.IsNullOrEmpty(scenePath))
-                    {
-                        EditorGUIUtility.PingObject(AssetDatabase.LoadAssetAtPath<SceneAsset>(scenePath));
-                    }
-                    else
-                    {
-                        Debug.LogWarning($"Scene '{activeSceneName}' not found in project.");
-                    }
+                    Debug.LogWarning($"Scene '{activeSceneName}' not found in project.");
                 }
-            });
-
-            return button;
+            }
         }
 
-        private static MainToolbarElement CreateSceneSelectorDropdown()
+        public static void RestartScene()
+        {
+            string activeSceneName = GetActiveSceneName();
+            if (activeSceneName == "Untitled")
+            {
+                Debug.LogWarning("Active scene is untitled. Please save the scene first.");
+                return;
+            }
+            else
+            {
+                string scenePath = _paths.FirstOrDefault(path => Path.GetFileNameWithoutExtension(path) == activeSceneName);
+                if (!string.IsNullOrEmpty(scenePath))
+                {
+                    SwitchScene(scenePath);
+                }
+                else
+                {
+                    Debug.LogWarning($"Scene '{activeSceneName}' not found in project.");
+                }
+            }
+        }
+
+        private static MainToolbarElement SceneSelectorDropdown()
         {
             string activeSceneName = GetActiveSceneName();
             var icon = EditorGUIUtility.IconContent("UnityLogo").image as Texture2D;
@@ -83,6 +105,8 @@ namespace UnityTools.ToolbarButtons
 
         private static void ShowDropdownMenu(Rect dropDownRect)
         {
+            RefreshSceneList();
+
             var menu = new GenericMenu();
             if (_paths.Length == 0)
             {
@@ -92,6 +116,14 @@ namespace UnityTools.ToolbarButtons
             {
                 string sceneName = Path.GetFileNameWithoutExtension(scenePath);
                 menu.AddItem(new GUIContent(scenePath.Replace("Assets\\", "").Replace("\\", "/")), false, () =>
+                {
+                    SwitchScene(scenePath);
+                });
+            }
+            foreach (string scenePath in _buildPaths)
+            {
+                string sceneName = Path.GetFileNameWithoutExtension(scenePath);
+                menu.AddItem(new GUIContent($"Build Settings/{scenePath.Replace("Assets/", "").Replace('/', '-').Replace('\\', '-').Replace(".unity", "")}"), false, () =>
                 {
                     SwitchScene(scenePath);
                 });
@@ -106,7 +138,7 @@ namespace UnityTools.ToolbarButtons
                 string sceneName = Path.GetFileNameWithoutExtension(scenePath);
                 if (Application.CanStreamedLevelBeLoaded(sceneName))
                 {
-                    Debug.Log($"Switching to scene: {sceneName}");
+                    Debug.Log($"Playing scene: {sceneName}");
                     SceneManager.LoadScene(sceneName);
                 }
                 else
@@ -134,11 +166,62 @@ namespace UnityTools.ToolbarButtons
         private static void RefreshSceneList()
         {
             _paths = Directory.GetFiles("Assets", "*.unity", SearchOption.AllDirectories);
+            _buildPaths = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray();
         }
 
         private static void SceneSwitched(Scene oldScene, Scene newScene)
         {
             MainToolbar.Refresh(_id);
+        }
+
+        private static MainToolbarElement PlayFromDropdown()
+        {
+            string sceneName = EditorSceneManager.playModeStartScene != null ? EditorSceneManager.playModeStartScene.name : "Current";
+            var content = new MainToolbarContent(sceneName, null, "Select play from scene");
+            return new MainToolbarDropdown(content, ShowPlayFromDropdown);
+        }
+
+        private static void ShowPlayFromDropdown(Rect dropDownRect)
+        {
+            RefreshSceneList();
+
+            var menu = new GenericMenu();
+            if (_buildPaths.Length == 0)
+            {
+                menu.AddDisabledItem(new GUIContent("No Scenes in Build List"));
+            }
+
+            menu.AddItem(new GUIContent("Current"), false, () =>
+            {
+                EditorSceneManager.playModeStartScene = null;
+                Debug.Log($"Starting play mode from scene: {GetActiveSceneName()}");
+                MainToolbar.Refresh(_id);
+            });
+
+            foreach (string scenePath in _buildPaths)
+            {
+                string sceneName = Path.GetFileNameWithoutExtension(scenePath);
+                menu.AddItem(new GUIContent(scenePath.Replace("Assets/", "").Replace('/', '-').Replace('\\', '-').Replace(".unity", "")), false, () =>
+                {
+                    SetPlayFromScene(scenePath);
+                    MainToolbar.Refresh(_id);
+                });
+            }
+            menu.DropDown(dropDownRect);
+        }
+
+        private static void SetPlayFromScene(string path)
+        {
+            SceneAsset sceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(path);
+            if (sceneAsset != null)
+            {
+                EditorSceneManager.playModeStartScene = sceneAsset;
+                Debug.Log($"Starting play mode from scene: {sceneAsset.name}");
+            }
+            else
+            {
+                Debug.LogError($"Scene at path '{path}' does not exist.");
+            }
         }
     }
 }
