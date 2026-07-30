@@ -199,6 +199,7 @@ namespace ScatterTool.Editor
                 {
                     GameObject newGO = new GameObject("Projection Scatter");
                     newGO.AddComponent<ProjectionScatter>();
+                    Undo.RegisterCreatedObjectUndo(newGO, "Create " + newGO.name);
                     Selection.activeGameObject = newGO;
                 })
                 {
