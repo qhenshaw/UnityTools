@@ -10,7 +10,7 @@ using UnityEngine.UIElements;
 
 namespace ArtPipeline.Editor
 {
-    [EditorTool("Vertex Painter", typeof(MeshRenderer))]
+    [EditorTool("Vertex Painter")]
     public class VertexPaintertool : EditorTool
     {
         [SerializeField] private Texture2D _toolIcon;
@@ -34,34 +34,12 @@ namespace ArtPipeline.Editor
         {
             VertexPainterOverlay.IsVisible = true;
             VertexPainterOverlay.OnResetColorInput += OnColorsReset;
-            VertexPainterOverlay.OnAddComponentInput += OnAddComponent;
         }
 
         public override void OnWillBeDeactivated()
         {
             VertexPainterOverlay.IsVisible = false;
             VertexPainterOverlay.OnResetColorInput -= OnColorsReset;
-            VertexPainterOverlay.OnAddComponentInput -= OnAddComponent;
-        }
-
-        private void OnAddComponent(object sender, EventArgs e)
-        {
-            if (Selection.activeGameObject == null) return;
-            VertexPainter painter = Selection.activeGameObject.GetComponent<VertexPainter>();
-            if (painter != null)
-            {
-                Debug.Log("GameObject already has painter component.");
-                return;
-            }
-            MeshFilter meshFilter = Selection.activeGameObject.GetComponent<MeshFilter>();
-            MeshRenderer meshRenderer = Selection.activeGameObject.GetComponent<MeshRenderer>();
-            if (meshFilter == null || meshRenderer == null)
-            {
-                Debug.LogWarning("GameObject requires MeshFilter and MeshRenderer components for vertex painting.");
-                return;
-            }
-
-            Selection.activeGameObject.AddComponent<VertexPainter>();
         }
 
         private void OnColorsReset(object sender, EventArgs e)
@@ -196,7 +174,6 @@ namespace ArtPipeline.Editor
         public static float DotSize { get; private set; } = 0.1f;
 
         public static event EventHandler OnResetColorInput;
-        public static event EventHandler OnAddComponentInput;
 
         public bool visible => IsVisible;
 
@@ -207,16 +184,64 @@ namespace ArtPipeline.Editor
         {
             defaultSize = new Vector2(400f, 220f);
             size = new Vector2(400f, 220f);
+
+            Selection.selectionChanged += OnSelectionChanged;
+        }
+
+        public override void OnWillBeDestroyed()
+        {
+            Selection.selectionChanged -= OnSelectionChanged;
+        }
+
+        private void OnSelectionChanged()
+        {
+            if (displayed) Refresh();
+        }
+
+        public void Refresh()
+        {
+            displayed = false;
+            displayed = true;
         }
 
         public override VisualElement CreatePanelContent()
         {
             var panel = new VisualElement() { name = "Vertex Painter Root" };
 
-            var buttonAddComponent = new Button(() => OnAddComponentInput?.Invoke(this, null))
+            var activeGO = Selection.activeGameObject;
+            if (activeGO == null)
             {
-                text = "Add Component"
+                return panel;
+            }
+
+            var buttonAddComponent = new Button(() =>
+            {
+                if (activeGO.TryGetComponent(out VertexPainter painter))
+                {
+                    Debug.Log("GameObject already has painter component.");
+                    return;
+                }
+
+                MeshFilter meshFilter = activeGO.GetComponent<MeshFilter>();
+                MeshRenderer meshRenderer = activeGO.GetComponent<MeshRenderer>();
+                if (meshFilter == null || meshRenderer == null)
+                {
+                    Debug.LogWarning("GameObject requires MeshFilter and MeshRenderer components for vertex painting.");
+                    return;
+                }
+
+                Undo.AddComponent<VertexPainter>(activeGO);
+                Refresh();
+            })
+            {
+                text = "Add Vertex Painter Component"
             };
+
+            if (!activeGO.TryGetComponent(out VertexPainter _))
+            {
+                panel.Add(buttonAddComponent);
+                return panel;
+            }
 
             var buttonResetColors = new Button(() => OnResetColorInput?.Invoke(this, null))
             {
