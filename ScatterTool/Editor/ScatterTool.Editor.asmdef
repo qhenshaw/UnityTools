@@ -2,7 +2,8 @@
     "name": "ScatterTool.Editor",
     "rootNamespace": "ScatterTool.Editor",
     "references": [
-        "GUID:d252ca968a9f2c646bc421f9dd28ac88"
+        "GUID:d252ca968a9f2c646bc421f9dd28ac88",
+        "GUID:75469ad4d38634e559750d17036d5f7c"
     ],
     "includePlatforms": [
         "Editor"
