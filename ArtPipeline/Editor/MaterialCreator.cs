@@ -9,7 +9,14 @@ namespace ArtPipeline.Editor
     {
         private static string[] _texurePatterns = new[] { "basecolor", "normaldx" };
         private static string[] _textureNames = new[] { "Base Color", "Normal Map", "Mask Map" };
-        private static string[] _parameterNames = new[] { "_MainTex", "_Normal", "_Mask" };
+        private static string[,] _parameterNames = new[,]
+        {
+            { "_MainTex", "_Normal", "_Mask" },
+            { "_BlendBaseColor", "_BlendNormal", "_BlendMask" },
+            { "_BlendBaseColor_1", "_BlendNormal_1", "_BlendMask_1" },
+            { "_BlendBaseColor_2", "_BlendNormal_2", "_BlendMask_2" },
+            { "_BlendBaseColor_3", "_BlendNormal_3", "_BlendMask_3" }
+        };
         private static string[] _maskMapChannelNames = new[] { "height", "metal", "emiss", "rough", "smooth", "ao", "occlu", "mher" };
 
         [MenuItem("Assets/Create/VFS Uber material setup", false, -230)]
@@ -91,9 +98,15 @@ namespace ArtPipeline.Editor
             Material material = new Material(Shader.Find(shaderName));
             AssetDatabase.CreateAsset(material, $"{path}/{fileName}.mat");
 
-            for (int i = 0; i < _parameterNames.Length; i++)
+            for (int i = 0; i < _parameterNames.GetLength(0); i++)
             {
-                material.SetTexture(_parameterNames[i], textures[i]);
+                for (int j = 0; j < _parameterNames.GetLength(1); j++)
+                {
+                    if (material.HasProperty(_parameterNames[i, j]))
+                    {
+                        material.SetTexture(_parameterNames[i, j], textures[j]);
+                    }
+                }
             }
 
             Debug.Log($"Material created: {material}", material);
