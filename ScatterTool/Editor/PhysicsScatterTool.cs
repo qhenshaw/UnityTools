@@ -333,18 +333,6 @@ namespace ScatterTool.Editor
             return false;
         }
 
-        private static bool GetKeyState(KeyCode key, out bool isPressed)
-        {
-            if (Event.current.isKey && Event.current.keyCode == key)
-            {
-                isPressed = Event.current.type == EventType.KeyDown;
-                Event.current.Use();
-                return true;
-            }
-            isPressed = false;
-            return false;
-        }
-
         private static bool GetKeyDown(KeyCode key)
         {
             if (Event.current.isKey && Event.current.keyCode == key && Event.current.type == EventType.KeyDown)
@@ -353,14 +341,6 @@ namespace ScatterTool.Editor
                 return true;
             }
             return false;
-        }
-
-        private static void EatInput(KeyCode key)
-        {
-            if (Event.current.isKey && Event.current.keyCode == key)
-            {
-                Event.current.Use();
-            }
         }
 
         private void RecalculateBounds(GameObject[] selectedGOs)
@@ -568,6 +548,7 @@ namespace ScatterTool.Editor
                     Vector3 localNormPos = _normalizedLocalPositions[i];
                     Vector3 localPosition = Vector3.Scale(_bounds.size * 0.5f, localNormPos);
                     transform.position = _selectionCenter + localPosition;
+                    SetLocalPosition(localPosition, i, true);
                     if (PhysicsScatterOverlay.RemainUpright)
                     {
                         Quaternion uprightRotation = Quaternion.FromToRotation(transform.up, Vector3.up) * transform.rotation;
@@ -614,9 +595,10 @@ namespace ScatterTool.Editor
             GameObject[] copiesArray = copies.ToArray();
             Selection.objects = null;
             Selection.objects = copiesArray;
-            StopSim();
+            bool wasSimulating = IsSimulating;
+            if (wasSimulating) StopSim();
             TeleportSelection(copiesArray);
-            StartSim();
+            if (wasSimulating) StartSim();
         }
 
         private void AccelerateToPosition(GameObject[] selectedGOs, Vector3 currentCenter)

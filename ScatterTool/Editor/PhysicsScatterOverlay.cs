@@ -166,8 +166,8 @@ namespace ScatterTool.Editor
 
             var notes = new Label($"[Space] Toggle Simulation {Environment.NewLine}" +
                                   $"[G] Toggle Gravity {Environment.NewLine}" +
-                                  $"[Control + Space] Quick Copy {Environment.NewLine}" +
-                                  $"[Shift + Space] Quick Move");
+                                  $"[C] Quick Copy {Environment.NewLine}" +
+                                  $"[M] Quick Move");
 
             var launchHeader = new Label("Launch")
             {
