@@ -9,7 +9,7 @@ using UnityEngine.UIElements;
 
 namespace ScatterTool.Editor
 {
-    [EditorTool("Projection Scatter", typeof(ProjectionScatter))]
+    [EditorTool("Projection Scatter")]
     public class ProjectionScatterTool : EditorTool
     {
         [SerializeField] private Texture2D _toolIcon;
@@ -169,10 +169,47 @@ namespace ScatterTool.Editor
         {
             defaultSize = _defaultSize;
             size = _defaultSize;
+
+            Selection.selectionChanged += OnSelectionChanged;
+        }
+
+        public override void OnWillBeDestroyed()
+        {
+            Selection.selectionChanged -= OnSelectionChanged;
+        }
+
+        private void OnSelectionChanged()
+        {
+            if(displayed) Refresh();
+        }
+
+        public void Refresh()
+        {
+            displayed = false;
+            displayed = true;
         }
 
         public override VisualElement CreatePanelContent()
         {
+            var panel = new VisualElement() { name = "Projection Scatter Root" };
+
+            if (Selection.activeGameObject == null || !Selection.activeGameObject.TryGetComponent(out ProjectionScatter _))
+            {
+                var butonCreate = new Button(() =>
+                {
+                    GameObject newGO = new GameObject("Projection Scatter");
+                    newGO.AddComponent<ProjectionScatter>();
+                    Undo.RegisterCreatedObjectUndo(newGO, "Create " + newGO.name);
+                    Selection.activeGameObject = newGO;
+                })
+                {
+                    text = "Create Projection Scatter"
+                };
+                panel.Add(butonCreate);
+
+                return panel;
+            }
+
             var buttonResetMask = new Button(() => OnResetMask?.Invoke(this, null))
             {
                 text = "Reset Mask"
@@ -210,7 +247,6 @@ namespace ScatterTool.Editor
             var notes = new Label($"Left click to paint mask {Environment.NewLine}" +
                                   $"Ctrl + Left click to erase mask");
 
-            var panel = new VisualElement() { name = "Projection Scatter Root" };
             var buttonGroup = new VisualElement();
             buttonGroup.style.flexDirection = FlexDirection.Row;
             buttonGroup.Add(buttonResetMask);
