@@ -1,5 +1,10 @@
 # Changelog
 
+[5.1.0] - 2026-08-08
+- Fixed error caused by chaining messages
+- Added new right click options for assigning 3 texture MHER setups directly to material layers
+- Added physics scatter tool that can simulate physics during edit mode for rapid accurate prop placement
+
 [5.0.0] - 2026-07-22
 - Removed Odin Inspector dependencies for package
 - Added new HideChildren component that can hide scene/prefab child GOs and event components
