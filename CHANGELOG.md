@@ -1,5 +1,9 @@
 # Changelog
 
+[5.1.1] - 2026-08-09
+- Updated to support Unity 6.5 EntityID changes
+- Removed CustomInspector until new hierarchy view stops changing things
+
 [5.1.0] - 2026-08-08
 - Fixed error caused by chaining messages
 - Added new right click options for assigning 3 texture MHER setups directly to material layers

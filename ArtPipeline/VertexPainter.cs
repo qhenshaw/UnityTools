@@ -34,10 +34,12 @@ namespace ArtPipeline
             {
                 if (_sourceMesh == null) _sourceMesh = MeshFilter.sharedMesh;
 
-                if (_mesh == null || !_mesh.name.Contains(gameObject.GetInstanceID().ToString()))
+                EntityId id = gameObject.GetEntityId();
+                string idString = id.ToString();
+                if (_mesh == null || !_mesh.name.Contains(idString))
                 {
                     _mesh = Instantiate(MeshFilter.sharedMesh);
-                    string name = _sourceMesh.name + "-" + gameObject.GetInstanceID().ToString();
+                    string name = _sourceMesh.name + "-" + idString;
                     _mesh.name = name;
                 }
                 MeshFilter.mesh = _mesh;

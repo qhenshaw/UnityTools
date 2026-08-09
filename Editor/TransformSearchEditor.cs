@@ -156,7 +156,7 @@ namespace EditorTools
 
                     // Generate a stable key for this component instance
                     string componentTypeName = currentEditor.target.GetType().Name;
-                    string foldoutKey = $"{currentEditor.target.GetInstanceID()}_{componentTypeName}";
+                    string foldoutKey = $"{currentEditor.target.GetEntityId()}_{componentTypeName}";
 
                     // Default to expanded (true) if it's the first time seeing this component in search results
                     if (!componentFoldoutStates.ContainsKey(foldoutKey))
