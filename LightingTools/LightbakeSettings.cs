@@ -6,7 +6,7 @@ using UnityEngine.Rendering;
 using UnityEditor;
 #endif
 
-namespace SceneManagement
+namespace LightingTools
 {
     [DisallowMultipleComponent]
     public class LightbakeSettings : MonoBehaviour

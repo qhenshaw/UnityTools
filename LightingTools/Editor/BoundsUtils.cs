@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-namespace EditorTools
+namespace LightingTools.Editor
 {
     public static class BoundsUtils
     {

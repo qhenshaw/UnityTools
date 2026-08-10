@@ -1,5 +1,9 @@
 # Changelog
 
+[5.1.2] - 2026-08-10
+- Reorganized lighting tools into new assembly
+- Added quick assign option for volumes and multi-scene lighting setups
+
 [5.1.1] - 2026-08-09
 - Updated to support Unity 6.5 EntityID changes
 - Removed CustomInspector until new hierarchy view stops changing things
