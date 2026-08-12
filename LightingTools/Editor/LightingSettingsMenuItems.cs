@@ -36,15 +36,24 @@ namespace LightingTools.Editor
 
                 Debug.Log($"Updated LightingSettings to: {activeLightingSettings.name}");
             }
+
+            EditorSceneManager.MarkAllScenesDirty();
         }
 
         private static void AssignEnvironmentProfile(Scene scene, VolumeProfile profile)
         {
-            StaticLightingSky staticSky = FindFirstObjectByType<StaticLightingSky>();
+            GameObject[] rootGameObjects = scene.GetRootGameObjects();
+            StaticLightingSky staticSky = null;
+            for (int i = 0; i < rootGameObjects.Length; i++)
+            {
+                staticSky = rootGameObjects[i].GetComponentInChildren<StaticLightingSky>();
+            }
+
             if (staticSky == null)
             {
                 GameObject go = new GameObject("Runtime-StaticLightingSky") { hideFlags = HideFlags.HideInHierarchy };
                 staticSky = go.AddComponent<StaticLightingSky>();
+                EditorSceneManager.MoveGameObjectToScene(go, scene);
             }
 
             Undo.RecordObject(staticSky, "Change HDRP Environment Profile");
@@ -56,29 +65,11 @@ namespace LightingTools.Editor
             }
             staticSky.staticLightingSkyUniqueID = skyID;
             EditorUtility.SetDirty(staticSky);
-            EditorSceneManager.MarkSceneDirty(scene);
-            EditorSceneManager.SaveScene(scene);
-
-            System.Type lightingWindowType = System.Type.GetType("UnityEditor.LightingWindow,UnityEditor");
-            if (lightingWindowType != null)
-            {
-                EditorWindow lightingWindow = GetWindow(lightingWindowType);
-                if (lightingWindow != null) lightingWindow.Repaint();
-            }
         }
 
         private static void AssignLightingSettings(Scene scene, LightingSettings settings)
         {
             Lightmapping.SetLightingSettingsForScene(scene, settings);
-            EditorSceneManager.MarkSceneDirty(scene);
-            EditorSceneManager.SaveScene(scene);
-
-            System.Type lightingWindowType = System.Type.GetType("UnityEditor.LightingWindow,UnityEditor");
-            if (lightingWindowType != null)
-            {
-                EditorWindow window = GetWindow(lightingWindowType);
-                if (window != null) window.Repaint();
-            }
         }
     }
 }

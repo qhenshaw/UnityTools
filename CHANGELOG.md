@@ -1,5 +1,8 @@
 # Changelog
 
+[5.1.3] - 2026-08-12
+- Fixed issues with LightingSettings and environment volumes not saving correctly
+
 [5.1.2] - 2026-08-10
 - Reorganized lighting tools into new assembly
 - Added quick assign option for volumes and multi-scene lighting setups
