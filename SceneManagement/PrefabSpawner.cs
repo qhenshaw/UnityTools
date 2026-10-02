@@ -50,7 +50,7 @@ namespace SceneManagement
 
         public GameObject Spawn(GameObject prefab)
         {
-            GameObject instantiated = Instantiate(prefab, transform.position, Quaternion.identity);
+            GameObject instantiated = Instantiate(prefab, transform.position, transform.rotation);
             switch (_parentMode)
             {
                 case ParentMode.None:

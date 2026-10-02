@@ -1,5 +1,8 @@
 # Changelog
 
+[5.1.4] - 2026-10-02
+- PrefabSpawner now uses transform rotation for spawned object
+
 [5.1.3] - 2026-08-12
 - Fixed issues with LightingSettings and environment volumes not saving correctly
 
