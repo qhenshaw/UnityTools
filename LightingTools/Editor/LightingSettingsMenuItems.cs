@@ -2,13 +2,17 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.Rendering.HighDefinition;
 using UnityEngine.SceneManagement;
+
+#if HDRP
+using UnityEngine.Rendering.HighDefinition;
+#endif
 
 namespace LightingTools.Editor
 {
     public class LightingSettingsMenuItems : EditorWindow
     {
+#if HDRP
         [MenuItem("GameObject/Light/Assign Volume to Open Scenes", false, priority = -10)]
         private static void AssignSelectedVolume()
         {
@@ -71,5 +75,6 @@ namespace LightingTools.Editor
         {
             Lightmapping.SetLightingSettingsForScene(scene, settings);
         }
+#endif
     }
 }

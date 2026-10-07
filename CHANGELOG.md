@@ -1,5 +1,8 @@
 # Changelog
 
+[5.1.5] - 2026-10-06
+- Added HDRP check for lighting helper menu options
+
 [5.1.4] - 2026-10-02
 - PrefabSpawner now uses transform rotation for spawned object
 
