@@ -1,5 +1,8 @@
 # Changelog
 
+[5.2.0] - 2026-10-16
+- Updated gradient editor with EXR support and import options
+
 [5.1.5] - 2026-10-06
 - Added HDRP check for lighting helper menu options
 

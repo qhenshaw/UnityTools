@@ -8,8 +8,8 @@ This package comes with several useful tools focused on organization, level desi
 Unity 6+. Will likely work on earlier versions but this is the version I tested with. 
 Currently requires Odin Inspector for custom editor windows, it won't compile without Odin.
 
-> [!TIP]
-> As of 5.0.0 this package has no 3rd party dependencies. Odin Inspector is no longer required.
+> [!Warning]
+> As of 5.2.0 this package is being maintained with AI-assisted code. If that's not your thing feel free to fork a previous version.
 
 > [!WARNING]
 > GameEvents have been fully replaced by the MessagingService in 5.0.0, if you still want to use GameEvents use 4.5.0.
