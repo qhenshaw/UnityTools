@@ -1,5 +1,12 @@
 # Changelog
 
+[5.3.0] - 2026-10-27
+- Vertex Painter now saves painted meshes as mesh assets in the project instead of embedding them in scenes
+- Painting in Prefab Mode stores paint in the prefab, painting a prefab instance creates a unique copy for that instance
+- Added Vertex Painter inspector with Save to Asset, Rebuild from Source, Make Unique and Remove options
+- Added undo support for vertex painting
+- Added Vertex Paint cleanup window to find and delete unused painted mesh assets
+
 [5.2.0] - 2026-10-16
 - Updated gradient editor with EXR support and import options
 

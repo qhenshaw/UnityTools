@@ -15,7 +15,8 @@ namespace ArtPipeline.Editor
     {
         [SerializeField] private Texture2D _toolIcon;
 
-        private bool _mousePressed;
+        private Mesh _strokeMesh;
+        private VertexPainter _strokePainter;
         private List<Vector3> _vertices = new List<Vector3>();
         private List<Vector3> _normals = new List<Vector3>();
         private List<Color> _colors = new List<Color>();
@@ -38,6 +39,7 @@ namespace ArtPipeline.Editor
 
         public override void OnWillBeDeactivated()
         {
+            EndStroke();
             VertexPainterOverlay.IsVisible = false;
             VertexPainterOverlay.OnResetColorInput -= OnColorsReset;
         }
@@ -53,20 +55,41 @@ namespace ArtPipeline.Editor
 
         private void ResetColors(VertexPainter painter)
         {
+            Mesh previous = painter.PaintedMesh;
+            Mesh mesh = VertexPaintStorage.GetWritableMesh(painter);
+            if (mesh == null) return;
+
+            Undo.RegisterCompleteObjectUndo(mesh, "Reset Vertex Colors");
             List<Color> colors = new List<Color>();
-            painter.Mesh.GetColors(colors);
-            if (colors.Count == 0)
+            for (int i = 0; i < mesh.vertexCount; i++)
             {
-                for (int i = 0; i < painter.Mesh.vertexCount; i++)
-                {
-                    colors.Add(Color.clear);
-                }
+                colors.Add(new Color(0f, 0f, 0f, 0f));
             }
-            for (int i = 0; i < colors.Count; i++)
-            {
-                colors[i] = new Color(0f, 0f, 0f, 0f);
-            }
-            painter.Mesh.SetColors(colors);
+            mesh.SetColors(colors);
+            EditorUtility.SetDirty(mesh);
+            AssetDatabase.SaveAssetIfDirty(mesh);
+
+            if (previous != mesh) VertexPainterOverlay.RequestRefresh();
+        }
+
+        private void BeginStroke(VertexPainter painter)
+        {
+            Mesh previous = painter.PaintedMesh;
+            _strokeMesh = VertexPaintStorage.GetWritableMesh(painter);
+            if (_strokeMesh == null) return;
+
+            _strokePainter = painter;
+            _lastPaintTime = DateTime.MinValue;
+            Undo.RegisterCompleteObjectUndo(_strokeMesh, "Vertex Paint");
+
+            if (previous != _strokeMesh) VertexPainterOverlay.RequestRefresh();
+        }
+
+        private void EndStroke()
+        {
+            if (_strokeMesh != null) AssetDatabase.SaveAssetIfDirty(_strokeMesh);
+            _strokeMesh = null;
+            _strokePainter = null;
         }
 
         private Color ColorBlend(Color a, Color b, float alpha)
@@ -82,19 +105,39 @@ namespace ArtPipeline.Editor
 
         public override void OnToolGUI(EditorWindow window)
         {
-            if(Selection.activeGameObject == null) return;
-            VertexPainter painter = Selection.activeGameObject.GetComponent<VertexPainter>();
+            VertexPainter painter = Selection.activeGameObject != null ? Selection.activeGameObject.GetComponent<VertexPainter>() : null;
+            if (painter != _strokePainter) EndStroke();
             if (painter == null) return;
 
+            int controlId = GUIUtility.GetControlID(FocusType.Passive);
             Ray mouseRay = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
-
             bool hit = SceneMeshRaycast.Raycast(mouseRay, new Renderer[] { painter.Renderer }, out RaycastHit hitInfo, out GameObject go);
+
+            // handle mouse before the hit check so releasing off the mesh still ends the stroke
+            if (Event.current.isMouse && Event.current.button == 0)
+            {
+                if (Event.current.type == EventType.MouseDown && hit)
+                {
+                    BeginStroke(painter);
+                    GUIUtility.hotControl = controlId;
+                }
+                if (Event.current.type == EventType.MouseUp)
+                {
+                    EndStroke();
+                    if (GUIUtility.hotControl == controlId) GUIUtility.hotControl = 0;
+                }
+
+                Event.current.Use();
+            }
+
             if (!hit) return;
             Vector3 hitLocalPos = painter.transform.InverseTransformPoint(hitInfo.point);
 
-            painter.Mesh.GetVertices(_vertices);
-            painter.Mesh.GetNormals(_normals);
-            painter.Mesh.GetColors(_colors);
+            Mesh mesh = _strokeMesh != null ? _strokeMesh : VertexPaintStorage.GetDisplayMesh(painter);
+            if (mesh == null) return;
+            mesh.GetVertices(_vertices);
+            mesh.GetNormals(_normals);
+            mesh.GetColors(_colors);
             if (_colors.Count == 0)
             {
                 for (int i = 0; i < _vertices.Count; i++) _colors.Add(new Color(0f, 0f, 0f, 0f));
@@ -127,20 +170,6 @@ namespace ArtPipeline.Editor
                 _newColors.Add(i, newColor);
             }
 
-            if (Event.current.isMouse && Event.current.button == 0)
-            {
-                if (Event.current.type == EventType.MouseDown)
-                {
-                    _mousePressed = true;
-                }
-                if (Event.current.type == EventType.MouseUp)
-                {
-                    _mousePressed = false;
-                }
-
-                Event.current.Use();
-            }
-
             using (new Handles.DrawingScope())
             {
                 Color discColor = Color.white;
@@ -148,7 +177,7 @@ namespace ArtPipeline.Editor
                 Handles.DrawWireDisc(hitInfo.point, hitInfo.normal, radius);
             }
 
-            bool isPainting = _mousePressed;
+            bool isPainting = _strokeMesh != null;
             if (isPainting && DateTime.Now > _lastPaintTime.AddSeconds(_paintTick))
             {
                 _lastPaintTime = DateTime.Now;
@@ -158,7 +187,8 @@ namespace ArtPipeline.Editor
                     _colors[indexedColor.Key] = indexedColor.Value;
                 }
 
-                painter.Mesh.SetColors(_colors);
+                _strokeMesh.SetColors(_colors);
+                EditorUtility.SetDirty(_strokeMesh);
             }
         }
     }
@@ -174,28 +204,50 @@ namespace ArtPipeline.Editor
         public static float DotSize { get; private set; } = 0.1f;
 
         public static event EventHandler OnResetColorInput;
+        private static event Action OnRefreshRequested;
 
         public bool visible => IsVisible;
 
         private ColorField _color;
         private CurveField _falloff;
 
+        public static void RequestRefresh() => OnRefreshRequested?.Invoke();
+
         public override void OnCreated()
         {
-            defaultSize = new Vector2(400f, 220f);
-            size = new Vector2(400f, 220f);
+            defaultSize = new Vector2(400f, 260f);
+            size = new Vector2(400f, 260f);
 
             Selection.selectionChanged += OnSelectionChanged;
+            OnRefreshRequested += OnSelectionChanged;
+            ObjectChangeEvents.changesPublished += OnObjectChangesPublished;
         }
 
         public override void OnWillBeDestroyed()
         {
             Selection.selectionChanged -= OnSelectionChanged;
+            OnRefreshRequested -= OnSelectionChanged;
+            ObjectChangeEvents.changesPublished -= OnObjectChangesPublished;
         }
 
         private void OnSelectionChanged()
         {
             if (displayed) Refresh();
+        }
+
+        // Rebuild when components are added or removed (restore button, Remove Component, undo/redo)
+        private void OnObjectChangesPublished(ref ObjectChangeEventStream stream)
+        {
+            if (!displayed) return;
+
+            for (int i = 0; i < stream.length; i++)
+            {
+                if (stream.GetEventType(i) == ObjectChangeKind.ChangeGameObjectStructure)
+                {
+                    Refresh();
+                    return;
+                }
+            }
         }
 
         public void Refresh()
@@ -237,11 +289,15 @@ namespace ArtPipeline.Editor
                 text = "Add Vertex Painter Component"
             };
 
-            if (!activeGO.TryGetComponent(out VertexPainter _))
+            if (!activeGO.TryGetComponent(out VertexPainter activePainter))
             {
                 panel.Add(buttonAddComponent);
                 return panel;
             }
+
+            var storageLabel = new Label(VertexPaintStorage.Describe(activePainter));
+            storageLabel.style.whiteSpace = WhiteSpace.Normal;
+            storageLabel.style.marginBottom = 4f;
 
             var buttonResetColors = new Button(() => OnResetColorInput?.Invoke(this, null))
             {
@@ -296,7 +352,7 @@ namespace ArtPipeline.Editor
             dotSize.value = 0.1f;
             dotSize.RegisterCallback<ChangeEvent<float>>((evt) => DotSize = evt.newValue);
 
-            panel.Add(buttonAddComponent);
+            panel.Add(storageLabel);
             panel.Add(buttonResetColors);
             panel.Add(_color);
             var colorLayout = new VisualElement();

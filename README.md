@@ -38,7 +38,13 @@ Paint vertex colors onto any scene mesh.
 Scene view => Select any GO with a mesh => Select VP (paint brush) icon in Unity's floating tools bar  
 Select Add Component in tool overlay and begin painting
 ```
-Mesh is overridden in scene with a painted copy, because of Unity's serialization the mesh can't be saved in a prefab. Recommend using Unity's FBX exporter if you need a baked copy of the mesh. 
+Painted meshes are saved as mesh assets in the project, the original model is never modified.
+- **Prefab Mode:** paint is stored in the prefab and shared by all instances. Saved to `<PrefabFolder>/<PrefabName>_VertexPaint/`
+- **Scene / prefab instance:** the first stroke creates a unique copy for that object. Saved to `<SceneFolder>/<SceneName>/VertexPaint/` (`Assets/VertexPaint/` for unsaved scenes)
+- Duplicated objects get their own copy on their first stroke. Use **Make Unique** in the inspector if objects in different scenes share a painted mesh.
+- After reimporting the source model use **Rebuild from Source** to update the painted mesh, colors are kept if the vertex count is unchanged.
+- Meshes painted with older versions are stored in the scene, use **Save to Asset** in the inspector to convert them.
+- Painted mesh assets are not deleted when the painter or object is removed. Use `Tools => Vertex Painter => Clean Up Unused Paint Meshes` to find and delete unreferenced meshes (deleted files go to the OS trash).
 
 ### Mesh Importer
 Unreal style UCX meshes will be converted into mesh colliders.  

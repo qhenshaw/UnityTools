@@ -1,12 +1,17 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace ArtPipeline
 {
+    // Holds references to the original mesh and its painted copy.
+    // The painted copy is a mesh asset saved in the project (see ArtPipeline.Editor.VertexPaintStorage),
+    // so it can be referenced from prefabs and scenes without embedding mesh data.
     [DisallowMultipleComponent]
     public class VertexPainter : MonoBehaviour
     {
-        [SerializeField] private Mesh _mesh;
         [SerializeField] private Mesh _sourceMesh;
+        [FormerlySerializedAs("_mesh")]
+        [SerializeField] private Mesh _paintedMesh;
 
         private MeshFilter _meshFilter;
         public MeshFilter MeshFilter
@@ -28,28 +33,16 @@ namespace ArtPipeline
             }
         }
 
-        public Mesh Mesh
+        public Mesh SourceMesh
         {
-            get
-            {
-                if (_sourceMesh == null) _sourceMesh = MeshFilter.sharedMesh;
+            get => _sourceMesh;
+            set => _sourceMesh = value;
+        }
 
-                EntityId id = gameObject.GetEntityId();
-                string idString = id.ToString();
-                if (_mesh == null || !_mesh.name.Contains(idString))
-                {
-                    _mesh = Instantiate(MeshFilter.sharedMesh);
-                    string name = _sourceMesh.name + "-" + idString;
-                    _mesh.name = name;
-                }
-                MeshFilter.mesh = _mesh;
-                return _mesh;
-            }
-            set
-            {
-                _mesh = value;
-                MeshFilter.mesh = _mesh;
-            }
+        public Mesh PaintedMesh
+        {
+            get => _paintedMesh;
+            set => _paintedMesh = value;
         }
     }
 }
