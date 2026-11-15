@@ -1,5 +1,12 @@
 # Changelog
 
+[5.6.0] - 2026-11-15
+- Mesh Importer: added Unreal UBX_ (box), USP_ (sphere) and UCP_ (capsule) collision prefixes, fitted to each collision mesh's bounds on its own transform
+- Mesh Importer: UCX_ colliders are now convex, matching Unreal (warns when a mesh is over Unity's 255 triangle convex limit)
+- Mesh Importer: collision meshes must now start with the prefix and an underscore (e.g. UCX_), names that only contain "ucx" no longer match
+- Art Asset Import Settings now work: Generate Unreal Colliders (was Generate UCX Colliders), Generate Mesh LODs, Import Cameras and Import Lights were being ignored
+- Art Asset Import Settings moved to ProjectSettings/ArtAssetImportSettings.asset, values from the old Assets/Settings asset are copied over and the old asset is deleted
+
 [5.5.0] - 2026-11-14
 - Added InlineButton attribute: draws a button on the same row as a field, and works alongside another drawer on the field (e.g. a dropdown)
 - Button attribute: added Method = nameof(...) so buttons no longer depend on the field's saved string (which broke on method renames and for new array elements); the old style still works

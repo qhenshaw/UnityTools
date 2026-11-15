@@ -47,8 +47,10 @@ Painted meshes are saved as mesh assets in the project, the original model is ne
 - Painted mesh assets are not deleted when the painter or object is removed. Use `Tools => Vertex Painter => Clean Up Unused Paint Meshes` to find and delete unreferenced meshes (deleted files go to the OS trash).
 
 ### Mesh Importer
-Unreal style UCX meshes will be converted into mesh colliders.  
-All meshes will have Generate Mesh LODs enabled on first import, can be disabled later.
+Unreal style collision meshes are converted into colliders: `UCX_` (convex mesh), `UBX_` (box), `USP_` (sphere) and `UCP_` (capsule).  
+The name must start with the prefix and an underscore (any case). The collider stays on the collision child and its renderer is removed.  
+All meshes will have Generate Mesh LODs enabled on first import, can be disabled later.  
+Settings: Project Settings => [Custom] Art Asset Import Settings (saved in ProjectSettings/ArtAssetImportSettings.asset).
 ```
 Automatically applied on import
 ```

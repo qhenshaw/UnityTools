@@ -8,14 +8,11 @@ namespace ArtPipeline.Editor
         {
             ModelImporter importer = (ModelImporter)assetImporter;
             if (!importer.importSettingsMissing) return;
-            //ArtAssetImportSettings settings = ArtAssetImportSettings.GetOrCreateSettings();
-            //importer.generateMeshLods = settings.GenerateMeshLODs;
-            //importer.importCameras = settings.ImportCameras;
-            //importer.importLights = settings.ImportLights;
 
-            importer.generateMeshLods = true;
-            importer.importCameras = false;
-            importer.importLights = false;
+            ArtImportValues settings = ArtAssetImportSettings.ReadForImport();
+            importer.generateMeshLods = settings.GenerateMeshLODs;
+            importer.importCameras = settings.ImportCameras;
+            importer.importLights = settings.ImportLights;
         }
     }
 }
