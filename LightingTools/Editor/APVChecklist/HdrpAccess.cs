@@ -161,9 +161,111 @@ namespace LightingTools.Editor.APVChecklist
                 .ToList();
         }
 
+        /// <summary>
+        /// The saved Baking Set asset that lists the scene. Uses HDRP's own scene-to-set lookup when it points at a saved
+        /// asset that really lists the scene, and otherwise searches the assets' scene lists. Temporary sets made by
+        /// the Lighting window's Single Scene mode are never returned: they aren't saved and vanish when it switches.
+        /// </summary>
         public static ProbeVolumeBakingSet FindBakingSetForScene(IEnumerable<ProbeVolumeBakingSet> sets, string sceneGuid)
         {
-            return string.IsNullOrEmpty(sceneGuid) ? null : sets.FirstOrDefault(set => set.sceneGUIDs.Contains(sceneGuid));
+            if (string.IsNullOrEmpty(sceneGuid)) return null;
+            ProbeVolumeBakingSet registered = GetRegisteredBakingSet(sceneGuid);
+            if (registered != null && !IsTemporary(registered) && registered.sceneGUIDs.Contains(sceneGuid)) return registered;
+            return sets.FirstOrDefault(set => set.sceneGUIDs.Contains(sceneGuid));
+        }
+
+        /// <summary>
+        /// The set HDRP's in-memory scene-to-set lookup maps the scene to. This is what TryAddScene checks, so it can
+        /// differ from the saved assets (e.g. a temporary Single Scene set). Null when unmapped or HDRP changed.
+        /// </summary>
+        public static ProbeVolumeBakingSet GetRegisteredBakingSet(string sceneGuid)
+        {
+            try
+            {
+                MethodInfo lookup = typeof(ProbeVolumeBakingSet).GetMethod("GetBakingSetForScene",
+                    BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static, null, new[] { typeof(string) }, null);
+                return lookup?.Invoke(null, new object[] { sceneGuid }) as ProbeVolumeBakingSet;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>An unsaved set, like the one the Lighting window makes in Single Scene mode.</summary>
+        public static bool IsTemporary(ProbeVolumeBakingSet set) => set != null && !EditorUtility.IsPersistent(set);
+
+        /// <summary>
+        /// If HDRP maps the scene to a temporary (unsaved) set, takes it out of that set so TryAddScene accepts it.
+        /// Returns the saved set that still claims the scene, if any, so the caller can report it.
+        /// </summary>
+        public static ProbeVolumeBakingSet ReleaseFromTemporarySet(string sceneGuid)
+        {
+            ProbeVolumeBakingSet registered = GetRegisteredBakingSet(sceneGuid);
+            if (registered == null) return null;
+            if (!IsTemporary(registered)) return registered;
+            registered.RemoveScene(sceneGuid);
+            return null;
+        }
+
+        // ---------- Lighting window APV tab (internal ProbeVolumeLightingTab) ----------
+
+        private static object GetLightingTab(out Type tabType)
+        {
+            tabType = typeof(AdaptiveProbeVolumes).Assembly.GetType("UnityEngine.Rendering.ProbeVolumeLightingTab");
+            return tabType?.GetField("instance", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static)?.GetValue(null);
+        }
+
+        /// <summary>
+        /// Whether the Lighting window's Adaptive Probe Volumes tab is in Single Scene baking mode. In that mode it
+        /// keeps a temporary set for the active scene and takes that scene out of multi-scene sets. Null if unknown.
+        /// </summary>
+        public static bool? IsLightingTabInSingleSceneMode()
+        {
+            try
+            {
+                object tab = GetLightingTab(out Type tabType);
+                if (tab == null) return null;
+                return tabType.GetField("m_SingleSceneMode", AnyInstance)?.GetValue(tab) as bool?;
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Makes the set active in the Lighting window and in APV, the way picking it in the Lighting window does.
+        /// That drops the tab's temporary set and switches it to Baking Set mode (the set has singleSceneMode off).
+        /// Returns false when HDRP's internals changed; the caller then asks the user to pick the set by hand.
+        /// </summary>
+        public static bool MakeActiveBakingSet(ProbeVolumeBakingSet set)
+        {
+            try
+            {
+                Undo.RecordObject(set, "Use Baking Set");
+                SetFieldIfPresent(set, "singleSceneMode", false);
+                EditorUtility.SetDirty(set);
+
+                object tab = GetLightingTab(out Type tabType);
+                PropertyInfo activeSet = tabType?.GetProperty("activeSet", AnyInstance);
+                if (tab == null || activeSet == null) return false;
+                activeSet.SetValue(tab, set);
+                tabType.GetField("m_SingleSceneMode", AnyInstance)?.SetValue(tab, false);
+
+                MethodInfo setActive = typeof(ProbeReferenceVolume).GetMethod("SetActiveBakingSet", AnyInstance, null, new[] { typeof(ProbeVolumeBakingSet) }, null);
+                if (setActive != null)
+                {
+                    typeof(ProbeReferenceVolume).GetMethod("Clear", AnyInstance, null, Type.EmptyTypes, null)?.Invoke(ProbeReferenceVolume.instance, null);
+                    setActive.Invoke(ProbeReferenceVolume.instance, new object[] { set });
+                }
+                return true;
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"APV Bake Checklist: couldn't switch the Lighting window to '{set.name}' ({e.GetBaseException().Message}).");
+                return false;
+            }
         }
 
         /// <summary>Creates a baking set with HDRP's defaults (SetDefaults is internal, so it's called by reflection).</summary>

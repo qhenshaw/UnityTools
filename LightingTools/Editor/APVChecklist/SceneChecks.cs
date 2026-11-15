@@ -316,7 +316,9 @@ namespace LightingTools.Editor.APVChecklist
         public override string Title => "Loaded scenes are in one Baking Set";
         public override string Help =>
             "APV bakes per Baking Set (Lighting > Adaptive Probe Volumes). Every loaded scene must be saved and in the same " +
-            "set, or it's skipped by the bake.";
+            "saved set, or it's skipped by the bake. With several scenes loaded, the Lighting window must use Baking Set " +
+            "mode: in Single Scene mode it keeps a temporary, unsaved set for the active scene and pulls that scene out of " +
+            "multi-scene sets.";
 
         public override CheckResult Evaluate(ChecklistContext context)
         {
@@ -345,30 +347,78 @@ namespace LightingTools.Editor.APVChecklist
             {
                 ProbeVolumeBakingSet existing = used.FirstOrDefault();
                 string fix = existing != null
-                    ? $"Add {missing.Count} scene(s) to '{existing.name}'"
-                    : "Create a Baking Set next to the active scene and add the loaded scenes";
-                return CheckResult.Fail($"Not in any Baking Set: {string.Join(", ", missing.Select(s => s.name))}.")
+                    ? $"Add {missing.Count} scene(s) to '{existing.name}' and use it in the Lighting window"
+                    : "Create a Baking Set next to the active scene, add the loaded scenes and use it in the Lighting window";
+                bool inTemporary = missing.Any(s => HdrpAccess.IsTemporary(HdrpAccess.GetRegisteredBakingSet(SceneCheckUtility.SceneGuid(s))));
+                string why = inTemporary ? " (only in the Lighting window's temporary Single Scene set, which isn't saved)" : "";
+                return CheckResult.Fail($"Not in any saved Baking Set: {string.Join(", ", missing.Select(s => s.name))}{why}.")
                     .WithFix(fix, missing.Count, () =>
                     {
                         Scene active = SceneManager.GetActiveScene();
                         ProbeVolumeBakingSet set = existing != null
                             ? existing
                             : HdrpAccess.CreateBakingSet($"{SceneCheckUtility.SceneFolder(active)}/{active.name} Baking Set.asset");
-                        Undo.RecordObject(set, "Add Scenes to Baking Set");
-                        foreach (Scene scene in missing)
-                        {
-                            string guid = SceneCheckUtility.SceneGuid(scene);
-                            if (set.TryAddScene(guid)) set.SetSceneBaking(guid, true);
-                            else Debug.LogWarning($"APV Bake Checklist: couldn't add '{scene.name}' to '{set.name}'. Add it in the Lighting window.", set);
-                        }
-                        EditorUtility.SetDirty(set);
-                        AssetDatabase.SaveAssetIfDirty(set);
+                        AddScenes(set, missing);
                     });
             }
 
             ProbeVolumeBakingSet bakingSet = used[0];
+            if (context.IsMultiScene && HdrpAccess.IsLightingTabInSingleSceneMode() == true)
+            {
+                return CheckResult.Warn($"All scenes are in '{bakingSet.name}', but the Lighting window is in Single Scene mode, which takes the active scene back out of multi-scene sets.")
+                    .WithTargets(new Object[] { bakingSet })
+                    .WithFix($"Switch the Lighting window to Baking Set mode using '{bakingSet.name}'", 1, () => UseInLightingWindow(bakingSet));
+            }
+
             return CheckResult.Pass($"'{bakingSet.name}': {bakingSet.sceneGUIDs.Count} scene(s), min probe spacing {bakingSet.minDistanceBetweenProbes} m.")
                 .WithTargets(new Object[] { bakingSet });
+        }
+
+        /// <summary>
+        /// Adds the scenes to the set and makes it the Lighting window's active set. Scenes that HDRP maps to the
+        /// Lighting window's temporary Single Scene set are released from it first, otherwise TryAddScene refuses them.
+        /// Throws (so the window shows the failure) when a scene still can't be added.
+        /// </summary>
+        private static void AddScenes(ProbeVolumeBakingSet set, List<Scene> scenes)
+        {
+            Undo.RecordObject(set, "Add Scenes to Baking Set");
+            var failed = new List<string>();
+            foreach (Scene scene in scenes)
+            {
+                string guid = SceneCheckUtility.SceneGuid(scene);
+                if (set.sceneGUIDs.Contains(guid)) continue;
+
+                ProbeVolumeBakingSet owner = HdrpAccess.ReleaseFromTemporarySet(guid);
+                if (owner == set) continue;
+                if (set.TryAddScene(guid))
+                {
+                    set.SetSceneBaking(guid, true);
+                }
+                else
+                {
+                    failed.Add(owner != null ? $"'{scene.name}' belongs to Baking Set '{owner.name}'" : $"HDRP refused '{scene.name}'");
+                }
+            }
+            EditorUtility.SetDirty(set);
+            AssetDatabase.SaveAssetIfDirty(set);
+
+            UseInLightingWindow(set);
+
+            if (failed.Count > 0)
+            {
+                throw new System.InvalidOperationException($"Couldn't add every scene to '{set.name}': {string.Join("; ", failed)}. " +
+                                                           "Move them in Window > Rendering > Lighting > Adaptive Probe Volumes.");
+            }
+        }
+
+        private static void UseInLightingWindow(ProbeVolumeBakingSet set)
+        {
+            if (!HdrpAccess.MakeActiveBakingSet(set))
+            {
+                Debug.LogWarning($"APV Bake Checklist: set the Lighting window's Baking Mode to 'Baking Set' and pick '{set.name}' " +
+                                 "(Window > Rendering > Lighting > Adaptive Probe Volumes).", set);
+            }
+            AssetDatabase.SaveAssetIfDirty(set);
         }
     }
 
