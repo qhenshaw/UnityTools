@@ -1,5 +1,26 @@
 # Changelog
 
+[5.8.0] - 2026-11-15
+- Messaging Service: a listener with the wrong payload type no longer stops the rest of a message, and sending a null payload no longer throws
+- Messaging Service: each tag carries one payload type, set by its first listener. A listener or send with a different type logs a clear error naming the tag and both types (before, a second listener type threw an unexplained ArgumentException)
+- Messaging Service: a listener that throws is logged and the other listeners still run
+- Messaging Service: listeners can send messages while a message is being sent
+- Messaging Service: Send(tag, payload, sendToLate: true) remembers the payload and gives it to listeners added later. Once remembered, every later send to the tag replaces it, and ClearSticky(tag) forgets it
+- Messaging Service: no-payload listeners, AddListener(tag, Action), fire on every send to a tag whatever the payload, and Send(tag) sends without a payload
+- Messaging Service: a listener removed while a message is being sent is skipped for the rest of that send
+- Messaging Service: listeners on destroyed objects are removed with a warning instead of throwing on every send
+- Messaging Service and Global Variables: sending no longer allocates. Enum tags are no longer boxed, tags held in an Enum variable are read without allocating, and sticky struct payloads are stored without boxing. Calls that name a single type argument (Send<int>(tag, 1)) still box the tag at the call site, so leave the type out or name both (Send<MyTag, int>)
+- Global Variables: OnUpdated now fires on every GlobalVariable with the tag, whichever one (or GlobalVariableService.Set) changed the value. Before, only the instance that set it was notified
+- Global Variables: added GlobalVariableService.ValueChanged (tag, value)
+- Global Variables: a value passed to the constructor is now a starting value, only used if the tag has no value yet. Before, every new instance overwrote the global, and the constructor threw in edit mode
+- Global Variables: HasValue no longer throws when the value is null, and is false for destroyed objects
+- Global Variables: reading a value as the wrong type logs an error instead of silently returning the default
+- Global Variables: added GlobalVariableService.Remove(tag) and Clear(), which notify listeners with the default value
+- Global Variables: GlobalVariable fields show their tag and value in the Inspector (starting value in edit mode, live value in Play) instead of editable fields that were ignored
+- MessagingService.Instance and GlobalVariableService.Instance now exist on first use (including edit mode) and reset when Play starts, also with domain reload disabled
+- Added the Messaging Debugger window (Window > UnityTools > Messaging Debugger)
+- Added EditMode tests for the Messaging Service and Global Variables, including allocation checks and checks that GlobalVariable tags survive Unity serialization (add "testables": ["com.qhenshaw.unitytools"] to a project's manifest to run them)
+
 [5.7.0] - 2026-11-15
 - Transform Search: searching no longer changes your component foldouts (before, typing expanded every component and clearing the search collapsed every component, including Transform)
 - Transform Search: each Inspector window has its own search, and a locked Inspector keeps its search until its object changes

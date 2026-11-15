@@ -138,10 +138,26 @@ private void Update()
     }
 }
 ```
+Every `GlobalVariable` with the same tag shares the value, and `OnUpdated` fires on all of them whenever it is set:
+```cs
+private void OnEnable() => _player.OnUpdated += OnPlayerChanged;
+private void OnDisable() => _player.OnUpdated -= OnPlayerChanged;
+
+private void OnPlayerChanged(object sender, GameObject player)
+{
+    // react to the new player
+}
+```
+A value passed to the constructor (`new GlobalVariable<int>(GlobalVariables.Score, 0)`) is a starting value: it is only used if the tag has no value yet, so spawning another object with the same field doesn't reset it.  
+`HasValue` is false when the tag is unset, the value is null, or the object was destroyed.  
+`GlobalVariableService.Instance.Remove(tag)` and `Clear()` remove values and notify listeners with the default value (null / 0).  
+In the Inspector a `GlobalVariable` field shows its tag and value (the starting value in edit mode, the live value in Play).
 
 ### Messaging Service
-Send global messages between objects and scenes using an enum as a tag. 
-Watch out for initialization order and race conditions! 
+Send global messages between objects and scenes using an enum as a tag.  
+Each tag carries one payload type, set by its first listener. A listener or send with a different type logs an error naming the tag and both types. A listener that throws is logged and the other listeners still run.  
+A listener only receives messages sent after it was added, unless the sender passes `sendToLate: true` (see below).  
+Listeners on destroyed objects are removed with a warning, but remove your listeners in `OnDisable` anyway.  
 Sender:
 ```cs
 private void Start()
@@ -153,12 +169,12 @@ Listener:
 ```cs
 private void OnEnable()
 {
-    MessagingService.Instance.AddListener<Character>(GlobalMessages.PlayerSpawned, OnPlayerSpawned);
+    MessagingService.Instance.AddListener<GameObject>(GlobalMessages.PlayerSpawned, OnPlayerSpawned);
 }
 
 private void OnDisable()
 {
-    MessagingService.Instance.RemoveListener<Character>(GlobalMessages.PlayerSpawned, OnPlayerSpawned);
+    MessagingService.Instance.RemoveListener<GameObject>(GlobalMessages.PlayerSpawned, OnPlayerSpawned);
 }
 
 private void OnPlayerSpawned(GameObject gameObject)
@@ -166,6 +182,17 @@ private void OnPlayerSpawned(GameObject gameObject)
     // cache the reference here
 }
 ```
+Late listeners: pass `sendToLate: true` and listeners added later get the last payload as soon as they are added (e.g. a HUD enabled after the player spawned). Once a tag has a remembered payload, every later send to it replaces it. `ClearSticky(tag)` forgets it.
+```cs
+MessagingService.Instance.Send(GlobalMessages.PlayerSpawned, gameObject, sendToLate: true);
+```
+No payload: listen without caring about the payload (fires on every send to the tag), or send without one (only on tags with no typed listeners).
+```cs
+MessagingService.Instance.AddListener(GlobalMessages.PlayerDied, PlayDeathSound);
+MessagingService.Instance.Send(GlobalMessages.LevelLoaded);
+```
+Sending doesn't allocate, as long as the call doesn't name a single type argument: `Send(tag, payload)` is allocation-free, `Send<DamageInfo>(tag, payload)` boxes the tag (name both types, `Send<GlobalMessages, DamageInfo>`, or none).  
+Debugging: Window > UnityTools > Messaging Debugger lists every tag with its payload type, listeners and remembered payload, and every global variable with its value.
 
 ### Object Pooling
 A simple object pooling solution for GameObjects.  
