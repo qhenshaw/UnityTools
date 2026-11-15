@@ -12,7 +12,7 @@ namespace SceneManagement
         [SerializeField] private string _tagFilter = "Player";
 
         [Header("Forced Set")]
-        [SerializeField] private string[] _overrideOnEnter;
+        [SerializeField, SceneDropdown(storeName: true)] private string[] _overrideOnEnter;
 
         private void OnTriggerEnter(Collider other)
         {

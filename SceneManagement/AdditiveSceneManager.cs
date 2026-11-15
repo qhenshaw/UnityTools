@@ -16,10 +16,10 @@ namespace SceneManagement
     public class AdditiveSceneManager : MonoBehaviour
     {
 #pragma warning disable CS0414
-        [SerializeField] private string _newSceneName;
-        [SerializeField, Button("Add New Scene", true)] private string _addNewSceneButton = nameof(AddNewScene);
-        [field: SerializeField] public List<string> SceneList { get; private set; }
-        [SerializeField, Button("Load Scene List", true)] private string _loadSceneListButton = nameof(LoadSceneList);
+        [SerializeField, InlineButton(nameof(AddNewScene), "Add")] private string _newSceneName;
+        [SerializeField, SceneDropdown, InlineButton(nameof(AddExistingScene), "Add")] private string _existingScene;
+        [field: SerializeField, SceneDropdown] public List<string> SceneList { get; private set; }
+        [SerializeField, Button("Load Scene List", true, Method = nameof(LoadSceneList))] private string _loadSceneListButton;
 #pragma warning restore CS0414
 
         private void Awake()
@@ -84,7 +84,8 @@ namespace SceneManagement
                 return;
             }
             Scene activeScene = SceneManager.GetActiveScene();
-            string path = activeScene.path.Replace(activeScene.name + ".unity", "");
+            string folder = Path.GetDirectoryName(activeScene.path)?.Replace('\\', '/');
+            if (string.IsNullOrEmpty(folder)) folder = "Assets";
             Scene newScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
 
             int index = GetLoadedSceneIndex(newScene);
@@ -95,11 +96,45 @@ namespace SceneManagement
             }
 
             newScene.name = $"{activeScene.name}-{_newSceneName}";
-            EditorSceneManager.SaveScene(newScene, path + "/" + newScene.name + ".unity");
+            EditorSceneManager.SaveScene(newScene, $"{folder}/{newScene.name}.unity");
             EditorSceneManager.SetActiveScene(activeScene);
             SceneList.Add(newScene.path);
 
             Debug.Log($"New scene added: {newScene.name}");
+#endif
+        }
+
+        /// <summary>Adds the scene picked in the Existing Scene dropdown to the list and opens it additively.</summary>
+        private void AddExistingScene()
+        {
+#if UNITY_EDITOR
+            if (string.IsNullOrEmpty(_existingScene))
+            {
+                Debug.LogError("Pick a scene in Existing Scene first.", this);
+                return;
+            }
+            if (_existingScene == gameObject.scene.path)
+            {
+                Debug.LogError("A scene can't load itself additively; pick a different scene.", this);
+                return;
+            }
+            if (SceneList.Contains(_existingScene))
+            {
+                Debug.LogWarning($"{Path.GetFileNameWithoutExtension(_existingScene)} is already in the scene list.", this);
+                return;
+            }
+
+            SceneList.Add(_existingScene);
+            string sceneName = Path.GetFileNameWithoutExtension(_existingScene);
+            if (!CheckIfSceneLoaded(sceneName))
+            {
+                Scene activeScene = SceneManager.GetActiveScene();
+                EditorSceneManager.OpenScene(_existingScene, OpenSceneMode.Additive);
+                EditorSceneManager.SetActiveScene(activeScene);
+            }
+
+            Debug.Log($"Existing scene added: {sceneName}", this);
+            _existingScene = string.Empty;
 #endif
         }
 

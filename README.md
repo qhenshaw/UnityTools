@@ -102,8 +102,16 @@ Adds a search field to the Transform inspector, displays matching field results 
 >Use with discretion.
 
 ### Inspect Attributes
-Used internally to add buttons to my tools, it's not good. Seriously.  
-Get Odin, Naughty Attributes, or Alchemy.
+Used internally to add buttons to my tools. For anything bigger, get Odin, Naughty Attributes, or Alchemy.
+```csharp
+// Full-width button, drawn in place of a placeholder field
+[SerializeField, Button("Bake", true, Method = nameof(Bake))] private string _bakeButton;
+
+// Button on the same row as a field: New Scene Name [field] [Add]
+[SerializeField, InlineButton(nameof(AddNewScene), "Add")] private string _newSceneName;
+```
+Methods must be parameterless; private methods and methods in base classes work. Buttons run on every selected object as one undo step, after the inspector has finished drawing. A missing method shows on the button as `(!)` with the reason in its tooltip.  
+`InlineButton` works alongside another drawer on the same field (e.g. a dropdown). If your own PropertyDrawer should keep the button when an inspector such as Odin picks your drawer, call `position = InlineButtonGUI.Draw(position, property, fieldInfo);` at the start of its `OnGUI`.
 
 ### Global Variables
 Register global variables using any enum.  
@@ -189,8 +197,10 @@ Placed prefabs retain prefab connection in scene and are spawned as-is, all phys
 A scene management component that will automatically load groups of scenes in editor and at runtime.  
 ```
 Scene view => Right click => Scene Management => Additive Scene Manager
-Type in additional scenes and click Add New Scene to automatically create and add to the list
+Type in a name and click Add New Scene to automatically create a scene and add it to the list
+Pick a scene from the Existing Scene dropdown and click Add Existing Scene to add a scene that already exists
 ```
+Scene List entries are dropdowns of the project's scenes; entries that point at a deleted or moved scene show as Missing.
 
 ### Hide Children
 A component that can hide child objects and components on scene objects or prefabs.

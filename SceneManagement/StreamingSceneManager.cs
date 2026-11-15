@@ -19,8 +19,8 @@ namespace SceneManagement
 
         [SerializeField] private bool _unloadUnusedAssets = true;
         [SerializeField] private bool _disableInsteadOfUnload = false;
-        [SerializeField] private string[] _persistent;
-        [SerializeField] private string[] _initial;
+        [SerializeField, SceneDropdown(storeName: true)] private string[] _persistent;
+        [SerializeField, SceneDropdown(storeName: true)] private string[] _initial;
 
         private void Awake()
         {

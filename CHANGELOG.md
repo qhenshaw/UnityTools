@@ -1,5 +1,14 @@
 # Changelog
 
+[5.5.0] - 2026-11-14
+- Added InlineButton attribute: draws a button on the same row as a field, and works alongside another drawer on the field (e.g. a dropdown)
+- Button attribute: added Method = nameof(...) so buttons no longer depend on the field's saved string (which broke on method renames and for new array elements); the old style still works
+- Buttons now run on every selected object as one undo step, after the inspector finishes drawing, find private methods in base classes, log exceptions instead of breaking the inspector, and show "(!)" with the reason when the method is missing
+- Added SceneDropdown attribute: a searchable, folder-grouped scene picker for string fields and lists (stores the asset path, or the scene name with storeName: true)
+- Additive Scene Manager: scenes are picked from the searchable dropdown, with inline Add buttons for New Scene Name and Existing Scene
+- Streaming Scene Manager and Streaming Scene Transition: scene fields use the searchable scene dropdown (still stored as scene names)
+- Fixed Add New Scene saving scene paths with a doubled slash
+
 [5.4.0] - 2026-11-14
 - Added APV Bake Checklist window (Window > Rendering > APV Bake Checklist): checks an HDRP Adaptive Probe Volume bake with no lightmaps across the project, loaded scenes and objects, with per-row Fix/Select buttons, Fix All, bake controls and post-bake verification
 - APV Bake Checklist: the Baking Set fix now works when the Lighting window is in Single Scene mode (its temporary set used to block the active scene) and switches the Lighting window to the new set

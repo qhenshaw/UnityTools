@@ -31,7 +31,7 @@ namespace LightingTools
         [SerializeField] private ShadowCastingMode _shadowCastingMode = ShadowCastingMode.On;
         [SerializeField] private bool _staticShadowCaster = true;
 #pragma warning disable CS0414
-        [SerializeField, Button("Apply", true)] private string _applyButton = nameof(ApplyCurrentSettings);
+        [SerializeField, Button("Apply", true, Method = nameof(ApplyCurrentSettings))] private string _applyButton = nameof(ApplyCurrentSettings);
 #pragma warning restore CS0414
 
         // Serialized so a domain reload doesn't look like a preset change and overwrite hand-tuned values.

@@ -169,7 +169,7 @@ namespace ScatterTool
             public bool BasedOnWeight;
             public AnimationCurve WeightCurve;
 #pragma warning disable CS0414
-            [Button("Reset Curve", true, 90), SerializeField] private string _resetCurve = "";
+            [Button("Reset Curve", true, 90, Method = nameof(ResetCurve)), SerializeField] private string _resetCurve = "";
 #pragma warning restore CS0414
 
             public void OnBeforeSerialize() { }
@@ -184,7 +184,6 @@ namespace ScatterTool
                     BasedOnWeight = true;
                     WeightCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
                 }
-                _resetCurve = nameof(ResetCurve);
             }
 
             public void ResetCurve()
@@ -245,10 +244,10 @@ namespace ScatterTool
         [field: SerializeField] public int InstanceCount { get; private set; } = 0;
 
 #pragma warning disable 0414
-        [Button("Clear", allowEditMode: true, 60), SerializeField]
+        [Button("Clear", allowEditMode: true, 60, Method = nameof(Clear)), SerializeField]
         private string _clear = nameof(Clear);
 
-        [Button("Bake", allowEditMode: true, 60), SerializeField]
+        [Button("Bake", allowEditMode: true, 60, Method = nameof(Bake)), SerializeField]
         private string _bake = nameof(Bake);
 #pragma warning restore 0414
 
