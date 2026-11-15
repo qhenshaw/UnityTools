@@ -1,5 +1,16 @@
 # Changelog
 
+[5.4.0] - 2026-11-14
+- Fixed Assign Volume to Open Scenes using the wrong Static Lighting Sky and creating hidden duplicates when a scene had several root objects
+- Fixed Assign Volume to Open Scenes failing on unloaded scenes or with nothing selected; it now logs what it skipped instead of failing silently
+- Assign Volume to Open Scenes uses the profile's sky when the profile has no Visual Environment, and warns instead of silently picking HDRI Sky
+- Lighting tools now detect HDRP automatically, so the HDRP scripting define is no longer needed (menu items were missing on platforms without it)
+- Surround with Probe Volume / Reflection Probe / Local Volume now warn when nothing usable is selected, skip terrains without data, and create one object for a multi-selection instead of one per selected object
+- Light Bake Settings: Apply is now undoable and records prefab overrides (changes to prefab instances could be lost before)
+- Light Bake Settings: Apply now supports terrains and leaves objects without a renderer untouched instead of clearing their static flags
+- Light Bake Settings: custom static flags no longer reset to the preset after a domain reload
+- Light Bake Settings: fixed a serialization layout mismatch between the Editor and player builds
+
 [5.3.0] - 2026-10-27
 - Vertex Painter now saves painted meshes as mesh assets in the project instead of embedding them in scenes
 - Painting in Prefab Mode stores paint in the prefab, painting a prefab instance creates a unique copy for that instance

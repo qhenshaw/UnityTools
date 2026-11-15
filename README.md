@@ -190,8 +190,8 @@ Type in additional scenes and click Add New Scene to automatically create and ad
 A component that can hide child objects and components on scene objects or prefabs.
 
 ### Light Bake Settings
-A component that can apply lighting settings to all meshes in scene under a parent.  
-When nesting objects deeper component settings are used.
+A component that can apply lighting settings to all meshes and terrains in scene under a parent.  
+When nesting objects deeper component settings are used. Skinned meshes and objects without a renderer are left untouched. Apply is undoable and works on prefab instances.
 
 ### Prefab Spawner
 Allows for quickly swapping in-scene prefabs with a spawner object.  

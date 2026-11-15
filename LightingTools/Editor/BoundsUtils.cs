@@ -9,64 +9,73 @@ namespace LightingTools.Editor
         public static bool TryGetSelectionBounds(out Bounds bounds, float padding = 2f)
         {
             bounds = new Bounds();
-            bool boundsInit = false;
-
-            if (Selection.gameObjects == null || Selection.gameObjects.Length == 0) return false;
 
             GameObject[] selection = Selection.gameObjects;
-            List<MeshRenderer> renderers = new List<MeshRenderer>();
-            List<SkinnedMeshRenderer> skinnedMeshRenderers = new List<SkinnedMeshRenderer>();
-            List<Terrain> terrains = new List<Terrain>();
+            if (selection == null || selection.Length == 0)
+            {
+                Debug.LogWarning("Select one or more objects with renderers or terrains first.");
+                return false;
+            }
 
+            var renderers = new List<Renderer>();
+            var terrains = new List<Terrain>();
             foreach (GameObject selected in selection)
             {
                 renderers.AddRange(selected.GetComponentsInChildren<MeshRenderer>());
-                skinnedMeshRenderers.AddRange(selected.GetComponentsInChildren<SkinnedMeshRenderer>());
+                renderers.AddRange(selected.GetComponentsInChildren<SkinnedMeshRenderer>());
                 terrains.AddRange(selected.GetComponentsInChildren<Terrain>());
             }
 
-            if (renderers.Count == 0 && skinnedMeshRenderers.Count == 0 && terrains.Count == 0)
+            if (!TryGetBounds(renderers, terrains, out bounds))
             {
-                Debug.LogWarning("No renderers or terrains found.");
+                Debug.LogWarning("No renderers or terrains with data found in the selection.");
                 return false;
-            }    
-
-            if (renderers.Count > 0)
-            {
-                bounds = renderers[0].bounds;
-                boundsInit = true;
-                foreach (MeshRenderer meshRenderer in renderers)
-                {
-                    bounds.Encapsulate(meshRenderer.bounds);
-                }
-            }
-
-            if(skinnedMeshRenderers.Count > 0)
-            {
-                if (!boundsInit) bounds = skinnedMeshRenderers[0].bounds;
-                boundsInit = true;
-                foreach (SkinnedMeshRenderer smr in skinnedMeshRenderers)
-                {
-                    bounds.Encapsulate(smr.bounds);
-                }
-            }
-
-            if(terrains.Count > 0)
-            {
-                if (!boundsInit) bounds = GetTerrainWorldBoundS(terrains[0]);
-                boundsInit = true;
-                foreach(Terrain terrain in terrains)
-                {
-                    bounds.Encapsulate(GetTerrainWorldBoundS(terrain));
-                }
             }
 
             bounds.size += Vector3.one * padding;
-
             return true;
         }
 
-        private static Bounds GetTerrainWorldBoundS(Terrain terrain)
+        /// <summary>Combined world bounds of renderers and terrains. Terrains without TerrainData are skipped with a warning.</summary>
+        public static bool TryGetBounds(IEnumerable<Renderer> renderers, IEnumerable<Terrain> terrains, out Bounds bounds)
+        {
+            bounds = new Bounds();
+            bool initialized = false;
+
+            foreach (Renderer renderer in renderers)
+            {
+                if (renderer == null) continue;
+                Encapsulate(ref bounds, ref initialized, renderer.bounds);
+            }
+
+            foreach (Terrain terrain in terrains)
+            {
+                if (terrain == null) continue;
+                if (terrain.terrainData == null)
+                {
+                    Debug.LogWarning($"Terrain '{terrain.name}' has no TerrainData and was left out of the bounds.", terrain);
+                    continue;
+                }
+                Encapsulate(ref bounds, ref initialized, GetTerrainWorldBounds(terrain));
+            }
+
+            return initialized;
+        }
+
+        private static void Encapsulate(ref Bounds bounds, ref bool initialized, Bounds other)
+        {
+            if (!initialized)
+            {
+                bounds = other;
+                initialized = true;
+            }
+            else
+            {
+                bounds.Encapsulate(other);
+            }
+        }
+
+        public static Bounds GetTerrainWorldBounds(Terrain terrain)
         {
             Bounds bounds = terrain.terrainData.bounds;
             bounds.center += terrain.transform.position;

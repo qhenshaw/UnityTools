@@ -1,8 +1,9 @@
 using UnityEngine;
+using UnityEngine.Rendering;
+using InspectorAttributes;
 
 #if UNITY_EDITOR
-using InspectorAttributes;
-using UnityEngine.Rendering;
+using System.Collections.Generic;
 using UnityEditor;
 #endif
 
@@ -11,8 +12,11 @@ namespace LightingTools
     [DisallowMultipleComponent]
     public class LightbakeSettings : MonoBehaviour
     {
-#if UNITY_EDITOR
-        private enum LightBakePreset
+        // Serialized fields live outside #if UNITY_EDITOR so the serialization layout is identical in the
+        // Editor and in players (otherwise builds log "different serialization layout" errors).
+        // Static flags are stored as an int because StaticEditorFlags is an Editor-only type;
+        // the serialized data is the same as the enum it replaces.
+        public enum LightBakePreset
         {
             FullStatic,
             StaticNoShadows,
@@ -22,7 +26,7 @@ namespace LightingTools
         }
 
         [SerializeField] private LightBakePreset _preset;
-        [SerializeField] private StaticEditorFlags _flags;
+        [SerializeField, StaticEditorFlagsField] private int _flags;
         [SerializeField] private ReceiveGI _bakeMode = ReceiveGI.LightProbes;
         [SerializeField] private ShadowCastingMode _shadowCastingMode = ShadowCastingMode.On;
         [SerializeField] private bool _staticShadowCaster = true;
@@ -30,17 +34,31 @@ namespace LightingTools
         [SerializeField, Button("Apply", true)] private string _applyButton = nameof(ApplyCurrentSettings);
 #pragma warning restore CS0414
 
-        private LightBakePreset _previousPreset;
+        // Serialized so a domain reload doesn't look like a preset change and overwrite hand-tuned values.
+        [SerializeField, HideInInspector] private LightBakePreset _previousPreset;
+
+        public LightBakePreset Preset => _preset;
+
+#if UNITY_EDITOR
+        private const StaticEditorFlags StaticFlags =
+            StaticEditorFlags.ContributeGI |
+            StaticEditorFlags.BatchingStatic |
+            StaticEditorFlags.ReflectionProbeStatic |
+            StaticEditorFlags.OccluderStatic |
+            StaticEditorFlags.OccludeeStatic;
+
+        public StaticEditorFlags Flags => (StaticEditorFlags)_flags;
 
         private void Reset()
         {
             _preset = LightBakePreset.FullStatic;
             ApplyPreset();
+            _previousPreset = _preset;
         }
 
         private void OnValidate()
         {
-            if(_previousPreset != _preset)
+            if (_previousPreset != _preset)
             {
                 ApplyPreset();
                 _previousPreset = _preset;
@@ -52,11 +70,7 @@ namespace LightingTools
             switch (_preset)
             {
                 case LightBakePreset.FullStatic:
-                    _flags = StaticEditorFlags.ContributeGI |
-                             StaticEditorFlags.BatchingStatic |
-                             StaticEditorFlags.ReflectionProbeStatic |
-                             StaticEditorFlags.OccluderStatic |
-                             StaticEditorFlags.OccludeeStatic;
+                    _flags = (int)StaticFlags;
                     _bakeMode = ReceiveGI.LightProbes;
                     _shadowCastingMode = ShadowCastingMode.On;
                     _staticShadowCaster = true;
@@ -68,11 +82,7 @@ namespace LightingTools
                     _staticShadowCaster = false;
                     break;
                 case LightBakePreset.StaticNoShadows:
-                    _flags = StaticEditorFlags.ContributeGI |
-                             StaticEditorFlags.BatchingStatic |
-                             StaticEditorFlags.ReflectionProbeStatic |
-                             StaticEditorFlags.OccluderStatic |
-                             StaticEditorFlags.OccludeeStatic;
+                    _flags = (int)StaticFlags;
                     _bakeMode = ReceiveGI.LightProbes;
                     _shadowCastingMode = ShadowCastingMode.Off;
                     _staticShadowCaster = false;
@@ -84,7 +94,7 @@ namespace LightingTools
                     _staticShadowCaster = false;
                     break;
                 case LightBakePreset.DynamicBakeReflections:
-                    _flags = StaticEditorFlags.ReflectionProbeStatic;
+                    _flags = (int)StaticEditorFlags.ReflectionProbeStatic;
                     _bakeMode = ReceiveGI.LightProbes;
                     _shadowCastingMode = ShadowCastingMode.On;
                     _staticShadowCaster = false;
@@ -92,33 +102,76 @@ namespace LightingTools
             }
         }
 
+        /// <summary>
+        /// Applies this component's settings to every MeshRenderer and Terrain below it, and lets nested
+        /// LightbakeSettings apply theirs to their own subtrees. Objects without a MeshRenderer or Terrain
+        /// are left untouched. SkinnedMeshRenderers are skipped on purpose.
+        /// Undoable, and recorded as prefab overrides on prefab instances.
+        /// </summary>
         public void ApplyCurrentSettings()
         {
-            Debug.Log($"Lighting settings applied under object: {gameObject.name}", gameObject);
-            Transform[] transforms = GetComponentsInChildren<Transform>();
-            foreach (Transform t in transforms)
+            Undo.IncrementCurrentGroup();
+            int group = Undo.GetCurrentGroup();
+            Undo.SetCurrentGroupName($"Apply Lightbake Settings ({name})");
+
+            int count = 0;
+            foreach (LightbakeSettings settings in GetComponentsInChildren<LightbakeSettings>(true))
             {
-                if (t.TryGetComponent(out MeshRenderer renderer))
-                {
-                    t.gameObject.isStatic = true;
-                    GameObjectUtility.SetStaticEditorFlags(t.gameObject, _flags);
-                    renderer.receiveGI = _bakeMode;
-                    renderer.shadowCastingMode = _shadowCastingMode;
-                    renderer.staticShadowCaster = _staticShadowCaster;
-                }
-                else
-                {
-                    t.gameObject.isStatic = false;
-                }
+                count += settings.ApplyToOwnedObjects();
             }
 
-            LightbakeSettings[] childSettings = GetComponentsInChildren<LightbakeSettings>();
-            foreach (LightbakeSettings child in childSettings)
-            {
-                if (child == this) continue;
-                child.ApplyCurrentSettings();
-            }
+            Undo.CollapseUndoOperations(group);
+            Debug.Log($"Lightbake settings applied to {count} object(s) under: {gameObject.name}", gameObject);
         }
+
+        /// <summary>Applies to renderers/terrains whose nearest LightbakeSettings ancestor is this one.</summary>
+        private int ApplyToOwnedObjects()
+        {
+            int count = 0;
+            var visited = new HashSet<GameObject>();
+
+            foreach (MeshRenderer renderer in GetComponentsInChildren<MeshRenderer>(true))
+            {
+                if (renderer.GetComponentInParent<LightbakeSettings>(true) != this) continue;
+                if (!visited.Add(renderer.gameObject)) continue;
+
+                Undo.RecordObject(renderer, "Apply Lightbake Settings");
+                renderer.receiveGI = _bakeMode;
+                renderer.shadowCastingMode = _shadowCastingMode;
+                renderer.staticShadowCaster = _staticShadowCaster;
+                PrefabUtility.RecordPrefabInstancePropertyModifications(renderer);
+
+                ApplyStaticFlags(renderer.gameObject);
+                count++;
+            }
+
+            foreach (Terrain terrain in GetComponentsInChildren<Terrain>(true))
+            {
+                if (terrain.GetComponentInParent<LightbakeSettings>(true) != this) continue;
+                if (!visited.Add(terrain.gameObject)) continue;
+
+                Undo.RecordObject(terrain, "Apply Lightbake Settings");
+                terrain.shadowCastingMode = _shadowCastingMode;
+                PrefabUtility.RecordPrefabInstancePropertyModifications(terrain);
+
+                ApplyStaticFlags(terrain.gameObject);
+                count++;
+            }
+
+            return count;
+        }
+
+        private void ApplyStaticFlags(GameObject go)
+        {
+            Undo.RecordObject(go, "Apply Lightbake Settings");
+            GameObjectUtility.SetStaticEditorFlags(go, (StaticEditorFlags)_flags);
+            PrefabUtility.RecordPrefabInstancePropertyModifications(go);
+        }
+#else
+        public void ApplyCurrentSettings() { }
 #endif
     }
+
+    /// <summary>Draws an int field as a StaticEditorFlags mask in the inspector.</summary>
+    public class StaticEditorFlagsFieldAttribute : PropertyAttribute { }
 }
