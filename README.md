@@ -89,6 +89,12 @@ Wraps the selected objects tightly with the selected volume type.
 Right click objects(s) in scene and select Light => Surround with x
 ```
 
+### APV Bake Checklist
+A walkthrough for baking HDRP lighting with Adaptive Probe Volumes and no lightmaps. Checks the HDRP assets, frame settings, Lighting Settings, Static Lighting Sky, Baking Set, Probe Volumes, renderers, lights and emissive materials of every loaded scene, and offers a Fix and a Select button per row. Fix All applies every safe fix as one undo step. Includes bake buttons and post-bake checks (baked data, zero lightmaps). Realtime lights are listed, never changed. Requires HDRP.
+```
+Window => Rendering => APV Bake Checklist
+```
+
 ### Transform Search Editor
 Adds a search field to the Transform inspector, displays matching field results from GameObject components.
 > [!CAUTION]

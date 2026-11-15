@@ -1,0 +1,157 @@
+/* APV Bake Checklist window. Status colours are mid-tones with explicit text colours so they read on both Editor skins. */
+
+.apv-root {
+    flex-grow: 1;
+}
+
+.apv-toolbar {
+    flex-direction: row;
+    align-items: center;
+    padding: 4px 6px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(0, 0, 0, 0.25);
+}
+
+.apv-summary {
+    flex-direction: row;
+}
+
+.apv-chip {
+    padding: 1px 7px;
+    margin-right: 4px;
+    border-radius: 8px;
+    -unity-font-style: bold;
+    font-size: 11px;
+}
+
+.apv-fix-all {
+    -unity-font-style: bold;
+}
+
+.apv-scroll {
+    flex-grow: 1;
+}
+
+.apv-section {
+    margin: 4px 4px 2px 4px;
+}
+
+.apv-section > .unity-foldout__toggle {
+    -unity-font-style: bold;
+    font-size: 13px;
+}
+
+.apv-section-done > .unity-foldout__toggle {
+    opacity: 0.75;
+}
+
+.apv-row {
+    flex-direction: row;
+    align-items: flex-start;
+    padding: 5px 6px;
+    margin: 2px 0 2px -12px;
+    border-left-width: 3px;
+    border-radius: 3px;
+    background-color: rgba(127, 127, 127, 0.08);
+}
+
+.apv-badge {
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    margin-right: 8px;
+    border-radius: 10px;
+    -unity-text-align: middle-center;
+    -unity-font-style: bold;
+    font-size: 12px;
+}
+
+.apv-text {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 120px;
+}
+
+.apv-title {
+    -unity-font-style: bold;
+    white-space: normal;
+}
+
+.apv-message {
+    white-space: normal;
+    opacity: 0.85;
+    margin-top: 1px;
+}
+
+.apv-help {
+    white-space: normal;
+    opacity: 0.7;
+    margin-top: 4px;
+    font-size: 11px;
+    -unity-font-style: italic;
+}
+
+.apv-buttons {
+    flex-direction: row;
+    flex-shrink: 0;
+    align-items: center;
+    margin-left: 6px;
+}
+
+.apv-buttons > Button {
+    margin: 0 0 0 3px;
+}
+
+.apv-fix {
+    -unity-font-style: bold;
+}
+
+.apv-help-button {
+    width: 20px;
+}
+
+.apv-bake {
+    margin: 2px 0 6px -12px;
+    padding: 6px;
+    border-radius: 3px;
+    background-color: rgba(127, 127, 127, 0.12);
+}
+
+.apv-bake-buttons {
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.apv-bake-buttons > Button {
+    margin: 2px 4px 2px 0;
+}
+
+.apv-primary {
+    -unity-font-style: bold;
+}
+
+.apv-bake-status-row {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 4px;
+}
+
+.apv-bake-status {
+    flex-grow: 1;
+    white-space: normal;
+}
+
+/* status colours */
+.apv-status-pass { border-left-color: #3f9b5e; }
+.apv-status-info { border-left-color: #4a7fc9; }
+.apv-status-warning { border-left-color: #d4a72c; }
+.apv-status-fail { border-left-color: #d0503f; background-color: rgba(208, 80, 63, 0.10); }
+.apv-status-manual { border-left-color: #8d6fd1; }
+.apv-status-notapplicable { border-left-color: #7a7a7a; opacity: 0.6; }
+
+.apv-badge.apv-status-pass, .apv-chip.apv-status-pass { background-color: #3f9b5e; color: #ffffff; }
+.apv-badge.apv-status-info, .apv-chip.apv-status-info { background-color: #4a7fc9; color: #ffffff; }
+.apv-badge.apv-status-warning, .apv-chip.apv-status-warning { background-color: #d4a72c; color: #1e1e1e; }
+.apv-badge.apv-status-fail, .apv-chip.apv-status-fail { background-color: #d0503f; color: #ffffff; }
+.apv-badge.apv-status-manual, .apv-chip.apv-status-manual { background-color: #8d6fd1; color: #ffffff; }
+.apv-badge.apv-status-notapplicable { background-color: #7a7a7a; color: #ffffff; }

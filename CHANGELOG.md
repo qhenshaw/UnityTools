@@ -1,6 +1,7 @@
 # Changelog
 
 [5.4.0] - 2026-11-14
+- Added APV Bake Checklist window (Window > Rendering > APV Bake Checklist): checks an HDRP Adaptive Probe Volume bake with no lightmaps across the project, loaded scenes and objects, with per-row Fix/Select buttons, Fix All, bake controls and post-bake verification
 - Fixed Assign Volume to Open Scenes using the wrong Static Lighting Sky and creating hidden duplicates when a scene had several root objects
 - Fixed Assign Volume to Open Scenes failing on unloaded scenes or with nothing selected; it now logs what it skipped instead of failing silently
 - Assign Volume to Open Scenes uses the profile's sky when the profile has no Visual Environment, and warns instead of silently picking HDRI Sky
