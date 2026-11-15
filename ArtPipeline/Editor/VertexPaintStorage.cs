@@ -108,7 +108,11 @@ namespace ArtPipeline.Editor
             Object.DestroyImmediate(rebuilt);
             EditorUtility.SetDirty(painted);
             AssetDatabase.SaveAssetIfDirty(painted);
+            MeshGeometryChanged?.Invoke(painted);
         }
+
+        // Raised when a painted mesh's vertices may have changed (not just its colors), so cached paint data can be rebuilt.
+        internal static event System.Action<Mesh> MeshGeometryChanged;
 
         // Restores the original mesh and removes the painter. The painted asset is left in the project.
         public static void RestoreSource(VertexPainter painter)

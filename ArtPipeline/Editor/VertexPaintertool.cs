@@ -6,6 +6,7 @@ using UnityEditor.EditorTools;
 using UnityEditor.Overlays;
 using UnityEditor.UIElements;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.UIElements;
 
 namespace ArtPipeline.Editor
@@ -17,11 +18,42 @@ namespace ArtPipeline.Editor
 
         private Mesh _strokeMesh;
         private VertexPainter _strokePainter;
-        private List<Vector3> _vertices = new List<Vector3>();
-        private List<Vector3> _normals = new List<Vector3>();
         private List<Color> _colors = new List<Color>();
-        Dictionary<int, Color> _newColors = new Dictionary<int, Color>();
         private DateTime _lastPaintTime;
+
+        private const int MaxPreviewDots = 4000;
+        private const int DotSegments = 8;
+        private static readonly int ZTestId = Shader.PropertyToID("_ZTest");
+        private static Material _dotMaterial;
+
+        // unlit vertex-colored material for the batched preview dots (same shader Unity uses for GL handles)
+        private static Material GetDotMaterial()
+        {
+            if (_dotMaterial != null) return _dotMaterial;
+            Shader shader = Shader.Find("Hidden/Internal-Colored");
+            if (shader == null) return null;
+            _dotMaterial = new Material(shader) { hideFlags = HideFlags.HideAndDontSave };
+            _dotMaterial.SetFloat("_Cull", (float)CullMode.Off);
+            _dotMaterial.SetFloat("_ZWrite", 0f);
+            _dotMaterial.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+            _dotMaterial.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+            return _dotMaterial;
+        }
+
+        // cached mesh data and spatial lookup for the painter being painted
+        private VertexPaintTarget _target;
+
+        // brush state, updated only when the mouse, camera, radius or mesh changes
+        private bool _brushHit;
+        private Vector3 _brushPoint;
+        private Vector3 _brushNormal;
+        private readonly List<int> _brushIndices = new List<int>();
+        private readonly List<float> _brushWeights = new List<float>();
+        private Vector2 _lastMousePosition;
+        private Vector3 _lastCameraPosition;
+        private Quaternion _lastCameraRotation;
+        private float _lastRadius;
+        private int _lastTargetVersion = -1;
         private float _paintTick = 0.05f;
         private float _strengthMultiplier = 2f;
 
@@ -35,6 +67,10 @@ namespace ArtPipeline.Editor
         {
             VertexPainterOverlay.IsVisible = true;
             VertexPainterOverlay.OnResetColorInput += OnColorsReset;
+            Undo.undoRedoPerformed += OnUndoRedo;
+            VertexPaintStorage.MeshGeometryChanged += OnMeshGeometryChanged;
+            Selection.selectionChanged += DisposeTarget;
+            AssemblyReloadEvents.beforeAssemblyReload += DisposeTarget;
         }
 
         public override void OnWillBeDeactivated()
@@ -42,7 +78,24 @@ namespace ArtPipeline.Editor
             EndStroke();
             VertexPainterOverlay.IsVisible = false;
             VertexPainterOverlay.OnResetColorInput -= OnColorsReset;
+            Undo.undoRedoPerformed -= OnUndoRedo;
+            VertexPaintStorage.MeshGeometryChanged -= OnMeshGeometryChanged;
+            Selection.selectionChanged -= DisposeTarget;
+            AssemblyReloadEvents.beforeAssemblyReload -= DisposeTarget;
+            DisposeTarget();
         }
+
+        private void DisposeTarget()
+        {
+            _target?.Dispose();
+            _target = null;
+            _brushHit = false;
+        }
+
+        // undo/redo may restore different vertices into the same mesh, re-check them before the next brush query
+        private void OnUndoRedo() => _target?.VerifyGeometryOnNextSync();
+
+        private void OnMeshGeometryChanged(Mesh mesh) => _target?.Invalidate();
 
         private void OnColorsReset(object sender, EventArgs e)
         {
@@ -82,6 +135,15 @@ namespace ArtPipeline.Editor
             _lastPaintTime = DateTime.MinValue;
             Undo.RegisterCompleteObjectUndo(_strokeMesh, "Vertex Paint");
 
+            // colors are read once per stroke and kept in memory, then uploaded in ranges as they change
+            _strokeMesh.GetColors(_colors);
+            if (_colors.Count != _strokeMesh.vertexCount)
+            {
+                _colors.Clear();
+                for (int i = 0; i < _strokeMesh.vertexCount; i++) _colors.Add(new Color(0f, 0f, 0f, 0f));
+                _strokeMesh.SetColors(_colors);
+            }
+
             if (previous != _strokeMesh) VertexPainterOverlay.RequestRefresh();
         }
 
@@ -105,91 +167,174 @@ namespace ArtPipeline.Editor
 
         public override void OnToolGUI(EditorWindow window)
         {
+            Event e = Event.current;
+            // control IDs must be requested on every event, including Layout
+            int controlId = GUIUtility.GetControlID(FocusType.Passive);
+
             VertexPainter painter = Selection.activeGameObject != null ? Selection.activeGameObject.GetComponent<VertexPainter>() : null;
             if (painter != _strokePainter) EndStroke();
-            if (painter == null) return;
+            if (painter == null)
+            {
+                _brushHit = false;
+                return;
+            }
+            if (e.type == EventType.Layout) return;
 
-            int controlId = GUIUtility.GetControlID(FocusType.Passive);
-            Ray mouseRay = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
-            bool hit = SceneMeshRaycast.Raycast(mouseRay, new Renderer[] { painter.Renderer }, out RaycastHit hitInfo, out GameObject go);
+            Mesh mesh = _strokeMesh != null ? _strokeMesh : VertexPaintStorage.GetDisplayMesh(painter);
+            if (mesh == null) return;
+            if (_target == null) _target = new VertexPaintTarget();
+            _target.Sync(painter, mesh);
+
+            EventType type = e.type;
+            if (type == EventType.MouseLeaveWindow) _brushHit = false;
+            if (type == EventType.MouseMove || type == EventType.MouseDrag || type == EventType.MouseDown || BrushInputsChanged(e, window))
+            {
+                UpdateBrush(e.mousePosition, window);
+            }
 
             // handle mouse before the hit check so releasing off the mesh still ends the stroke
-            if (Event.current.isMouse && Event.current.button == 0)
+            if (e.isMouse && e.button == 0)
             {
-                if (Event.current.type == EventType.MouseDown && hit)
+                if (type == EventType.MouseDown && _brushHit)
                 {
                     BeginStroke(painter);
                     GUIUtility.hotControl = controlId;
                 }
-                if (Event.current.type == EventType.MouseUp)
+                if (type == EventType.MouseUp)
                 {
                     EndStroke();
                     if (GUIUtility.hotControl == controlId) GUIUtility.hotControl = 0;
                 }
 
-                Event.current.Use();
-            }
-
-            if (!hit) return;
-            Vector3 hitLocalPos = painter.transform.InverseTransformPoint(hitInfo.point);
-
-            Mesh mesh = _strokeMesh != null ? _strokeMesh : VertexPaintStorage.GetDisplayMesh(painter);
-            if (mesh == null) return;
-            mesh.GetVertices(_vertices);
-            mesh.GetNormals(_normals);
-            mesh.GetColors(_colors);
-            if (_colors.Count == 0)
-            {
-                for (int i = 0; i < _vertices.Count; i++) _colors.Add(new Color(0f, 0f, 0f, 0f));
-            }
-
-            float radius = VertexPainterOverlay.Radius;
-            float strength = VertexPainterOverlay.Strength;
-            Color color = VertexPainterOverlay.Color;
-            AnimationCurve falloffCurve = VertexPainterOverlay.Falloff;
-            float dotSize = VertexPainterOverlay.DotSize;
-
-            float sqrMaxDistance = radius * radius;
-            _newColors.Clear();
-            for (int i = 0; i < _vertices.Count; i++)
-            {
-                float sqrDistance = Vector3.SqrMagnitude(_vertices[i] - hitLocalPos);
-                if (sqrDistance > sqrMaxDistance) continue;
-
-                float distance = Mathf.Sqrt(sqrDistance);
-                float normalizedDistance = Mathf.Clamp01(distance / radius);
-                float distanceStrength = falloffCurve.Evaluate(normalizedDistance);
-                float size = dotSize * distanceStrength;
-
-                Vector3 worldPos = painter.transform.TransformPoint(_vertices[i]);
-                Handles.color = new Color(color.r, color.g, color.b, 1f);
-                Handles.DrawSolidDisc(worldPos, _normals[i], size);
-
-                float lerpValue = distanceStrength * strength * _paintTick * _strengthMultiplier;
-                Color newColor = ColorBlend(_colors[i], color, lerpValue);
-                _newColors.Add(i, newColor);
-            }
-
-            using (new Handles.DrawingScope())
-            {
-                Color discColor = Color.white;
-                Handles.color = discColor;
-                Handles.DrawWireDisc(hitInfo.point, hitInfo.normal, radius);
+                e.Use();
             }
 
             bool isPainting = _strokeMesh != null;
-            if (isPainting && DateTime.Now > _lastPaintTime.AddSeconds(_paintTick))
+            if (isPainting) PaintTick();
+
+            // keep repainting while hovering or painting, so the brush follows the mouse and paint keeps flowing when held still
+            if (isPainting || type == EventType.MouseMove || type == EventType.MouseDrag) window.Repaint();
+
+            if (type == EventType.Repaint && _brushHit) DrawBrush();
+        }
+
+        // The brush only needs a new raycast when the mouse, camera, brush radius or mesh changed.
+        private bool BrushInputsChanged(Event e, EditorWindow window)
+        {
+            if (e.type != EventType.Repaint) return false;
+            Camera camera = (window as SceneView)?.camera;
+            Vector3 cameraPosition = camera != null ? camera.transform.position : Vector3.zero;
+            Quaternion cameraRotation = camera != null ? camera.transform.rotation : Quaternion.identity;
+            bool changed = e.mousePosition != _lastMousePosition
+                || cameraPosition != _lastCameraPosition
+                || cameraRotation != _lastCameraRotation
+                || VertexPainterOverlay.Radius != _lastRadius
+                || _target.Version != _lastTargetVersion;
+            return changed;
+        }
+
+        private void UpdateBrush(Vector2 mousePosition, EditorWindow window)
+        {
+            Camera camera = (window as SceneView)?.camera;
+            _lastMousePosition = mousePosition;
+            _lastCameraPosition = camera != null ? camera.transform.position : Vector3.zero;
+            _lastCameraRotation = camera != null ? camera.transform.rotation : Quaternion.identity;
+            _lastRadius = VertexPainterOverlay.Radius;
+            _lastTargetVersion = _target.Version;
+
+            Ray ray = HandleUtility.GUIPointToWorldRay(mousePosition);
+            _brushHit = _target.Raycast(ray, out RaycastHit hit);
+            if (!_brushHit)
             {
-                _lastPaintTime = DateTime.Now;
-
-                foreach (var indexedColor in _newColors)
-                {
-                    _colors[indexedColor.Key] = indexedColor.Value;
-                }
-
-                _strokeMesh.SetColors(_colors);
-                EditorUtility.SetDirty(_strokeMesh);
+                _brushIndices.Clear();
+                _brushWeights.Clear();
+                return;
             }
+
+            _brushPoint = hit.point;
+            _brushNormal = hit.normal;
+
+            // brush distances are measured in world space so the painted area matches the brush circle at any scale
+            float radius = VertexPainterOverlay.Radius;
+            AnimationCurve falloff = VertexPainterOverlay.Falloff;
+            _target.Query(_brushPoint, radius, _brushIndices, _brushWeights);
+            for (int k = 0; k < _brushWeights.Count; k++)
+            {
+                _brushWeights[k] = falloff.Evaluate(Mathf.Clamp01(_brushWeights[k] / radius));
+            }
+        }
+
+        private void PaintTick()
+        {
+            if (!_brushHit || DateTime.Now <= _lastPaintTime.AddSeconds(_paintTick)) return;
+            _lastPaintTime = DateTime.Now;
+
+            float strength = VertexPainterOverlay.Strength;
+            Color color = VertexPainterOverlay.Color;
+            bool changed = false;
+            for (int k = 0; k < _brushIndices.Count; k++)
+            {
+                int i = _brushIndices[k];
+                if (i >= _colors.Count) continue;
+                float lerpValue = _brushWeights[k] * strength * _paintTick * _strengthMultiplier;
+                _colors[i] = ColorBlend(_colors[i], color, lerpValue);
+                changed = true;
+            }
+            if (!changed) return;
+
+            // SetColors always replaces the whole color array (start/length only pick a slice of the source list)
+            _strokeMesh.SetColors(_colors, 0, _colors.Count, MeshUpdateFlags.DontRecalculateBounds | MeshUpdateFlags.DontValidateIndices);
+            EditorUtility.SetDirty(_strokeMesh);
+        }
+
+        // Draws the brush circle and one dot per affected vertex, batched into a single GL draw.
+        // Very dense brushes are thinned out to MaxPreviewDots so drawing stays cheap.
+        private void DrawBrush()
+        {
+            Handles.color = Color.white;
+            Handles.DrawWireDisc(_brushPoint, _brushNormal, VertexPainterOverlay.Radius);
+
+            float dotSize = VertexPainterOverlay.DotSize;
+            int count = _brushIndices.Count;
+            if (count == 0 || dotSize <= 0f) return;
+
+            int step = count > MaxPreviewDots ? Mathf.CeilToInt(count / (float)MaxPreviewDots) : 1;
+            Vector3[] positions = _target.WorldPositions;
+            List<Vector3> normals = _target.LocalNormals;
+            Matrix4x4 normalToWorld = _target.NormalToWorld;
+            Color color = VertexPainterOverlay.Color;
+
+            Material dotMaterial = GetDotMaterial();
+            if (dotMaterial == null) return;
+            dotMaterial.SetFloat(ZTestId, (float)Handles.zTest);
+            dotMaterial.SetPass(0);
+            GL.PushMatrix();
+            GL.MultMatrix(Handles.matrix);
+            GL.Begin(GL.TRIANGLES);
+            GL.Color(new Color(color.r, color.g, color.b, 1f));
+            for (int k = 0; k < count; k += step)
+            {
+                int i = _brushIndices[k];
+                float size = dotSize * _brushWeights[k];
+                if (size <= 0f) continue;
+
+                Vector3 normal = i < normals.Count ? normalToWorld.MultiplyVector(normals[i]).normalized : _brushNormal;
+                Vector3 tangent = Vector3.Cross(normal, Mathf.Abs(normal.y) < 0.99f ? Vector3.up : Vector3.right).normalized * size;
+                Vector3 bitangent = Vector3.Cross(normal, tangent);
+                Vector3 center = positions[i];
+                Vector3 previous = center + tangent;
+                for (int s = 1; s <= DotSegments; s++)
+                {
+                    float angle = s * (Mathf.PI * 2f / DotSegments);
+                    Vector3 next = center + tangent * Mathf.Cos(angle) + bitangent * Mathf.Sin(angle);
+                    GL.Vertex(center);
+                    GL.Vertex(previous);
+                    GL.Vertex(next);
+                    previous = next;
+                }
+            }
+            GL.End();
+            GL.PopMatrix();
         }
     }
 

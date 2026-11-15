@@ -1,5 +1,11 @@
 # Changelog
 
+[5.6.1] - 2026-11-15
+- Vertex Painter: fixed the painted area not matching the brush circle on scaled meshes (the brush radius is now always in world units, including non-uniform and mirrored scale)
+- Vertex Painter: preview dots now face the right way on rotated and non-uniformly scaled meshes
+- Vertex Painter: much faster on large meshes. Mesh data, world positions and a spatial grid are cached per selection, raycasts use a hidden MeshCollider instead of testing every triangle, and the brush only updates when the mouse, camera, radius or mesh changes
+- Vertex Painter: preview dots are drawn in one batch and thinned out above 4000 vertices
+
 [5.6.0] - 2026-11-15
 - Mesh Importer: added Unreal UBX_ (box), USP_ (sphere) and UCP_ (capsule) collision prefixes, fitted to each collision mesh's bounds on its own transform
 - Mesh Importer: UCX_ colliders are now convex, matching Unreal (warns when a mesh is over Unity's 255 triangle convex limit)
