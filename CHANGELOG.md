@@ -1,5 +1,15 @@
 # Changelog
 
+[5.7.0] - 2026-11-15
+- Transform Search: searching no longer changes your component foldouts (before, typing expanded every component and clearing the search collapsed every component, including Transform)
+- Transform Search: each Inspector window has its own search, and a locked Inspector keeps its search until its object changes
+- Transform Search: the search clears when the selection changes
+- Transform Search: hidden components (e.g. URP/HDRP Additional Light Data) are no longer listed
+- Transform Search: much faster with large components, matches are only rebuilt when the query, components or undo state change instead of every redraw
+- Transform Search: arrays and lists match by their own name and are shown as one expandable field instead of every element being searched
+- Transform Search: added RectTransform support (UI objects), with the anchor and pivot handles still working
+- Transform Search: fields that share a parent show its path once instead of above every field
+
 [5.6.1] - 2026-11-15
 - Vertex Painter: fixed the painted area not matching the brush circle on scaled meshes (the brush radius is now always in world units, including non-uniform and mirrored scale)
 - Vertex Painter: preview dots now face the right way on rotated and non-uniformly scaled meshes

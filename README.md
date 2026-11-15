@@ -98,10 +98,10 @@ Window => Rendering => APV Bake Checklist
 ```
 
 ### Transform Search Editor
-Adds a search field to the Transform inspector, displays matching field results from GameObject components.
-> [!CAUTION]
-> This search function is experimental and currently returns intentionally hidden Unity component fields like everything under the URP/HDRP Additional Light Data.  
->Use with discretion.
+Adds a search field to the Transform and RectTransform inspector, displays matching field results from GameObject components.  
+Matches field names, or every field of a component whose type name matches. Arrays and lists match by their own name.  
+Searching never changes your component foldouts. The search clears when the selection changes, and each Inspector window has its own search.  
+Hidden components (like URP/HDRP Additional Light Data) and fields drawn only by custom inspectors are not searched.
 
 ### Inspect Attributes
 Used internally to add buttons to my tools. For anything bigger, get Odin, Naughty Attributes, or Alchemy.
