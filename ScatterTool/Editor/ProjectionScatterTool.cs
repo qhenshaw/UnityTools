@@ -35,6 +35,7 @@ namespace ScatterTool.Editor
 
         public override void OnWillBeDeactivated()
         {
+            EndStroke();
             ProjectionScatterOverlay.IsVisible = false;
             ProjectionScatterOverlay.OnResetMask -= OnResetMask;
             ProjectionScatterOverlay.OnFloodMask -= OnFloodMask;
@@ -64,8 +65,37 @@ namespace ScatterTool.Editor
             ProjectionScatter projectionScatter = Selection.activeGameObject.GetComponent<ProjectionScatter>();
             if (projectionScatter == null) return;
 
-            Ray mouseRay = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
+            Event current = Event.current;
+            int controlId = GUIUtility.GetControlID(FocusType.Passive);
+            if (current.type == EventType.Layout) HandleUtility.AddDefaultControl(controlId);
+
+            // Ctrl is read from the event itself, so releasing it anywhere (even outside the Scene view) counts.
+            _controlPressed = current.control;
+
+            Ray mouseRay = HandleUtility.GUIPointToWorldRay(current.mousePosition);
             bool maskHit = projectionScatter.GetMouseHit(mouseRay, out RaycastHit hitInfo);
+
+            // Mouse up ends the stroke wherever the cursor is: the brush holds the hot control while painting,
+            // so the release reaches it even outside the volume or the Scene view.
+            EventType eventType = current.GetTypeForControl(controlId);
+            if (eventType == EventType.MouseUp && current.button == 0 && _mousePressed)
+            {
+                EndStroke();
+                if (GUIUtility.hotControl == controlId) GUIUtility.hotControl = 0;
+                current.Use();
+            }
+            else if (eventType == EventType.MouseDown && current.button == 0 && !current.alt && maskHit
+                     && HandleUtility.nearestControl == controlId)
+            {
+                BeginStroke(projectionScatter);
+                GUIUtility.hotControl = controlId;
+                current.Use();
+            }
+            else if (_mousePressed && GUIUtility.hotControl != controlId && eventType != EventType.Layout && eventType != EventType.Repaint)
+            {
+                EndStroke(); // something else took the mouse
+            }
+
             if (!maskHit) return;
             Vector3 hitWorldPos = hitInfo.point;
             Vector3 hitWorldNormal = hitInfo.normal;
@@ -75,19 +105,6 @@ namespace ScatterTool.Editor
             AnimationCurve falloffCurve = ProjectionScatterOverlay.Falloff;
             float dotSize = ProjectionScatterOverlay.DotSize;
             float dotOpacity = ProjectionScatterOverlay.DotOpacity;
-
-            if (Event.current.isKey && Event.current.keyCode == KeyCode.LeftControl)
-            {
-                if (Event.current.type == EventType.KeyDown)
-                {
-                    _controlPressed = true;
-                }
-                if (Event.current.type == EventType.KeyUp)
-                {
-                    _controlPressed = false;
-                }
-                Event.current.Use();
-            }
 
             Handles.color = new Color(1f, 1f, 1f, dotOpacity);
 
@@ -114,19 +131,7 @@ namespace ScatterTool.Editor
                 _newWeights.Add(i, newWeight);
             }
 
-            if (Event.current.isMouse && Event.current.button == 0)
-            {
-                if (Event.current.type == EventType.MouseDown)
-                {
-                    _mousePressed = true;
-                }
-                if (Event.current.type == EventType.MouseUp)
-                {
-                    _mousePressed = false;
-                }
-
-                Event.current.Use();
-            }
+            if (eventType == EventType.MouseDrag && _mousePressed && GUIUtility.hotControl == controlId) current.Use();
 
             using (new Handles.DrawingScope())
             {
@@ -134,17 +139,49 @@ namespace ScatterTool.Editor
                 Handles.DrawWireDisc(hitInfo.point, hitInfo.normal, radius);
             }
 
-            bool isPainting = _mousePressed;
+            bool isPainting = _mousePressed && _strokeTarget == projectionScatter;
             if (isPainting && DateTime.Now > _lastPaintTime.AddSeconds(_paintTick))
             {
                 _lastPaintTime = DateTime.Now;
 
-                foreach (var kvp in _newWeights)
-                {
-                    projectionScatter.SetWeight(kvp.Key, kvp.Value);
-                }
+                PaintTick(projectionScatter, _newWeights);
+            }
+
+            if (_mousePressed) window.Repaint();
+        }
+
+        private ProjectionScatter _strokeTarget;
+        private int _strokeUndoGroup;
+
+        /// <summary>Starts a paint stroke: everything until mouse up is one Undo step.</summary>
+        internal void BeginStroke(ProjectionScatter target)
+        {
+            _mousePressed = true;
+            _strokeTarget = target;
+            Undo.IncrementCurrentGroup();
+            Undo.SetCurrentGroupName("Paint Projection Scatter Mask");
+            _strokeUndoGroup = Undo.GetCurrentGroup();
+        }
+
+        /// <summary>Applies one tick of the brush. Part of the current stroke's Undo step.</summary>
+        internal static void PaintTick(ProjectionScatter target, Dictionary<int, float> weights)
+        {
+            Undo.RecordObject(target, "Paint Projection Scatter Mask");
+            foreach (var kvp in weights)
+            {
+                target.SetWeight(kvp.Key, kvp.Value);
             }
         }
+
+        internal void EndStroke()
+        {
+            if (!_mousePressed) return;
+            _mousePressed = false;
+            _strokeTarget = null;
+            Undo.CollapseUndoOperations(_strokeUndoGroup);
+        }
+
+        internal bool IsPainting => _mousePressed;
     }
 
     [Overlay(typeof(SceneView), "Projection Scatter Overlay", defaultDisplay = false)]
@@ -195,13 +232,7 @@ namespace ScatterTool.Editor
 
             if (Selection.activeGameObject == null || !Selection.activeGameObject.TryGetComponent(out ProjectionScatter _))
             {
-                var butonCreate = new Button(() =>
-                {
-                    GameObject newGO = new GameObject("Projection Scatter");
-                    newGO.AddComponent<ProjectionScatter>();
-                    Undo.RegisterCreatedObjectUndo(newGO, "Create " + newGO.name);
-                    Selection.activeGameObject = newGO;
-                })
+                var butonCreate = new Button(() => ProjectionScatter.Create())
                 {
                     text = "Create Projection Scatter"
                 };

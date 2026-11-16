@@ -1,5 +1,22 @@
 # Changelog
 
+[6.7.0] - 2026-11-15
+- Physics Scatter: Stop now puts every Rigidbody's Is Kinematic and Use Gravity back exactly as they were and removes the Rigidbodies it added. Before, plain (non-prefab) objects stayed kinematic and kept the added Rigidbodies
+- Physics Scatter: the simulated moves are one Undo step ("Physics Scatter"), and scenes are marked dirty once on Stop instead of on every Scene view event
+- Physics Scatter: Stop restores the project's physics simulation mode to what it was, instead of always setting it to FixedUpdate (even when no simulation ran)
+- Physics Scatter: the simulation runs in real time from the editor update loop; before, it advanced once per Scene view event, so it sped up when the mouse moved and stalled when it didn't
+- Physics Scatter: toggling the tool no longer adds another copy of each overlay button handler, so Launch fires once
+- Physics Scatter: entering Play mode or recompiling mid-simulation stops it cleanly first, and the overlay's Start/Stop button follows the tool instead of the physics simulation mode
+- Physics Scatter: Quick Copy (C) duplicates like Edit > Duplicate, keeping scale, prefab overrides and added components
+- Physics Scatter: keys and mouse buttons are read from the editor event, so it no longer throws without a keyboard or mouse device. Fixed the "Phyisics Scatter" tool name
+- Projection Scatter: paint strokes, Reset Mask, Flood Mask, Clear and Bake are each one Undo step, and painted weights mark the scene dirty so they're saved
+- Projection Scatter: inside a prefab instance it no longer throws trying to destroy the prefab's children; it pauses with one warning (edit it in prefab mode, or unpack the instance)
+- Projection Scatter: the brush ends its stroke on mouse release anywhere, and reads Ctrl from the event, so it can't get stuck painting or erasing
+- Projection Scatter: the overlay's Create button sets the scatter up like the GameObject menu (pointing down, random seed, Default layer mask), so it spawns
+- Projection Scatter: its settings now exist in builds, so builds no longer log serialization layout errors for scenes with a scatter. The inspector notes that its children are generated and destroyed on regeneration
+- README: documented Physics Scatter and corrected Projection Scatter's "non-destructive" description
+- Added EditMode tests for Physics Scatter and Projection Scatter
+
 [6.6.0] - 2026-11-15
 - Prefab Spawner: the preview no longer creates (and leaks) a new material on every repaint, and no longer throws every frame without a Preview Material; with none set it draws tinted gizmo meshes
 - Prefab Spawner: the preview places nested and scaled child meshes where they'd actually spawn (it used the children's local scale and ignored their offsets), and skips inactive objects and disabled renderers

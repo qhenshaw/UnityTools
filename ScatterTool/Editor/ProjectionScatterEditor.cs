@@ -9,6 +9,19 @@ namespace ScatterTool.Editor
     {
         private BoxBoundsHandle _boundsHandle = new BoxBoundsHandle();
 
+        public override void OnInspectorGUI()
+        {
+            var ps = (ProjectionScatter)target;
+            EditorGUILayout.HelpBox("The children of a Projection Scatter are generated. Anything placed under it is " +
+                                    "destroyed when it regenerates.", MessageType.Info);
+            if (ps.IsInPrefabInstance)
+            {
+                EditorGUILayout.HelpBox("This scatter is inside a prefab instance, so it can't regenerate here. " +
+                                        "Edit it in prefab mode, or unpack the prefab instance.", MessageType.Warning);
+            }
+            base.OnInspectorGUI();
+        }
+
         private void OnSceneGUI()
         {
             ProjectionScatter ps = (ProjectionScatter)target;

@@ -4,11 +4,10 @@ using UnityEditor.EditorTools;
 using UnityEditor.IMGUI.Controls;
 using UnityEditor.Overlays;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 namespace ScatterTool.Editor
 {
-    [EditorTool("Phyisics Scatter")]
+    [EditorTool("Physics Scatter")]
     public class PhysicsScatterTool : EditorTool
     {
         private enum GizmoMode
@@ -44,62 +43,71 @@ namespace ScatterTool.Editor
 
         private LayerMask _worldMask;
 
+        private readonly PhysicsScatterSession _session = new PhysicsScatterSession();
+        private double _lastUpdateTime;
+
         public override void OnActivated()
         {
             PhysicsScatterOverlay.IsVisible = true;
-            PhysicsScatterOverlay.OnStartSim += (s, e) => StartSim();
-            PhysicsScatterOverlay.OnStopSim += (s, e) => StopSim();
-            PhysicsScatterOverlay.OnLaunch += (s, e) => Launch();
-            PhysicsScatterOverlay.OnRandomizeInBounds += (s, e) => RandomizeInBounds();
+            // Method references, so OnWillBeDeactivated removes exactly these and they don't pile up.
+            PhysicsScatterOverlay.OnStartSim += HandleStartSim;
+            PhysicsScatterOverlay.OnStopSim += HandleStopSim;
+            PhysicsScatterOverlay.OnLaunch += HandleLaunch;
+            PhysicsScatterOverlay.OnRandomizeInBounds += HandleRandomizeInBounds;
+            EditorApplication.update += OnEditorUpdate;
+            EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+            AssemblyReloadEvents.beforeAssemblyReload += StopSim;
 
+            _session.BeforeStep = ApplyForces;
             _worldMask = LayerMask.GetMask("Default");
         }
 
         public override void OnWillBeDeactivated()
         {
             PhysicsScatterOverlay.IsVisible = false;
-            PhysicsScatterOverlay.OnStartSim -= (s, e) => StartSim();
-            PhysicsScatterOverlay.OnStopSim -= (s, e) => StopSim();
-            PhysicsScatterOverlay.OnLaunch -= (s, e) => Launch();
-            PhysicsScatterOverlay.OnRandomizeInBounds -= (s, e) => RandomizeInBounds();
+            PhysicsScatterOverlay.OnStartSim -= HandleStartSim;
+            PhysicsScatterOverlay.OnStopSim -= HandleStopSim;
+            PhysicsScatterOverlay.OnLaunch -= HandleLaunch;
+            PhysicsScatterOverlay.OnRandomizeInBounds -= HandleRandomizeInBounds;
+            EditorApplication.update -= OnEditorUpdate;
+            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+            AssemblyReloadEvents.beforeAssemblyReload -= StopSim;
 
             StopSim();
         }
 
+        private void HandleStartSim(object sender, System.EventArgs e) => StartSim();
+        private void HandleStopSim(object sender, System.EventArgs e) => StopSim();
+        private void HandleLaunch(object sender, System.EventArgs e) => Launch();
+        private void HandleRandomizeInBounds(object sender, System.EventArgs e) => RandomizeInBounds();
+
+        private void OnPlayModeStateChanged(PlayModeStateChange state)
+        {
+            if (state == PlayModeStateChange.ExitingEditMode) StopSim();
+        }
+
+        // Runs the simulation in real time, independent of how many GUI events the Scene view gets.
+        private void OnEditorUpdate()
+        {
+            double now = EditorApplication.timeSinceStartup;
+            double delta = now - _lastUpdateTime;
+            _lastUpdateTime = now;
+            if (!IsSimulating || Application.isPlaying) return;
+
+            if (_session.Step(delta, PhysicsScatterOverlay.TimeStep, PhysicsScatterOverlay.StepCount) > 0)
+            {
+                SceneView.RepaintAll();
+            }
+        }
+
         private void StartSim()
         {
+            if (Application.isPlaying) return;
             _lastDragTime = 0f;
-            Physics.simulationMode = SimulationMode.Script;
+            _session.Start(Selection.gameObjects);
+            _lastUpdateTime = EditorApplication.timeSinceStartup;
             IsSimulating = true;
-
-            var selected = Selection.gameObjects;
-            foreach (GameObject go in selected)
-            {
-                if (!go.TryGetComponent(out Rigidbody rb))
-                {
-                    rb = go.AddComponent<Rigidbody>();
-                    rb.mass = 1f;
-                    rb.linearDamping = 0.5f;
-                    rb.angularDamping = 0.05f;
-                    rb.useGravity = false;
-                    rb.isKinematic = false;
-                }
-            }
-
-            Rigidbody[] rigidbodies = FindObjectsByType<Rigidbody>(FindObjectsSortMode.None);
-            foreach (Rigidbody rb in rigidbodies)
-            {
-                rb.isKinematic = true;
-            }
-
-            foreach (GameObject go in selected)
-            {
-                if (go.TryGetComponent(out Rigidbody rigidbody))
-                {
-                    rigidbody.isKinematic = false;
-                    rigidbody.useGravity = false;
-                }
-            }
+            PhysicsScatterOverlay.IsSimulating = true;
 
             RecalculateBounds(Selection.gameObjects);
             RefreshToolOverlay();
@@ -107,11 +115,34 @@ namespace ScatterTool.Editor
 
         private void StopSim()
         {
-            Physics.simulationMode = SimulationMode.FixedUpdate;
+            if (!IsSimulating) return;
+            _session.Stop();
             IsSimulating = false;
-            ResetPhysicsOverrides();
+            PhysicsScatterOverlay.IsSimulating = false;
             RefreshToolOverlay();
             RecalculateBounds(Selection.gameObjects);
+        }
+
+        // One physics step's forces: pull towards the handles, gravity, and reset objects that fell too far.
+        private void ApplyForces(float stepTime)
+        {
+            GameObject[] selectedGOs = Selection.gameObjects;
+            if (_localPositions == null || _localPositions.Length != selectedGOs.Length) return;
+
+            foreach (GameObject go in selectedGOs)
+            {
+                if (go.transform.position.y < PhysicsScatterOverlay.ResetHeight && go.TryGetComponent(out Rigidbody rb))
+                {
+                    Vector3 position = go.transform.position;
+                    position.y = PhysicsScatterOverlay.ResetHeight + 10f;
+                    go.transform.position = position;
+                    rb.linearVelocity = Vector3.zero;
+                    rb.angularVelocity = Vector3.zero;
+                }
+            }
+
+            AccelerateToPosition(selectedGOs, _selectionCenter);
+            if (PhysicsScatterOverlay.IsGravityEnabled && IsGravityAllowed) ApplyGravity(selectedGOs);
         }
 
         private void SetGravity(bool enabled)
@@ -221,9 +252,10 @@ namespace ScatterTool.Editor
                 _previousSelectionCount = selectedCount;
             }
 
-            bool movingCamera = Mouse.current.rightButton.isPressed;
-            bool shiftPressed = Keyboard.current.leftShiftKey.isPressed;
-            bool controlPressed = Keyboard.current.leftCtrlKey.isPressed;
+            // From the editor event, so it works without a keyboard or mouse device in the Input System.
+            bool movingCamera = Tools.viewToolActive;
+            bool shiftPressed = Event.current.shift;
+            bool controlPressed = Event.current.control || Event.current.command;
 
             if (!movingCamera && GetKeyDown(KeyCode.W))
             {
@@ -286,27 +318,7 @@ namespace ScatterTool.Editor
                     break;
             }
 
-            if (!IsSimulating) return;
-
-            foreach (var go in Selection.gameObjects)
-            {
-                if (go.transform.position.y < PhysicsScatterOverlay.ResetHeight && go.TryGetComponent(out Rigidbody rb))
-                {
-                    Vector3 position = go.transform.position;
-                    position.y = PhysicsScatterOverlay.ResetHeight + 10f;
-                    go.transform.position = position;
-                    rb.linearVelocity = Vector3.zero;
-                    rb.angularVelocity = Vector3.zero;
-                }
-            }
-
-            AccelerateToPosition(selectedGOs, _selectionCenter);
-            if (PhysicsScatterOverlay.IsGravityEnabled && IsGravityAllowed) ApplyGravity(selectedGOs);
-            for (int i = 0; i < PhysicsScatterOverlay.StepCount; i++)
-            {
-                Physics.Simulate(PhysicsScatterOverlay.TimeStep);
-            }
-            UnityEditor.SceneManagement.EditorSceneManager.MarkAllScenesDirty();
+            // The simulation itself runs from OnEditorUpdate, in real time.
         }
 
         private void DrawGroundingGizmo()
@@ -568,37 +580,25 @@ namespace ScatterTool.Editor
 
         private void CopySelection(GameObject[] gameObjects)
         {
-            RecalculateBounds(gameObjects);
-
-            List<GameObject> copies = new List<GameObject>();
-            foreach (GameObject gameObject in gameObjects)
-            {
-                GameObject prefab = PrefabUtility.GetCorrespondingObjectFromSource(gameObject);
-                GameObject spawned;
-                if (prefab != null) spawned = PrefabUtility.InstantiatePrefab(prefab, gameObject.scene) as GameObject;
-                else spawned = Instantiate(gameObject, gameObject.scene) as GameObject;
-                spawned.name = gameObject.name;
-                spawned.transform.SetParent(gameObject.transform.parent);
-                spawned.transform.SetPositionAndRotation(gameObject.transform.position, gameObject.transform.rotation);
-                Undo.RegisterCreatedObjectUndo(spawned, "Copy " + spawned.name);
-                copies.Add(spawned);
-
-                if (IsSimulating && gameObject.TryGetComponent(out Rigidbody rb))
-                {
-                    if (spawned.TryGetComponent(out Rigidbody spawnedRb))
-                    {
-                        rb.isKinematic = true;
-                    }
-                }
-            }
-
-            GameObject[] copiesArray = copies.ToArray();
-            Selection.objects = null;
-            Selection.objects = copiesArray;
+            // Stop first, so the copies don't inherit the simulation's temporary Rigidbodies and settings.
             bool wasSimulating = IsSimulating;
             if (wasSimulating) StopSim();
-            TeleportSelection(copiesArray);
+
+            GameObject[] copies = Duplicate(gameObjects);
+            RecalculateBounds(copies);
+            TeleportSelection(copies);
             if (wasSimulating) StartSim();
+        }
+
+        /// <summary>
+        /// Duplicates the objects the way Edit > Duplicate does (scale, overrides, components, parent and prefab link
+        /// kept, one Undo step) and selects the copies.
+        /// </summary>
+        internal static GameObject[] Duplicate(GameObject[] gameObjects)
+        {
+            Selection.objects = gameObjects;
+            Unsupported.DuplicateGameObjectsUsingPasteboard();
+            return Selection.gameObjects;
         }
 
         private void AccelerateToPosition(GameObject[] selectedGOs, Vector3 currentCenter)
@@ -647,32 +647,6 @@ namespace ScatterTool.Editor
                 if (go.TryGetComponent(out Rigidbody rb))
                 {
                     rb.AddForce(gravity, ForceMode.Acceleration);
-                }
-            }
-        }
-
-        private void ResetPhysicsOverrides()
-        {
-            var rigidbodies = FindObjectsByType<Rigidbody>(FindObjectsSortMode.None);
-            foreach (Rigidbody rb in rigidbodies)
-            {
-                SerializedObject serializedObj = new SerializedObject(rb);
-                bool isRbAdded = PrefabUtility.IsAddedComponentOverride(rb);
-                if (isRbAdded)
-                {
-                    PrefabUtility.RevertAddedComponent(rb, InteractionMode.AutomatedAction);
-                }
-
-                SerializedProperty kinematicProp = serializedObj.FindProperty("m_IsKinematic");
-                if (kinematicProp != null && kinematicProp.isInstantiatedPrefab)
-                {
-                    PrefabUtility.RevertPropertyOverride(kinematicProp, InteractionMode.AutomatedAction);
-                }
-
-                SerializedProperty gravityProp = serializedObj.FindProperty("m_UseGravity");
-                if (gravityProp != null && gravityProp.isInstantiatedPrefab)
-                {
-                    PrefabUtility.RevertPropertyOverride(gravityProp, InteractionMode.AutomatedAction);
                 }
             }
         }

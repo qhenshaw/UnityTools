@@ -1,21 +1,27 @@
 using UnityEngine;
-
-#if UNITY_EDITOR
-using UnityEditor;
 using InspectorAttributes;
 using UnityEngine.Search;
 using System.Collections.Generic;
 using System;
 using Random = UnityEngine.Random;
+
+#if UNITY_EDITOR
+using UnityEditor;
 #endif
 
 namespace ScatterTool
 {
+    /// <summary>
+    /// Paints a mask that scatters prefabs onto the surfaces below it, in edit mode. Its children are generated:
+    /// every change regenerates them, destroying anything placed under it.
+    /// </summary>
+    /// <remarks>
+    /// The serialized settings exist in every build so scene data loads cleanly, but the component does nothing
+    /// outside the editor.
+    /// </remarks>
     [ExecuteAlways, DisallowMultipleComponent]
     public class ProjectionScatter : MonoBehaviour
     {
-#if UNITY_EDITOR
-
         private class DistanceComparer : IComparer<RaycastHit>
         {
             public static readonly DistanceComparer Instance = new DistanceComparer();
@@ -244,11 +250,11 @@ namespace ScatterTool
         [field: SerializeField] public int InstanceCount { get; private set; } = 0;
 
 #pragma warning disable 0414
-        [Button("Clear", allowEditMode: true, 60, Method = nameof(Clear)), SerializeField]
-        private string _clear = nameof(Clear);
+        [Button("Clear", allowEditMode: true, 60, Method = "Clear"), SerializeField]
+        private string _clear = "Clear";
 
-        [Button("Bake", allowEditMode: true, 60, Method = nameof(Bake)), SerializeField]
-        private string _bake = nameof(Bake);
+        [Button("Bake", allowEditMode: true, 60, Method = "Bake"), SerializeField]
+        private string _bake = "Bake";
 #pragma warning restore 0414
 
         public int TotalWeights => _resolution * _resolution;
@@ -297,9 +303,30 @@ namespace ScatterTool
         private float _lastUpdateTime;
         private RaycastHit[] _raycastHits = new RaycastHit[32];
 
+#if UNITY_EDITOR
+        [NonSerialized] private bool _warnedAboutPrefab;
+
         private void Reset()
         {
             _projectionMask = LayerMask.GetMask("Default");
+        }
+
+        /// <summary>
+        /// True when this scatter is part of a prefab instance in a scene. Its children belong to the prefab there
+        /// and can't be destroyed, so it doesn't regenerate.
+        /// </summary>
+        public bool IsInPrefabInstance => PrefabUtility.IsPartOfPrefabInstance(gameObject);
+
+        private bool CanRegenerate()
+        {
+            if (!IsInPrefabInstance) return true;
+            if (!_warnedAboutPrefab)
+            {
+                _warnedAboutPrefab = true;
+                Debug.LogWarning($"{name} is inside a prefab instance, so it can't regenerate its children here. " +
+                                 "Edit it in prefab mode, or unpack the prefab instance.", this);
+            }
+            return false;
         }
 
         private void OnValidate()
@@ -335,9 +362,12 @@ namespace ScatterTool
             }
         }
 
-        private void UpdatePoints()
+        private void UpdatePoints() => UpdatePoints(_autoBake);
+
+        private void UpdatePoints(bool bake)
         {
             if (!Application.isEditor || Application.isPlaying) return;
+            if (!CanRegenerate()) return;
             if (_prefabs == null || _prefabs.Length == 0) return;
 
             for (int i = 0; i < _prefabs.Length; i++)
@@ -356,7 +386,7 @@ namespace ScatterTool
                 _scatterPoints[i].Weight = 0f;
             }
 
-            Clear();
+            if (bake) ClearChildren(record: false);
 
             InstanceCount = 0;
             Vector2 spreadMax = new Vector2(1f / _resolution, 1f / _resolution);
@@ -416,7 +446,7 @@ namespace ScatterTool
                 }
             }
 
-            if(_autoBake) Bake();
+            if (bake) BakePoints(record: false);
         }
 
         private int GetRandomWeightedPrefabIndex()
@@ -464,7 +494,26 @@ namespace ScatterTool
             return false;
         }
 
+        /// <summary>Destroys every child (they're all generated), as one Undo step.</summary>
         public void Clear()
+        {
+            if (!CanRegenerate()) return;
+            Undo.SetCurrentGroupName("Clear Projection Scatter");
+            ClearChildren(record: true);
+        }
+
+        /// <summary>Regenerates the children from the painted mask, as one Undo step.</summary>
+        public void Bake()
+        {
+            if (!CanRegenerate()) return;
+            Undo.SetCurrentGroupName("Bake Projection Scatter");
+            UpdatePoints(bake: false);
+            BakePoints(record: true);
+        }
+
+        // Automatic regeneration isn't recorded: undoing the change that caused it (a stroke, a setting)
+        // marks the scatter dirty and it regenerates to match.
+        private void ClearChildren(bool record)
         {
             List<Transform> children = new List<Transform>();
             foreach (Transform child in transform)
@@ -474,14 +523,15 @@ namespace ScatterTool
             for (int i = 0; i < children.Count; i++)
             {
                 if (children[i] == transform) continue;
-                DestroyImmediate(children[i].gameObject);
+                if (record) Undo.DestroyObjectImmediate(children[i].gameObject);
+                else DestroyImmediate(children[i].gameObject);
             }
         }
 
-        public void Bake()
+        private void BakePoints(bool record)
         {
             if (_scatterPoints == null || _scatterPoints.Length == 0) return;
-            Clear();
+            ClearChildren(record);
             Random.InitState(_seed);
             for (int i = 0; i < _scatterPoints.Length; i++)
             {
@@ -497,6 +547,7 @@ namespace ScatterTool
                         instance.transform.rotation = point.Rotation;
                         instance.transform.localScale = new Vector3(1f / transform.localScale.x, 1f / transform.localScale.y, 1f / transform.localScale.z);
                         instance.transform.localScale *= point.Scale;
+                        if (record) Undo.RegisterCreatedObjectUndo(instance, "Bake Projection Scatter");
                     }
                 }
             }
@@ -542,10 +593,12 @@ namespace ScatterTool
             return NormalizedV2CoordToWorld(normalizedCoord);
         }
 
+        /// <summary>Sets one mask weight. Record Undo before calling it (the brush records each stroke).</summary>
         public void SetWeight(int weightIndex, float weight)
         {
             Weights[weightIndex] = Mathf.Clamp01(weight);
             _isDirty = true;
+            EditorUtility.SetDirty(this);
         }
 
         public void SetWeights(float[] newWeights)
@@ -561,27 +614,60 @@ namespace ScatterTool
             }
 
             IsDirty = true;
+            EditorUtility.SetDirty(this);
         }
 
+        /// <summary>Sets every mask weight to value (Reset Mask is 0, Flood Mask is 1), as one Undo step.</summary>
         public void Flood(float value)
         {
+            Undo.RecordObject(this, value > 0f ? "Flood Projection Scatter Mask" : "Reset Projection Scatter Mask");
             for (int i = 0; i < Weights.Length; i++)
             {
                 Weights[i] = Mathf.Clamp01(value);
             }
             IsDirty = true;
+            EditorUtility.SetDirty(this);
         }
 
         [MenuItem("GameObject/Projection Scatter Tool", false, 0)]
         static void CreateCustomGameObject(MenuCommand menuCommand)
         {
+            Create(menuCommand.context as GameObject);
+        }
+
+        /// <summary>
+        /// Creates a Projection Scatter pointing down, with a random seed and the Default layer as its projection
+        /// mask, and selects it. Used by the GameObject menu and the overlay's Create button.
+        /// </summary>
+        public static ProjectionScatter Create(GameObject parent = null)
+        {
             GameObject go = new GameObject("Projection Scatter");
             ProjectionScatter ps = go.AddComponent<ProjectionScatter>();
             ps._seed = Random.Range(0, int.MaxValue);
-            GameObjectUtility.SetParentAndAlign(go, menuCommand.context as GameObject);
+            ps._projectionMask = LayerMask.GetMask("Default");
+            GameObjectUtility.SetParentAndAlign(go, parent);
             go.transform.forward = Vector3.down;
             Undo.RegisterCreatedObjectUndo(go, "Create " + go.name);
             Selection.activeObject = go;
+            return ps;
+        }
+
+        internal int Seed => _seed;
+        internal LayerMask ProjectionMask => _projectionMask;
+
+        internal void ConfigureForTests(PrefabItem[] prefabs, LayerMask mask, bool autoBake)
+        {
+            _prefabs = prefabs;
+            _projectionMask = mask;
+            _autoBake = autoBake;
+            _isDirty = true;
+        }
+
+        /// <summary>Runs a pending regeneration now instead of waiting for the next editor update.</summary>
+        internal void RegenerateNow()
+        {
+            UpdatePoints();
+            _isDirty = false;
         }
 #endif
     }

@@ -370,8 +370,9 @@ A situationally useful optimization tool. Add to any GameObject root in your sce
 > With SRP Batcher and GPU Resident Drawer this likely won't result in any measurable performance increase. Always test.
 
 ### Projection Scatter Tool
-Allows for non-destructive rapid prefab placement in scenes.  
+Allows for rapid prefab placement in scenes, driven by a painted mask.  
 Groups can be duplicated and have their position, shape, density, and prefabs customized after placement.  
+The scatter's children are generated: every change (moving it, painting, editing settings) regenerates them, and **anything you place under it is destroyed**. Keep hand-placed objects elsewhere. Paint strokes, Reset/Flood Mask, Clear and Bake are each one Undo step. Inside a prefab instance it doesn't regenerate (the children belong to the prefab); edit it in prefab mode or unpack the instance.  
 ```
 Scene view => Right click => Projection Scatter Tool  
 Size and position volume and add then customize Prefabs list
@@ -379,6 +380,20 @@ Select PS tool in Unity's floating tools bar
 Paint weights on volume and prefabs will automatically position themselves in scene
 ```
 Placed prefabs retain prefab connection in scene and are spawned as-is, all physics/collision/components will behave as normal during play.
+
+### Physics Scatter Tool
+Drops, throws and settles the selected objects with physics in edit mode, so props land naturally on the ground and on each other.
+```
+Select objects => pick Physics Scatter in the Scene view's tools overlay
+Space: start/stop the simulation    G: toggle gravity
+M: move the selection to the mouse  C: copy the selection to the mouse
+W / E / R: move, rotate or scale the selection's handles
+```
+- While simulating, every other Rigidbody in the open scenes is frozen and the selected objects get a free Rigidbody (added if they don't have one). The objects need colliders.
+- Stop puts every Rigidbody back exactly as it was, removes the Rigidbodies it added, restores the project's physics simulation mode, and records where the objects ended up as one Undo step.
+- The simulation runs in real time; Time Step and Step Count set its accuracy. Entering Play mode, recompiling or switching tools stops it first.
+- Launch throws the selection (Random, Sphere or Custom direction). Randomize in Bounds scatters it inside the box handle.
+- Copy (C) duplicates like Edit > Duplicate, keeping scale, prefab overrides and components.
 
 ### Additive Scene Manager
 A scene management component that will automatically load groups of scenes in editor and at runtime.  

@@ -19,6 +19,8 @@ namespace ScatterTool.Editor
         }
 
         public static bool IsVisible { get; set; } = false;
+        /// <summary>Set by the tool; picks the Start or Stop button.</summary>
+        public static bool IsSimulating { get; set; } = false;
         public static float TimeStep { get; private set; } = 0.02f;
         public static int StepCount { get; private set; } = 1;
         public static bool IsGravityEnabled { get; set; } = false;
@@ -199,8 +201,7 @@ namespace ScatterTool.Editor
 
             var toggleSimGroup = new VisualElement();
             toggleSimGroup.style.flexDirection = FlexDirection.Row;
-            if (Physics.simulationMode == SimulationMode.FixedUpdate) toggleSimGroup.Add(buttonStartSim);
-            if (Physics.simulationMode == SimulationMode.Script) toggleSimGroup.Add(buttonStopSim);
+            toggleSimGroup.Add(IsSimulating ? buttonStopSim : buttonStartSim);
             toggleSimGroup.Add(toggleGravity);
 
             var physicsFoldout = new Foldout() { text = "Physics Settings", value = false };
