@@ -1,0 +1,27 @@
+{
+    "name": "UnityTools.DebugTools.Cli",
+    "rootNamespace": "UnityTools.DebugTools.Cli",
+    "references": [
+        "DebugMenu.Runtime",
+        "Unity.Pipeline.Attributes"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "UNITYTOOLS_PIPELINE"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.unity.pipeline",
+            "expression": "0.0.1",
+            "define": "UNITYTOOLS_PIPELINE"
+        }
+    ],
+    "noEngineReferences": false
+}

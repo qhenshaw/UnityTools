@@ -30,7 +30,12 @@ namespace UnityTools.ObjectPooling.Tests
         [UnityTearDown]
         public IEnumerator TearDown()
         {
-            foreach (PoolSystem system in Object.FindObjectsByType<PoolSystem>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+#if UNITY_6000_5_OR_NEWER
+            PoolSystem[] systems = Object.FindObjectsByType<PoolSystem>(FindObjectsInactive.Include);
+#else
+            PoolSystem[] systems = Object.FindObjectsByType<PoolSystem>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+#endif
+            foreach (PoolSystem system in systems)
             {
                 Object.Destroy(system.gameObject);
             }

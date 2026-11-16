@@ -1,0 +1,19 @@
+{
+    "name": "UnityTools.DebugTools.Editor",
+    "rootNamespace": "UnityTools.DebugTools.Editor",
+    "references": [
+        "DebugMenu.Runtime",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

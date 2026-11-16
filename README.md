@@ -50,7 +50,7 @@ Painted meshes are saved as mesh assets in the project, the original model is ne
 Unreal style collision meshes are converted into colliders: `UCX_` (convex mesh), `UBX_` (box), `USP_` (sphere) and `UCP_` (capsule).  
 The name must start with the prefix and an underscore (any case). The collider stays on the collision child and its renderer is removed.  
 All meshes will have Generate Mesh LODs enabled on first import, can be disabled later.  
-Settings: Project Settings => [Custom] Art Asset Import Settings (saved in ProjectSettings/ArtAssetImportSettings.asset).
+Settings: Project Settings => Unity Tools => Art Asset Import (saved in ProjectSettings/ArtAssetImportSettings.asset).
 ```
 Automatically applied on import
 ```
@@ -70,12 +70,33 @@ Wrap any ScriptableObject in a serialized DataReference<YourType>
 Access the SO through the Persistent or RunTime properties, RunTime automatically creates a unique instance of the SO.
 
 ### Debug Menu
-This menu will automatically create debug buttons for all matching registered function/object pairs and call them simultaneously. Customize the prefab in the inspector, the default open button is tilde (~).
+An in-game debug menu where every feature adds its own section of buttons, toggles, sliders, dropdowns and live readouts. It's created automatically in the Editor and in Development builds (and in release builds with the `DEBUG_MENU` scripting define); there's nothing to place in your scenes. Open it with F5, or Select + Start on a gamepad.
+```cs
+using UnityTools.DebugTools;
+
+public class Player : MonoBehaviour
+{
+    private void OnEnable() => DebugMenu.Register(this, "Player", section => section
+        .Button("Heal", () => _health.Heal())
+        .Toggle("God mode", () => _godMode, value => _godMode = value)
+        .Slider("Speed", 0f, 20f, () => _speed, value => _speed = value)
+        .SliderInt("Lives", 0, 9, () => _lives, value => _lives = value)
+        .Dropdown("Weapon", () => _weapon, value => _weapon = value)   // any enum
+        .Readout("Health", () => $"{_health.Current}/{_health.Max}"));
+
+    private void OnDisable() => DebugMenu.Unregister(this);
+}
 ```
-Add the sample Debug Menu prefab from the package manager  
-Add the [DebugCommand] attribute to any instance methods  
-Add to menu through DebugMenuSystem.Instance.RegisterObject  
-Remove from menu through DebugMenuSystem.Instance.DeregisterObject  
+- Sections with the same title are shown together. Readouts and values refresh while the menu is open
+- In builds without the menu, the Register and Unregister calls (and their lambdas) are compiled out
+- The game keeps running while the menu is open. The cursor is freed while it's open and restored when it closes
+- A Game section adds FPS, time scale and reload scene
+- Settings: Project Settings => Unity Tools => Debug Menu (toggle binding, start open, pause while open, block gameplay input, Game section, refresh rate). Saved in ProjectSettings/UnityToolsDebugMenu.asset and copied into builds that include the menu
+- To restyle it, import the Debug Menu sample from the Package Manager and place its prefab in a scene; it replaces the automatic menu
+- With the Pipeline package installed, every control is also a CLI command:
+```
+unity command debugmenu list [--section Player]
+unity command debugmenu do --section Player --label "God mode" --value true
 ```
 
 ### Custom Hierarchy Drawer

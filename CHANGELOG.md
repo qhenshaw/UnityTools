@@ -1,5 +1,20 @@
 # Changelog
 
+[6.2.0] - 2026-11-15
+- **Breaking** Debug Menu: rebuilt around sections. Features call DebugMenu.Register(this, "Title", section => section.Button(...).Toggle(...).Slider(...).SliderInt(...).Dropdown(...).Readout(...)) in OnEnable and DebugMenu.Unregister(this) in OnDisable. The menu is drawn with UI Toolkit, one foldout per section
+- **Breaking** Debug Menu: the namespace is now UnityTools.DebugTools. To update a project: replace `using DebugMenu;` with `using UnityTools.DebugTools;`. [DebugCommand] and DebugMenuSystem.Instance.RegisterObject/DeregisterObject still work but are obsolete; each registered object becomes a section of buttons named after its type. Commands with parameters are skipped with a warning
+- **Breaking** Debug Menu: the old uGUI "Demo Debug Menu" sample is removed. A DebugMenuSystem component left in a scene logs a warning once and does nothing; remove it
+- Debug Menu: the menu is now created automatically in the Editor and Development builds, and in release builds with the DEBUG_MENU scripting define. Before, it needed the undocumented DEBUG_MENU define and a placed prefab, and otherwise silently never opened
+- Debug Menu: added Project Settings > Unity Tools > Debug Menu: toggle binding (default F5, or Select + Start on gamepad), Start Open, Pause While Open, Block Gameplay Input, Show Game Section and Refresh Interval. Builds that include the menu get a copy in StreamingAssets
+- Debug Menu: opening the menu no longer forces every PlayerInput to the "UI" map and back to "Player", and no longer resets the time scale to 1 on close. The cursor is restored to its previous state. Pause While Open restores the previous time scale, and Block Gameplay Input turns back on only the PlayerInputs it turned off
+- Debug Menu: no longer throws every frame when there's no keyboard (e.g. a Steam Deck using only its gamepad)
+- Debug Menu: sections whose owner was destroyed without unregistering are dropped instead of throwing when used
+- Debug Menu: added a built-in Game section with FPS, time scale, reset time scale and reload scene
+- Debug Menu: added a Debug Menu sample (prefab, UXML, USS and Panel Settings) to restyle the menu. Placed in a scene, it replaces the automatic menu
+- Debug Menu: with the Pipeline package installed, `unity command debugmenu list` and `unity command debugmenu do --section S --label L --value V` read and drive every control. DebugMenuJson.List/Do do the same from code and tests
+- Art Asset Import Settings moved from Project Settings > [Custom] Art Asset Import Settings to Project Settings > Unity Tools > Art Asset Import. The settings file is unchanged
+- Added EditMode and PlayMode tests for Debug Menu
+
 [6.1.0] - 2026-11-15
 - **Breaking** Service Locator: ServiceLocator is now a static class with Register, Unregister, Get and TryGet, and the ServiceLocator component (with its Register On Awake list and LocalServices) is removed. To update a project: delete ServiceLocator components from scenes and prefabs (they show as missing scripts), register those services in their own Awake, and replace `ServiceLocator.GlobalServices.X` with `ServiceLocator.X`. GlobalServices and ServiceRegistry still compile but are obsolete and forward to the static registry
 - Service Locator: global services now survive scene loads. Before, they lived on a GameObject that was destroyed by the next LoadScene, so every lookup failed afterwards

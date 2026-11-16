@@ -1,0 +1,56 @@
+/* Debug menu: plain and readable on purpose; it only exists in the Editor and development builds. */
+
+.debug-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    align-items: flex-end;
+    justify-content: flex-start;
+}
+
+.debug-panel {
+    width: 440px;
+    max-height: 90%;
+    margin: 16px;
+    padding: 10px;
+    background-color: rgba(12, 12, 16, 0.9);
+    border-color: rgb(90, 90, 110);
+    border-width: 1px;
+    border-radius: 4px;
+}
+
+.debug-title {
+    font-size: 18px;
+    -unity-font-style: bold;
+    color: rgb(235, 235, 245);
+}
+
+.debug-hint {
+    font-size: 11px;
+    color: rgb(160, 160, 175);
+    margin-bottom: 6px;
+}
+
+.debug-sections {
+    flex-grow: 1;
+}
+
+.debug-section {
+    margin-bottom: 4px;
+}
+
+.debug-section Label,
+.debug-readout {
+    color: rgb(225, 225, 230);
+}
+
+.debug-readout {
+    margin-left: 4px;
+    font-size: 12px;
+}
+
+.debug-button {
+    margin: 2px 0;
+}

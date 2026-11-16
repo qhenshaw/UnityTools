@@ -1,16 +1,11 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
 using System;
-using UnityEngine.UI;
-using System.Linq;
 using System.Reflection;
-using TMPro;
-using UnityEngine.EventSystems;
-using UnityEngine.InputSystem;
+using UnityEngine;
 
-namespace DebugMenu
+namespace UnityTools.DebugTools
 {
+    /// <summary>Old API: marks a public, parameterless instance method as a debug menu button.</summary>
+    [Obsolete("Register a section instead: DebugMenu.Register(this, \"Title\", section => section.Button(\"Label\", Method)).")]
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
     public class DebugCommandAttribute : Attribute
     {
@@ -22,154 +17,86 @@ namespace DebugMenu
         }
     }
 
-    [DefaultExecutionOrder(-100)]
+    /// <summary>
+    /// Old API, kept so existing code compiles. RegisterObject turns an object's [DebugCommand] methods into a
+    /// section of buttons in the new debug menu. A DebugMenuSystem component in a scene does nothing else; the new
+    /// menu is created automatically.
+    /// </summary>
+    [Obsolete("Use DebugMenu.Register(this, \"Title\", section => ...) and DebugMenu.Unregister(this). The menu itself is created automatically.")]
+    [AddComponentMenu("")]
     public class DebugMenuSystem : MonoBehaviour
     {
-        private class DebugCommandPair
-        {
-            public object Target;
-            public MethodInfo Method;
+        private static DebugMenuSystem _instance;
+        private static bool _quitting;
+        private static bool _warnedPlaced;
+        private static bool _creating;
 
-            public DebugCommandPair(object target, MethodInfo method)
+        public static DebugMenuSystem Instance
+        {
+            get
             {
-                Target = target;
-                Method = method;
+                // Keep the old instance while quitting instead of creating objects during teardown;
+                // RegisterObject and DeregisterObject don't need it to be alive.
+                if (ReferenceEquals(_instance, null) || (!_quitting && _instance == null))
+                {
+                    var go = new GameObject("Debug Menu System (obsolete)") { hideFlags = HideFlags.HideInHierarchy };
+                    if (Application.isPlaying) DontDestroyOnLoad(go);
+                    _creating = true;
+                    _instance = go.AddComponent<DebugMenuSystem>();
+                    _creating = false;
+                }
+                return _instance;
             }
         }
 
-        [SerializeField] private Key _toggleKey = Key.Backquote;
-        [SerializeField] private CursorLockMode _closedCursorMode = CursorLockMode.Locked;
-        [SerializeField] private bool _closedCursorVisible = false;
-        [SerializeField] private Transform _panel;
-        [SerializeField] private Transform _buttonLayout;
-        [SerializeField] private Button _buttonPrefab;
-        [SerializeField] private bool _pauseOnOpen = false;
-        [SerializeField] private string _openActionMap = "UI";
-        [SerializeField] private string _closeActionMap = "Player";
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics()
+        {
+            _instance = null;
+            _quitting = false;
+            _warnedPlaced = false;
+            Application.quitting -= OnQuitting;
+            Application.quitting += OnQuitting;
+        }
 
-        public static DebugMenuSystem Instance { get; private set; }
-
-        private Dictionary<string, List<DebugCommandPair>> _commands;
+        private static void OnQuitting() => _quitting = true;
 
         private void Awake()
         {
-            if (Instance != null)
+            if (!_creating && !_warnedPlaced)
             {
-                Debug.LogWarning("Duplicate DebugMenuSystem found, destroying!");
-                Destroy(gameObject);
-                return;
+                _warnedPlaced = true;
+                Debug.LogWarning("DebugMenuSystem is obsolete and does nothing: the debug menu is now created automatically. " +
+                                 "Remove this component (and the old Debug Menu prefab) from your scenes.", this);
             }
-
-            Instance = this;
-            _commands = new Dictionary<string, List<DebugCommandPair>>();
+            if (_instance == null) _instance = this;
         }
 
-#if DEBUG_MENU
-        private void Update()
-        {
-            if (Keyboard.current[_toggleKey].wasPressedThisFrame)
-            {
-                if (!_panel.gameObject.activeInHierarchy) Open();
-                else Close();
-            }
-        }
-#endif
-
-        private void Open()
-        {
-            _panel.gameObject.SetActive(true);
-
-            foreach (var command in _commands)
-            {
-                Button button = Instantiate(_buttonPrefab);
-                button.GetComponentInChildren<TextMeshProUGUI>().text = command.Key;
-                button.transform.SetParent(_buttonLayout);
-
-                foreach (var commandPair in command.Value)
-                {
-                    button.onClick.AddListener(() => commandPair.Method.Invoke(commandPair.Target, null));
-                }
-            }
-
-            EventSystem.current.SetSelectedGameObject(null);
-            if (_buttonLayout.childCount >= 1) EventSystem.current.SetSelectedGameObject(_buttonLayout.GetChild(0).gameObject);
-
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
-
-            SwitchActionhMaps(_openActionMap);
-            if (_pauseOnOpen) Time.timeScale = 0f;
-        }
-
-        private void Close()
-        {
-            for (int i = 0; i < _buttonLayout.childCount; i++)
-            {
-                Destroy(_buttonLayout.GetChild(i).gameObject);
-            }
-
-            _panel.gameObject.SetActive(false);
-
-            Cursor.lockState = _closedCursorMode;
-            Cursor.visible = _closedCursorVisible;
-
-            SwitchActionhMaps(_closeActionMap);
-            if (_pauseOnOpen) Time.timeScale = 1f;
-        }
-
-        public void SwitchActionhMaps(string newMap)
-        {
-            if(string.IsNullOrEmpty(newMap)) return;
-            PlayerInput[] playerInputs = FindObjectsByType<PlayerInput>(FindObjectsSortMode.None);
-            for (int i = 0; i < playerInputs.Length; i++)
-            {
-                PlayerInput playerInput = playerInputs[i];
-                playerInput.SwitchCurrentActionMap(newMap);
-            }
-        }
-
+        /// <summary>Adds a section titled with the object's type name, with a button per [DebugCommand] method.</summary>
         public void RegisterObject(object component)
         {
-#if DEBUG_MENU
-            var methods = component.GetType().
-                            GetMethods(BindingFlags.Public | BindingFlags.Instance).
-                            Where(x => x.GetCustomAttributes(typeof(DebugCommandAttribute), true).Any());
-
-            foreach (var method in methods)
+            if (component == null) return;
+            Type type = component.GetType();
+            DebugMenu.Register(component, type.Name, section =>
             {
-                DebugCommandAttribute att = (DebugCommandAttribute)method.GetCustomAttributes(typeof(DebugCommandAttribute), true).FirstOrDefault();
-                if (!_commands.ContainsKey(att.Name)) _commands.Add(att.Name, new List<DebugCommandPair>());
-                _commands[att.Name].Add(new DebugCommandPair(component, method));
-            }
-#endif
+                foreach (MethodInfo method in type.GetMethods(BindingFlags.Public | BindingFlags.Instance))
+                {
+                    var attribute = method.GetCustomAttribute<DebugCommandAttribute>(true);
+                    if (attribute == null) continue;
+                    if (method.GetParameters().Length > 0)
+                    {
+                        Debug.LogWarning($"Debug Menu: [DebugCommand] {type.Name}.{method.Name} takes parameters, so it was skipped. Debug commands can't take parameters.");
+                        continue;
+                    }
+                    section.Button(attribute.Name, () => method.Invoke(component, null));
+                }
+            });
         }
 
+        /// <summary>Removes the object's section.</summary>
         public void DeregisterObject(object component)
         {
-#if DEBUG_MENU
-            var methods = component.GetType().
-                            GetMethods(BindingFlags.Public | BindingFlags.Instance).
-                            Where(x => x.GetCustomAttributes(typeof(DebugCommandAttribute), true).Any());
-
-            foreach (var method in methods)
-            {
-                DebugCommandAttribute att = (DebugCommandAttribute)method.GetCustomAttributes(typeof(DebugCommandAttribute), true).FirstOrDefault();
-                if (!_commands.ContainsKey(att.Name)) continue;
-                List<DebugCommandPair> pairs = _commands[att.Name];
-                DebugCommandPair match = null;
-                foreach (var pair in pairs)
-                {
-                    if (pair.Target == component && pair.Method == method)
-                    {
-                        match = pair;
-                        break;
-                    }
-                }
-                if (match != null) pairs.Remove(match);
-            }
-
-            _commands = _commands.Where(x => x.Value.Count() > 0).ToDictionary(x => x.Key, x => x.Value);
-#endif
+            DebugMenu.Unregister(component);
         }
     }
 }

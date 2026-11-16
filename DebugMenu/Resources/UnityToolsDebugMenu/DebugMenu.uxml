@@ -1,0 +1,10 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="DebugMenu.uss" />
+    <ui:VisualElement name="debug-root" picking-mode="Ignore" class="debug-root">
+        <ui:VisualElement name="debug-panel" class="debug-panel">
+            <ui:Label text="Debug" name="debug-title" class="debug-title" />
+            <ui:Label text="F5 or Select + Start to close" name="debug-hint" class="debug-hint" />
+            <ui:ScrollView name="debug-sections" class="debug-sections" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

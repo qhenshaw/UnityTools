@@ -105,9 +105,9 @@ namespace ArtPipeline.Editor
         [SettingsProvider]
         public static SettingsProvider CreateProvider()
         {
-            var provider = new SettingsProvider("Project/Art Asset Import Settings", SettingsScope.Project)
+            var provider = new SettingsProvider("Project/Unity Tools/Art Asset Import", SettingsScope.Project)
             {
-                label = "[Custom] Art Asset Import Settings",
+                label = "Art Asset Import",
                 guiHandler = (searchContext) =>
                 {
                     ArtAssetImportSettings settings = ArtAssetImportSettings.instance;
