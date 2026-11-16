@@ -23,6 +23,18 @@ namespace ArtPipeline
         [SerializeField] private TextureWrapMode _wrapMode = TextureWrapMode.Clamp;
         [SerializeField] private bool _generateMipmaps = false;
 
+        /// <summary>
+        /// Where pixel i samples the gradient, from 0 (first pixel) to 1 (last pixel), so both end colours appear.
+        /// A texture one pixel long uses the start colour.
+        /// </summary>
+        internal static float SamplePosition(int index, Vector2Int size, bool vertical, bool flip)
+        {
+            int position = vertical ? index / size.x : index % size.x;
+            int length = vertical ? size.y : size.x;
+            float percentage = length > 1 ? (float)position / (length - 1) : 0f;
+            return flip ? 1f - percentage : percentage;
+        }
+
 #if UNITY_EDITOR
         public void BakeGradient()
         {
@@ -39,10 +51,7 @@ namespace ArtPipeline
             Color[] colors = new Color[_size.x * _size.y];
             for (int i = 0; i < colors.Length; i++)
             {
-                float percentage = _vertical
-                    ? (float)(i / _size.x) / _size.y
-                    : (float)(i % _size.x) / _size.x;
-                if (_flip) percentage = 1f - percentage;
+                float percentage = SamplePosition(i, _size, _vertical, _flip);
                 Color color = _gradient.Evaluate(percentage);
                 colors[i] = isEXR ? color.linear : color;
             }

@@ -1,5 +1,18 @@
 # Changelog
 
+[6.8.0] - 2026-11-15
+- **Breaking** Removed Runtime Mesh Combine and its UnityTools.Optimization assembly. A RuntimeMeshCombine component left in a scene shows as a missing script; remove it
+- Toolbar: the Time Scale slider and reset button work in Play mode only, and exiting Play mode restores the time scale. Before, using them in edit mode changed the project's Time Scale setting (TimeManager.asset), which ships in builds
+- Toolbar: Auto Compile is now a dropdown with all three Auto Refresh modes. The old toggle showed "Enabled Outside Playmode" as off and overwrote it when turned on
+- Toolbar: the recompile button refreshes and then always recompiles; before, it did nothing when no script had changed
+- Toolbar: the scene list comes from the AssetDatabase instead of a folder scan on every project change, and Find Scene / Restart Scene use the active scene's path instead of its name
+- Snap to Floor: works on every selected object as one Undo step, ignores triggers and the other selected objects, and brings objects that are sunk into the floor up to its surface
+- Gradient Editor: the last pixel is now the gradient's end colour (it sampled x / width, never reaching 1)
+- Material Creator: textures are identified by the suffix after their last underscore (BaseColor/Albedo/Diffuse, Normal/NormalDX/NormalGL, MHER/Mask/ORM), so names like "RoughStone_BaseColor" are no longer mistaken for mask maps, and errors name the texture that didn't match
+- Material Creator: Assign Layer raises the material's Enabled Layers keyword to include the layer (never lowers it), using the shader's current keyword names; before, the layer stayed hidden
+- Material Creator: a missing VFS/Uber shader gives a clear error instead of throwing, import settings change only once all three textures are found (with SaveAndReimport), a new material never overwrites an existing one with the same name, and layer assignment supports Undo
+- Added EditMode tests for the toolbar options, Snap to Floor, Gradient Editor and Material Creator
+
 [6.7.0] - 2026-11-15
 - Physics Scatter: Stop now puts every Rigidbody's Is Kinematic and Use Gravity back exactly as they were and removes the Rigidbodies it added. Before, plain (non-prefab) objects stayed kinematic and kept the added Rigidbodies
 - Physics Scatter: the simulated moves are one Undo step ("Physics Scatter"), and scenes are marked dirty once on Stop instead of on every Scene view event

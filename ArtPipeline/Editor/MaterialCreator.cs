@@ -1,16 +1,29 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
-using System.Text.RegularExpressions;
-using System;
 using UnityEngine.Rendering;
 
 namespace ArtPipeline.Editor
 {
+    /// <summary>
+    /// Builds VFS/Uber materials from a base colour, normal and mask texture, and assigns textures to its blend layers.
+    /// Textures are identified by the part of their name after the last underscore.
+    /// </summary>
     public class MaterialCreator
     {
-        private static string[] _texurePatterns = new[] { "basecolor", "normaldx" };
-        private static string[] _textureNames = new[] { "Base Color", "Normal Map", "Mask Map" };
-        private static string[,] _parameterNames = new[,]
+        internal const string UberShaderName = "VFS/Uber";
+
+        internal enum Slot { BaseColor = 0, Normal = 1, Mask = 2 }
+
+        private static readonly string[] _textureNames = { "Base Color", "Normal Map", "Mask Map" };
+        private static readonly string[] _baseColorSuffixes = { "basecolor", "albedo", "diffuse" };
+        private static readonly string[] _normalSuffixes = { "normal", "normaldx", "normalgl" };
+        private static readonly string[] _maskSuffixes = { "mher", "mask", "orm" };
+
+        private static readonly string[,] _parameterNames = new[,]
         {
             { "_MainTex", "_Normal", "_Mask" },
             { "_BlendBaseColor", "_BlendNormal", "_BlendMask" },
@@ -18,18 +31,22 @@ namespace ArtPipeline.Editor
             { "_BlendBaseColor_2", "_BlendNormal_2", "_BlendMask_2" },
             { "_BlendBaseColor_3", "_BlendNormal_3", "_BlendMask_3" }
         };
-        private static string[] _maskMapChannelNames = new[] { "height", "metal", "emiss", "rough", "smooth", "ao", "occlu", "mher" };
-        private static string[] _layerEnableKeywords = new[] 
+
+        // The shader's "Enabled Layers" keyword enum, in order: the float holds the index, one keyword is on.
+        internal const string EnabledLayersProperty = "_ENABLED_LAYERS";
+        internal static readonly string[] EnabledLayersKeywords =
         {
             "_ENABLED_LAYERS_BASE",
-            "_ENABLED_LAYERS_BASE_R",
-            "_ENABLED_LAYERS_BASE_RG",
-            "_ENABLED_LAYERS_BASE_RGB",
-            "_ENABLED_LAYERS_BASE_RGBA" 
+            "_ENABLED_LAYERS_BASE_BLEND_1_R",
+            "_ENABLED_LAYERS_BASE_BLEND_12_RG",
+            "_ENABLED_LAYERS_BASE_BLEND_123_RGB",
+            "_ENABLED_LAYERS_BASE_BLEND_1234_RGBA",
         };
 
+        private static readonly string[] _layerNames = { "Base", "R-L", "G-E", "B-G", "A-C" };
+
         [MenuItem("Assets/Create/VFS Uber/Create Material from Textures", false, -230)]
-        public static void CreateUberMaterial() { CreateUberMaterial("VFS/Uber"); }
+        public static void CreateUberMaterial() { CreateUberMaterial(UberShaderName); }
 
         [MenuItem("Assets/Create/VFS Uber/Assign Layer (Base)", false, -229)]
         public static void AssignLayer0() { SetMaterialLayer(0); }
@@ -48,138 +65,213 @@ namespace ArtPipeline.Editor
 
         private static void CreateUberMaterial(string shaderName)
         {
-            if (!ValidateSelectedTextures(out Texture[] textures)) return;
-
-            string path = AssetDatabase.GetAssetPath(Selection.activeObject);
-            Regex pathPattern = new Regex(@".+[/]");
-            path = pathPattern.Match(path).Value;
-
-            Regex fileNamePattern = new Regex(@".+[_]");
-            string fileName = fileNamePattern.Match(textures[0].name).Value.Replace("_", "");
-
-            Material material = new Material(Shader.Find(shaderName));
-            AssetDatabase.CreateAsset(material, $"{path}/{fileName}.mat");
-
-            for (int i = 0; i < _parameterNames.GetLength(0); i++)
+            Shader shader = Shader.Find(shaderName);
+            if (shader == null)
             {
-                for (int j = 0; j < _parameterNames.GetLength(1); j++)
-                {
-                    if (material.HasProperty(_parameterNames[i, j]))
-                    {
-                        material.SetTexture(_parameterNames[i, j], textures[j]);
-                    }
-                }
+                Debug.LogError($"Can't create the material: the {shaderName} shader isn't in this project.");
+                return;
             }
-
-            Debug.Log($"Material created: {material}", material);
+            Texture[] selected = Selection.GetFiltered<Texture>(SelectionMode.Assets);
+            if (!TryMatchTextures(selected, out Texture[] textures, out string error))
+            {
+                Debug.LogWarning(error);
+                return;
+            }
+            ApplyImportSettings(textures);
+            CreateMaterial(shader, textures);
         }
 
-        private static bool ValidateSelectedTextures(out Texture[] textures)
+        internal static Material CreateMaterial(Shader shader, Texture[] textures)
         {
-            Texture[] selectedTextures = Selection.GetFiltered<Texture>(SelectionMode.Assets);
+            string folder = Path.GetDirectoryName(AssetDatabase.GetAssetPath(textures[(int)Slot.BaseColor]))?.Replace('\\', '/');
+            string path = AssetDatabase.GenerateUniqueAssetPath($"{folder}/{BaseName(textures[(int)Slot.BaseColor].name)}.mat");
 
-            if (selectedTextures.Length != 3)
+            var material = new Material(shader);
+            AssetDatabase.CreateAsset(material, path);
+            AssignLayer(material, 0, textures);
+            AssetDatabase.SaveAssets();
+
+            Debug.Log($"Material created: {material}", material);
+            return material;
+        }
+
+        /// <summary>
+        /// The material name: the texture name without its suffix or underscores, as before
+        /// ("Rock_Moss_BaseColor" becomes "RockMoss").
+        /// </summary>
+        internal static string BaseName(string textureName)
+        {
+            int underscore = textureName.LastIndexOf('_');
+            string name = underscore > 0 ? textureName.Substring(0, underscore) : textureName;
+            return name.Replace("_", "");
+        }
+
+        /// <summary>Which slot a texture name belongs to, by the part after its last underscore.</summary>
+        internal static Slot? GetSlot(string textureName)
+        {
+            int underscore = textureName.LastIndexOf('_');
+            if (underscore < 0) return null;
+            string suffix = textureName.Substring(underscore + 1).ToLowerInvariant();
+            if (_baseColorSuffixes.Contains(suffix)) return Slot.BaseColor;
+            if (_normalSuffixes.Contains(suffix)) return Slot.Normal;
+            if (_maskSuffixes.Contains(suffix)) return Slot.Mask;
+            return null;
+        }
+
+        /// <summary>
+        /// Sorts exactly three textures into base colour, normal and mask. Fails with a message naming the problem
+        /// (wrong count, an unrecognised name, a missing or doubled slot).
+        /// </summary>
+        internal static bool TryMatchTextures(IReadOnlyList<Texture> selected, out Texture[] textures, out string error)
+        {
+            textures = new Texture[3];
+            error = null;
+            if (selected.Count != 3)
             {
-                Debug.LogWarning("Select 3 PBR maps before creating material.");
-                textures = null;
+                error = $"Select 3 textures (BaseColor, Normal and MHER) before creating a material; {selected.Count} selected.";
                 return false;
             }
 
-            textures = new Texture[3];
-            for (int i = 0; i < _texurePatterns.Length; i++)
+            var problems = new List<string>();
+            foreach (Texture texture in selected)
             {
-                for (int j = 0; j < selectedTextures.Length; j++)
+                Slot? slot = GetSlot(texture.name);
+                if (slot == null)
                 {
-                    if (selectedTextures[j].name.ToLower().Contains(_texurePatterns[i])) textures[i] = selectedTextures[j];
+                    problems.Add($"'{texture.name}' doesn't end in a known suffix (_BaseColor, _Normal/_NormalDX/_NormalGL, _MHER/_Mask/_ORM)");
+                    continue;
                 }
-            }
-
-            for (int i = 0; i < selectedTextures.Length; i++)
-            {
-                if (CheckMaskMap(selectedTextures[i])) textures[2] = selectedTextures[i];
-            }
-
-            string output = $"Textures found:{Environment.NewLine}";
-            for (int i = 0; i < _textureNames.Length; i++)
-            {
-                string result = "Failed";
-                if (textures[i] != null)
+                if (textures[(int)slot] != null)
                 {
-                    result = textures[i].name;
-                    TextureImporter importer = (TextureImporter)AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(textures[i]));
-                    switch (i)
-                    {
-                        case 0:
-                            importer.textureType = TextureImporterType.Default;
-                            importer.sRGBTexture = true;
-                            break;
-                        case 1:
-                            importer.textureType = TextureImporterType.NormalMap;
-                            break;
-                        case 2:
-                            importer.textureType = TextureImporterType.Default;
-                            importer.sRGBTexture = false;
-                            break;
-                    }
-
-                    AssetDatabase.ImportAsset(AssetDatabase.GetAssetPath(textures[i]), ImportAssetOptions.ForceUpdate);
+                    problems.Add($"'{textures[(int)slot].name}' and '{texture.name}' are both a {_textureNames[(int)slot]}");
+                    continue;
                 }
-                output += $"{_textureNames[i]}: {result}{Environment.NewLine}";
+                textures[(int)slot] = texture;
             }
-
             for (int i = 0; i < textures.Length; i++)
             {
-                if (textures[i] == null)
-                {
-                    Debug.LogWarning("Select 3 PBR maps before creating material.");
-                    return false;
-                }
+                if (textures[i] == null && problems.Count == 0) problems.Add($"No {_textureNames[i]} selected");
             }
 
+            if (problems.Count > 0)
+            {
+                error = "Can't create the material:" + Environment.NewLine + string.Join(Environment.NewLine, problems);
+                return false;
+            }
+
+            if (textures[(int)Slot.Normal].name.ToLowerInvariant().EndsWith("_normalgl"))
+            {
+                Debug.LogWarning($"{textures[(int)Slot.Normal].name} is an OpenGL normal map. VFS/Uber expects DirectX normals: flip its green channel.", textures[(int)Slot.Normal]);
+            }
             return true;
         }
 
-        private static bool CheckMaskMap(Texture texture)
-        {            
-            int successTarget = 1;
-            int successCount = 0;
-            
-            for (int i = 0; i < _maskMapChannelNames.Length; i++)
+        /// <summary>Base colour sRGB, normal as Normal Map, mask linear. Called only once all three are found.</summary>
+        internal static void ApplyImportSettings(Texture[] textures)
+        {
+            for (int i = 0; i < textures.Length; i++)
             {
-                string channel = _maskMapChannelNames[i];
-                if(texture.name.ToLower().Contains(channel)) successCount++;
-            }
+                string path = AssetDatabase.GetAssetPath(textures[i]);
+                if (!(AssetImporter.GetAtPath(path) is TextureImporter importer)) continue;
 
-            return successCount >= successTarget;
+                bool changed = false;
+                switch ((Slot)i)
+                {
+                    case Slot.BaseColor:
+                        changed = Set(importer.textureType != TextureImporterType.Default || !importer.sRGBTexture, () =>
+                        {
+                            importer.textureType = TextureImporterType.Default;
+                            importer.sRGBTexture = true;
+                        });
+                        break;
+                    case Slot.Normal:
+                        changed = Set(importer.textureType != TextureImporterType.NormalMap, () => importer.textureType = TextureImporterType.NormalMap);
+                        break;
+                    case Slot.Mask:
+                        changed = Set(importer.textureType != TextureImporterType.Default || importer.sRGBTexture, () =>
+                        {
+                            importer.textureType = TextureImporterType.Default;
+                            importer.sRGBTexture = false;
+                        });
+                        break;
+                }
+                if (changed) importer.SaveAndReimport();
+            }
+        }
+
+        private static bool Set(bool needed, Action apply)
+        {
+            if (needed) apply();
+            return needed;
         }
 
         private static void SetMaterialLayer(int layerIndex)
         {
-            if (!ValidateSelectedTextures(out Texture[] textures)) return;
+            Shader uberShader = Shader.Find(UberShaderName);
+            if (uberShader == null)
+            {
+                Debug.LogError($"Can't assign the layer: the {UberShaderName} shader isn't in this project.");
+                return;
+            }
+            Texture[] selected = Selection.GetFiltered<Texture>(SelectionMode.Assets);
+            if (!TryMatchTextures(selected, out Texture[] textures, out string error))
+            {
+                Debug.LogWarning(error);
+                return;
+            }
 
-            Shader uberShader = Shader.Find("VFS/Uber");
             Material[] selectedMaterials = Selection.GetFiltered<Material>(SelectionMode.Assets);
-            foreach (var mat in selectedMaterials)
+            if (selectedMaterials.Length == 0)
+            {
+                Debug.LogWarning("Select the material(s) to assign the layer to, together with the 3 textures.");
+                return;
+            }
+
+            ApplyImportSettings(textures);
+            foreach (Material mat in selectedMaterials)
             {
                 if (mat.shader != uberShader)
                 {
-                    Debug.LogWarning($"Material {mat.name} is not using the VFS/Uber shader.");
+                    Debug.LogWarning($"Material {mat.name} is not using the {UberShaderName} shader.", mat);
                     continue;
                 }
+                AssignLayer(mat, layerIndex, textures);
+                Debug.Log($"Layer [{_layerNames[layerIndex]}] assigned to material: {mat.name}", mat);
+            }
+            AssetDatabase.SaveAssets();
+        }
 
-                for (int i = 0; i < _parameterNames.GetLength(1); i++)
+        /// <summary>
+        /// Sets the layer's textures and raises Enabled Layers to include the layer (never lowers it). Undoable.
+        /// </summary>
+        internal static void AssignLayer(Material material, int layerIndex, Texture[] textures)
+        {
+            Undo.RecordObject(material, $"Assign {_layerNames[layerIndex]} Layer");
+            for (int i = 0; i < _parameterNames.GetLength(1); i++)
+            {
+                if (material.HasProperty(_parameterNames[layerIndex, i]))
                 {
-                    if (mat.HasProperty(_parameterNames[layerIndex, i]))
-                    {
-                        mat.SetTexture(_parameterNames[layerIndex, i], textures[i]);
-                    }
+                    material.SetTexture(_parameterNames[layerIndex, i], textures[i]);
                 }
+            }
 
-                EditorUtility.SetDirty(mat);
-                AssetDatabase.SaveAssets();
+            if (material.HasProperty(EnabledLayersProperty))
+            {
+                int current = Mathf.Clamp(Mathf.RoundToInt(material.GetFloat(EnabledLayersProperty)), 0, EnabledLayersKeywords.Length - 1);
+                SetEnabledLayers(material, Mathf.Max(current, layerIndex));
+            }
+            EditorUtility.SetDirty(material);
+        }
 
-                string[] layerNames = new[] { "Base", "R-L", "G-E", "B-G", "A-C" };
-                Debug.Log($"Layer [{layerNames[layerIndex]}] assigned to material: {mat.name}", mat);
+        internal static void SetEnabledLayers(Material material, int index)
+        {
+            material.SetFloat(EnabledLayersProperty, index);
+            for (int i = 0; i < EnabledLayersKeywords.Length; i++)
+            {
+                var keyword = new LocalKeyword(material.shader, EnabledLayersKeywords[i]);
+                if (keyword.isValid) material.SetKeyword(keyword, i == index);
+                else if (i == index) material.EnableKeyword(EnabledLayersKeywords[i]);
+                else material.DisableKeyword(EnabledLayersKeywords[i]);
             }
         }
     }

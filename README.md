@@ -59,8 +59,9 @@ Automatically applied on import
 A materal creator for use with the unified Unity/Unreal pipeline and Uber shaders.This will be of no use outside of my classes and school art pipeline.
 ```
 Select all 3 BaseColor/MHER/NormalMap
-Right Click => Create => Art Pipeline => [Material]
+Right Click => Create => VFS Uber => Create Material from Textures
 ```
+Textures are identified by the part of their name after the last underscore: `_BaseColor`/`_Albedo`/`_Diffuse`, `_Normal`/`_NormalDX`/`_NormalGL` (GL logs a reminder to flip green) and `_MHER`/`_Mask`/`_ORM`. **Assign Layer** (select a VFS/Uber material and 3 textures) sets that blend layer's textures and raises the material's Enabled Layers to include it.
 
 ### Data Reference
 Wraps a ScriptableObject asset so the game can change a copy of its values without editing the asset. In the Inspector it shows the asset field with a "New" button that creates and assigns a new asset. In Play mode, a "Runtime copy" foldout shows the copy's live values.
@@ -364,11 +365,6 @@ public class Bullet : PooledObject
 - `ReturnToPool()` on an object that didn't come from a pool (placed in the scene, or whose pool was unloaded) destroys it
 - Destroying a pooled object (or its parent) logs an error once per prefab, since the pool can't reuse it. If your PooledObject has its own `OnDestroy`, override it and call `base.OnDestroy()`
 
-### Runtime Mesh Combine
-A situationally useful optimization tool. Add to any GameObject root in your scene and it will automatically combine meshes on Start.  
-> [!NOTE]
-> With SRP Batcher and GPU Resident Drawer this likely won't result in any measurable performance increase. Always test.
-
 ### Projection Scatter Tool
 Allows for rapid prefab placement in scenes, driven by a painted mask.  
 Groups can be duplicated and have their position, shape, density, and prefabs customized after placement.  
@@ -557,3 +553,9 @@ Scene Selector
 TimeScale Options  
 Compilation Options  
 ```
+- **TimeScale Options** work in Play mode only; exiting Play mode puts the time scale back, so the project's Time Scale setting never changes.
+- **Compilation Options**: a dropdown for Unity's Auto Refresh mode (Disabled, Enabled, Enabled Outside Playmode) and a button that refreshes and always recompiles.
+- **Scene Selector**: Find Scene and Restart Scene use the active scene's path, so a scene with the same name in another folder is never picked.
+
+### Snap to Floor
+Press **End** (Tools > LD Shortcuts > Snap to Floor) to drop every selected object onto the first solid surface below it, as one Undo step. Triggers and the other selected objects are ignored, and objects sunk into the floor come up to its surface.

@@ -20,7 +20,6 @@ namespace UnityTools.ToolbarButtons
         {
             RefreshSceneList();
 
-            EditorApplication.projectChanged += RefreshSceneList;
             SceneManager.activeSceneChanged += SceneSwitched;
             EditorSceneManager.activeSceneChangedInEditMode += SceneSwitched;
         }
@@ -41,46 +40,31 @@ namespace UnityTools.ToolbarButtons
 
         public static void FindScene()
         {
-            string activeSceneName = GetActiveSceneName();
-            if (activeSceneName == "Untitled")
-            {
-                Debug.LogWarning("Active scene is untitled. Please save the scene first.");
-                return;
-            }
-            else
-            {
-                string scenePath = _paths.FirstOrDefault(path => Path.GetFileNameWithoutExtension(path) == activeSceneName);
-                if (!string.IsNullOrEmpty(scenePath))
-                {
-                    EditorGUIUtility.PingObject(AssetDatabase.LoadAssetAtPath<SceneAsset>(scenePath));
-                }
-                else
-                {
-                    Debug.LogWarning($"Scene '{activeSceneName}' not found in project.");
-                }
-            }
+            string scenePath = GetActiveScenePath();
+            if (scenePath == null) return;
+            EditorGUIUtility.PingObject(AssetDatabase.LoadAssetAtPath<SceneAsset>(scenePath));
         }
 
         public static void RestartScene()
         {
-            string activeSceneName = GetActiveSceneName();
-            if (activeSceneName == "Untitled")
+            string scenePath = GetActiveScenePath();
+            if (scenePath == null) return;
+            SwitchScene(scenePath);
+        }
+
+        /// <summary>
+        /// The active scene's asset path, or null (with a warning) when it's unsaved. Uses the path, not the name,
+        /// so a scene with the same name in another folder is never picked by mistake.
+        /// </summary>
+        internal static string GetActiveScenePath()
+        {
+            string path = SceneManager.GetActiveScene().path;
+            if (string.IsNullOrEmpty(path))
             {
                 Debug.LogWarning("Active scene is untitled. Please save the scene first.");
-                return;
+                return null;
             }
-            else
-            {
-                string scenePath = _paths.FirstOrDefault(path => Path.GetFileNameWithoutExtension(path) == activeSceneName);
-                if (!string.IsNullOrEmpty(scenePath))
-                {
-                    SwitchScene(scenePath);
-                }
-                else
-                {
-                    Debug.LogWarning($"Scene '{activeSceneName}' not found in project.");
-                }
-            }
+            return path;
         }
 
         private static MainToolbarElement SceneSelectorDropdown()
@@ -115,7 +99,7 @@ namespace UnityTools.ToolbarButtons
             foreach (string scenePath in _paths)
             {
                 string sceneName = Path.GetFileNameWithoutExtension(scenePath);
-                menu.AddItem(new GUIContent(scenePath.Replace("Assets\\", "").Replace("\\", "/")), false, () =>
+                menu.AddItem(new GUIContent(scenePath.StartsWith("Assets/") ? scenePath.Substring("Assets/".Length) : scenePath), false, () =>
                 {
                     SwitchScene(scenePath);
                 });
@@ -165,8 +149,18 @@ namespace UnityTools.ToolbarButtons
 
         private static void RefreshSceneList()
         {
-            _paths = Directory.GetFiles("Assets", "*.unity", SearchOption.AllDirectories);
+            _paths = FindScenePaths();
             _buildPaths = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray();
+        }
+
+        /// <summary>Scene paths in Assets, from the AssetDatabase rather than a folder scan.</summary>
+        internal static string[] FindScenePaths()
+        {
+            return AssetDatabase.FindAssets("t:Scene", new[] { "Assets" })
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .Where(path => path.EndsWith(".unity"))
+                .OrderBy(path => path)
+                .ToArray();
         }
 
         private static void SceneSwitched(Scene oldScene, Scene newScene)
