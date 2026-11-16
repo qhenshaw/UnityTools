@@ -17,6 +17,7 @@ namespace SceneManagement.Editor
     public class SceneDropdownDrawer : PropertyDrawer
     {
         private const string NoneLabel = "None";
+        private const float AddToBuildWidth = 84f;
 
         // Scene paths in Assets/, rebuilt when the project changes rather than on every repaint.
         private static string[] s_ScenePaths;
@@ -66,21 +67,39 @@ namespace SceneManagement.Editor
             bool missing = !string.IsNullOrEmpty(stored) && matches.Length == 0;
             bool ambiguous = matches.Length > 1;
 
+            bool notInBuild = !property.hasMultipleDifferentValues && matches.Length > 0
+                && !SceneBuildCheck.IsInBuild(storeName ? stored : matches[0], storeName);
+
             EditorGUI.BeginProperty(position, label, property);
             Rect buttonRect = EditorGUI.PrefixLabel(position, GUIUtility.GetControlID(FocusType.Passive), label);
+
+            if (notInBuild)
+            {
+                var addRect = new Rect(buttonRect.xMax - AddToBuildWidth, buttonRect.y, AddToBuildWidth, buttonRect.height);
+                buttonRect.width -= AddToBuildWidth + 2f;
+                var addContent = new GUIContent("Add to Build", $"Add {matches[0]} to Build Settings so it can be loaded at runtime.");
+                if (GUI.Button(addRect, addContent, EditorStyles.miniButton))
+                {
+                    SceneBuildCheck.AddToBuild(matches[0]);
+                    GUIUtility.ExitGUI();
+                }
+            }
 
             string text = property.hasMultipleDifferentValues ? "—"
                 : string.IsNullOrEmpty(stored) ? NoneLabel
                 : missing ? $"Missing: {stored}"
                 : ambiguous ? $"{stored}  ({matches.Length} scenes have this name)"
                 : RelativeName(matches[0]);
+            if (notInBuild) text += "  (not in build)";
             string tooltip = ambiguous ? $"Loading by name picks one of:\n{string.Join("\n", matches)}"
                 : matches.Length == 1 ? matches[0]
                 : null;
+            if (notInBuild) tooltip = "Not in Build Settings: loading it at runtime fails.\n" + tooltip;
             var content = new GUIContent(text, tooltip);
 
             Color previous = GUI.color;
             if (missing) GUI.color = new Color(1f, 0.55f, 0.5f);
+            else if (notInBuild) GUI.color = new Color(1f, 0.7f, 0.4f);
             else if (ambiguous) GUI.color = new Color(1f, 0.85f, 0.45f);
             if (EditorGUI.DropdownButton(buttonRect, content, FocusType.Keyboard))
             {

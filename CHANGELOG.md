@@ -1,5 +1,17 @@
 # Changelog
 
+[6.5.0] - 2026-11-15
+- Streaming Scene Manager: no longer unloads the scene it's in when that scene isn't listed as Persistent
+- Streaming Scene Manager: LoadSet calls made while a set is loading no longer race each other. The manager finishes the scene it's loading or unloading, then switches to the newest set; sets asked for in between are skipped
+- Streaming Scene Manager: asking for the set that's already loaded or loading (in any order) does nothing, so a transition entered several times, e.g. by a player with several colliders, loads once
+- Streaming Scene Manager: a scene that isn't in Build Settings is skipped with a clear error instead of throwing; the rest of the set still loads
+- Streaming Scene Manager: Disable Instead Of Unload now re-activates only the root objects that were active when the scene was hidden, instead of every root object
+- Streaming Scene Manager: added SetLoadStarted and SetLoaded events and the IsLoading, Progress, CurrentSet and IsSceneLoaded members, for loading screens. LoadSet now takes params, e.g. LoadSet("A", "B")
+- Streaming Scene Manager: empty Persistent or Initial lists no longer throw, the singleton is cleared when the manager is destroyed (and on entering Play mode with domain reload off), and Unload Unused Assets runs once per set instead of after each scene
+- Streaming Scene Transition: creating one from the GameObject menu no longer throws when the project has no "Trigger" layer; it uses Ignore Raycast instead
+- Scene dropdowns: a scene that isn't in Build Settings (or is disabled there) shows "(not in build)" and an Add to Build button
+- Added EditMode and PlayMode tests for the streaming scene manager, transitions and the Build Settings check
+
 [6.4.0] - 2026-11-15
 - Data Reference: Runtime no longer throws when no asset is assigned. Runtime and Persistent log one error naming the data type and return null. Added HasAsset to check without the error
 - Data Reference: outside Play mode, Runtime returns the asset itself instead of making a copy. The runtime copy is no longer serialized, so it can't be saved into scenes or prefabs

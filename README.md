@@ -389,6 +389,24 @@ Pick a scene from the Existing Scene dropdown and click Add Existing Scene to ad
 ```
 Scene List entries are dropdowns of the project's scenes; entries that point at a deleted or moved scene show as Missing.
 
+Every scene dropdown in UnityTools also checks Build Settings. A scene that isn't in the build (or is disabled there) shows "(not in build)" with an **Add to Build** button, because loading it at runtime would fail.
+
+### Streaming Scene Manager
+Keeps one set of scenes loaded at a time, for levels split into areas. Put the manager in a scene that stays loaded, list the scenes that are always loaded under **Persistent** and the first set under **Initial**, and add **Streaming Scene Transition** triggers (GameObject > Scene Management) that load a set when the player walks in.
+```cs
+using SceneManagement;
+
+StreamingSceneManager.Instance.LoadSet("Cave", "Cave Lighting");
+StreamingSceneManager.Instance.SetLoadStarted += set => _loadingScreen.Show();
+StreamingSceneManager.Instance.SetLoaded += set => _loadingScreen.Hide();
+// IsLoading, Progress (0-1) and CurrentSet are there for loading bars.
+```
+- `LoadSet` loads the new set first, then unloads every other scene except the Persistent ones and the manager's own scene.
+- Calling `LoadSet` while a set is loading switches to the newest set as soon as the current scene finishes loading or unloading; sets asked for in between are skipped. Asking for the set that's already loaded or loading does nothing, so a trigger entered several times loads once.
+- Scenes are loaded by name and must be in Build Settings. A scene that isn't is skipped with an error.
+- **Disable Instead Of Unload** hides scenes by deactivating their root objects. Showing a scene again re-activates only the objects that were active when it was hidden.
+- New transitions go on the "Trigger" layer if the project has one, otherwise on Ignore Raycast.
+
 ### Hide Children
 A component that can hide child objects and components on scene objects or prefabs.
 
