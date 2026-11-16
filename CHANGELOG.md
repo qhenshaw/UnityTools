@@ -1,5 +1,14 @@
 # Changelog
 
+[6.4.0] - 2026-11-15
+- Data Reference: Runtime no longer throws when no asset is assigned. Runtime and Persistent log one error naming the data type and return null. Added HasAsset to check without the error
+- Data Reference: outside Play mode, Runtime returns the asset itself instead of making a copy. The runtime copy is no longer serialized, so it can't be saved into scenes or prefabs
+- Data Reference: runtime copies are destroyed when Play mode ends (also with domain reload off). Added ResetRuntime() to throw away a field's copy and start fresh from the asset, e.g. on a restart. Assigning a different asset also replaces the copy
+- Data Reference: each field still gets its own runtime copy (now documented), including each instance of a prefab
+- Data Reference: new inspector drawer: the asset field with a "New" button on the same line (the assignment supports Undo), and in Play mode a "Runtime copy" foldout showing the copy's live values. The old Create New button field is gone; existing assignments load unchanged
+- Data Reference: Persistent can now be set from code. CreateNew() was removed (use the inspector's New button); CreateAt<U>() is unchanged
+- Added EditMode and PlayMode tests for Data Reference
+
 [6.3.0] - 2026-11-15
 - Added Playtest Feedback, moved in from the standalone com.qhenshaw.playtestfeedback package (0.1.1, commit c2342b9): players press F8 to pause the game, write feedback, pick a category, snip and draw on a screenshot, and send it with game version, system info, logs and custom game state to a Discord channel through a webhook
 - Playtest Feedback: the namespace is now UnityTools.PlaytestFeedback (and the assemblies UnityTools.PlaytestFeedback and UnityTools.PlaytestFeedback.Editor)

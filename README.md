@@ -63,11 +63,27 @@ Right Click => Create => Art Pipeline => [Material]
 ```
 
 ### Data Reference
-This adds an inspector button to create and assign a new ScriptableObject asset.  
+Wraps a ScriptableObject asset so the game can change a copy of its values without editing the asset. In the Inspector it shows the asset field with a "New" button that creates and assigns a new asset. In Play mode, a "Runtime copy" foldout shows the copy's live values.
+```cs
+using UnityTools.Data;
+
+public class Enemy : MonoBehaviour
+{
+    [SerializeField] private DataReference<EnemyStats> _stats;
+
+    private void Start()
+    {
+        if (!_stats.HasAsset) return;     // optional: skip the "no asset assigned" error
+        _stats.Runtime.Health -= 10;      // changes this enemy's copy, not the asset
+        Debug.Log(_stats.Persistent.Health); // the asset's value is unchanged
+    }
+}
 ```
-Wrap any ScriptableObject in a serialized DataReference<YourType>
-```
-Access the SO through the Persistent or RunTime properties, RunTime automatically creates a unique instance of the SO.
+- **Runtime** is this field's own copy, made the first time it's read in Play mode. Outside Play mode it's the asset itself.
+- **Each field gets its own copy**, including each instance of a prefab. Two fields that point at the same asset don't share changes: to show the player's health on a HUD, have the HUD read the player's DataReference (or use Persistent if the data never changes at runtime).
+- **Persistent** is the asset. Changes made to it in Play mode stay in the asset after you stop.
+- **ResetRuntime()** throws the copy away; the next read of Runtime makes a fresh copy from the asset. All copies are destroyed when Play mode ends.
+- With no asset assigned, Runtime and Persistent log one error and return null. **HasAsset** checks without the error.
 
 ### Debug Menu
 An in-game debug menu where every feature adds its own section of buttons, toggles, sliders, dropdowns and live readouts. It's created automatically in the Editor and in Development builds (and in release builds with the `DEBUG_MENU` scripting define); there's nothing to place in your scenes. Open it with F5, or Select + Start on a gamepad.

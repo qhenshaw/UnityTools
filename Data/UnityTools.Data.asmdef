@@ -1,9 +1,7 @@
 {
     "name": "UnityTools.Data",
     "rootNamespace": "UnityTools.Data",
-    "references": [
-        "GUID:64b01bc802468004990f810413075ca2"
-    ],
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
