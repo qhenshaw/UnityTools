@@ -18,7 +18,7 @@ namespace SceneManagement
 #pragma warning disable CS0414
         [SerializeField, InlineButton(nameof(AddNewScene), "Add")] private string _newSceneName;
         [SerializeField, SceneDropdown, InlineButton(nameof(AddExistingScene), "Add")] private string _existingScene;
-        [field: SerializeField, SceneDropdown] public List<string> SceneList { get; private set; }
+        [field: SerializeField, SceneDropdown] public List<string> SceneList { get; private set; } = new List<string>();
         [SerializeField, Button("Load Scene List", true, Method = nameof(LoadSceneList))] private string _loadSceneListButton;
 #pragma warning restore CS0414
 
@@ -86,6 +86,29 @@ namespace SceneManagement
             Scene activeScene = SceneManager.GetActiveScene();
             string folder = Path.GetDirectoryName(activeScene.path)?.Replace('\\', '/');
             if (string.IsNullOrEmpty(folder)) folder = "Assets";
+            AddNewSceneAt($"{folder}/{activeScene.name}-{_newSceneName}.unity");
+#endif
+        }
+
+#if UNITY_EDITOR
+        /// <summary>Asked when the new scene's file already exists: true adds the existing scene. Replaced by tests.</summary>
+        internal static Func<string, bool> AskAddExisting = path => UnityEditor.EditorUtility.DisplayDialog(
+            "Scene already exists",
+            $"{path} already exists. Add the existing scene to the list instead? It won't be overwritten.",
+            "Add Existing", "Cancel");
+
+        /// <summary>Creates an empty scene at path, adds it to the list and opens it additively. Never overwrites a file.</summary>
+        internal void AddNewSceneAt(string path)
+        {
+            if (File.Exists(path))
+            {
+                if (!AskAddExisting(path)) return;
+                _existingScene = path;
+                AddExistingScene();
+                return;
+            }
+
+            Scene activeScene = SceneManager.GetActiveScene();
             Scene newScene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
 
             int index = GetLoadedSceneIndex(newScene);
@@ -95,17 +118,24 @@ namespace SceneManagement
                 return;
             }
 
-            newScene.name = $"{activeScene.name}-{_newSceneName}";
-            EditorSceneManager.SaveScene(newScene, $"{folder}/{newScene.name}.unity");
+            EditorSceneManager.SaveScene(newScene, path);
             EditorSceneManager.SetActiveScene(activeScene);
-            SceneList.Add(newScene.path);
+            AddToList(newScene.path);
 
-            Debug.Log($"New scene added: {newScene.name}");
-#endif
+            Debug.Log($"New scene added: {newScene.name}", this);
         }
 
+        private void AddToList(string path)
+        {
+            UnityEditor.Undo.RecordObject(this, "Add Scene to Additive Scene Manager");
+            SceneList.Add(path);
+            UnityEditor.EditorUtility.SetDirty(this);
+            if (gameObject.scene.IsValid()) EditorSceneManager.MarkSceneDirty(gameObject.scene);
+        }
+#endif
+
         /// <summary>Adds the scene picked in the Existing Scene dropdown to the list and opens it additively.</summary>
-        private void AddExistingScene()
+        internal void AddExistingScene()
         {
 #if UNITY_EDITOR
             if (string.IsNullOrEmpty(_existingScene))
@@ -124,7 +154,7 @@ namespace SceneManagement
                 return;
             }
 
-            SceneList.Add(_existingScene);
+            AddToList(_existingScene);
             string sceneName = Path.GetFileNameWithoutExtension(_existingScene);
             if (!CheckIfSceneLoaded(sceneName))
             {

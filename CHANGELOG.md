@@ -1,5 +1,16 @@
 # Changelog
 
+[6.6.0] - 2026-11-15
+- Prefab Spawner: the preview no longer creates (and leaks) a new material on every repaint, and no longer throws every frame without a Preview Material; with none set it draws tinted gizmo meshes
+- Prefab Spawner: the preview places nested and scaled child meshes where they'd actually spawn (it used the children's local scale and ignored their offsets), and skips inactive objects and disabled renderers
+- Prefab Spawner: Replace with Prefab Spawner handles every selected instance in one Undo step and keeps rotation, parent, place in the hierarchy and scene (it kept only position). Instances with prefab overrides are listed first, with Replace Anyway, Skip Those or Cancel. Selecting a child of an instance replaces the whole instance
+- Prefab Spawner: Spawn() with no prefab logs an error and returns null instead of throwing, and doesn't destroy the spawner outside Play mode
+- Hide Children: inactive children are now hidden too, and only the hide flags it owns are added or removed, so other flags on the children are kept
+- Hide Children: Show In Prefab Mode now shows the children without changing Is Hidden. Before, saving in prefab mode could store Is Hidden off, and closing the prefab forced it on. Nested Hide Children in a prefab are handled too, and the "Showing/Hiding prefab components" logs are gone
+- Additive Scene Manager: Add New Scene no longer overwrites an existing scene with the same name; it offers to add the existing scene instead. Adding scenes records Undo and marks the scene dirty
+- Additive Scene Manager: the scene list starts empty instead of null, so a manager added from code no longer throws
+- Added EditMode tests for Prefab Spawner, the mesh preview, Hide Children and Additive Scene Manager
+
 [6.5.0] - 2026-11-15
 - Streaming Scene Manager: no longer unloads the scene it's in when that scene isn't listed as Persistent
 - Streaming Scene Manager: LoadSet calls made while a set is loading no longer race each other. The manager finishes the scene it's loading or unloading, then switches to the newest set; sets asked for in between are skipped

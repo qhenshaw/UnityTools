@@ -408,7 +408,8 @@ StreamingSceneManager.Instance.SetLoaded += set => _loadingScreen.Hide();
 - New transitions go on the "Trigger" layer if the project has one, otherwise on Ignore Raycast.
 
 ### Hide Children
-A component that can hide child objects and components on scene objects or prefabs.
+A component that can hide child objects and components on scene objects or prefabs.  
+Hides inactive children too, and keeps any other hide flags they have. With **Show In Prefab Mode** on, the children are shown while the prefab is open in prefab mode, without changing the saved **Is Hidden** value.
 
 ### Light Bake Settings
 A component that can apply lighting settings to all meshes and terrains in scene under a parent.  
@@ -420,6 +421,9 @@ Helps prevent accidental overrides and forces better editing practices.
 ```
 Right click prefab in scene => Replace with Prefab Spawner
 ```
+- Replace works on every selected prefab instance as one Undo step, keeping each one's position, rotation, parent and place in the hierarchy. Prefab overrides can't be kept by a spawner, so instances with overrides are listed first: replace anyway, skip them, or cancel.
+- The prefab spawns at the spawner's position and rotation and keeps its own scale; the spawner's scale is ignored.
+- The Scene view preview is drawn with the **Preview Material** in the Preview colour, or as tinted gizmos when no material is set.
 
 ### Service Locator
 A simple service locator: finds the one instance of a class (an AudioManager, a ScoreManager) without a direct reference.  

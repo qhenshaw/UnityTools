@@ -1,35 +1,27 @@
 using UnityEditor;
 using UnityEditor.SceneManagement;
-using UnityEngine;
 
 namespace SceneManagement.Editor
 {
+    /// <summary>
+    /// Shows the children of HideChildren components (with Show In Prefab Mode on) while their prefab is open in
+    /// prefab mode, without changing their saved Is Hidden value.
+    /// </summary>
     [InitializeOnLoad]
     public static class HideChildrenEditor
     {
         static HideChildrenEditor()
         {
-            PrefabStage.prefabStageOpened += OnPrefabOpened;
-            PrefabStage.prefabStageClosing += OnPrefabClosing;
+            PrefabStage.prefabStageOpened += stage => SetShown(stage, true);
+            PrefabStage.prefabStageClosing += stage => SetShown(stage, false);
         }
 
-        private static void OnPrefabOpened(PrefabStage prefabStage)
+        internal static void SetShown(PrefabStage stage, bool shown)
         {
-            GameObject prefabRoot = prefabStage.prefabContentsRoot;
-            if (prefabRoot.TryGetComponent(out HideChildren hideChildren) && hideChildren.ShowInPrefabMode)
+            if (stage == null || stage.prefabContentsRoot == null) return;
+            foreach (HideChildren hideChildren in stage.prefabContentsRoot.GetComponentsInChildren<HideChildren>(true))
             {
-                Debug.Log($"Showing prefab components: {prefabRoot.name}");
-                hideChildren.SetHidden(false);
-            }
-        }
-
-        private static void OnPrefabClosing(PrefabStage prefabStage)
-        {
-            GameObject prefabRoot = prefabStage.prefabContentsRoot;
-            if (prefabRoot.TryGetComponent(out HideChildren hideChildren) && hideChildren.ShowInPrefabMode)
-            {
-                Debug.Log($"Hiding prefab components: {prefabRoot.name}");
-                hideChildren.SetHidden(true);
+                if (hideChildren.ShowInPrefabMode) hideChildren.ShowTemporarily(shown);
             }
         }
     }
