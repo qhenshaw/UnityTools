@@ -1,0 +1,377 @@
+/* Playtest Feedback panel. Sizes are in panel units (reference resolution 1920x1080). */
+
+.pf-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    color: rgb(232, 232, 236);
+    font-size: 16px;
+}
+
+.pf-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.pf-row {
+    flex-direction: row;
+    align-items: center;
+}
+
+.pf-grow {
+    flex-grow: 1;
+    flex-basis: 0;
+}
+
+.pf-spacer {
+    flex-grow: 1;
+    min-height: 8px;
+}
+
+/* ---------------------------------------------------------------- Side panel */
+
+.pf-panel-mode {
+    flex-direction: row;
+}
+
+.pf-backdrop {
+    flex-grow: 1;
+    background-color: rgba(0, 0, 0, 0.35);
+}
+
+.pf-side-panel {
+    width: 480px;
+    padding: 28px 28px 24px 28px;
+    background-color: rgb(30, 31, 36);
+    border-left-width: 1px;
+    border-left-color: rgb(58, 60, 68);
+}
+
+.pf-title {
+    font-size: 28px;
+    -unity-font-style: bold;
+    margin: 0 0 4px 0;
+    padding: 0;
+}
+
+.pf-subtitle {
+    font-size: 15px;
+    color: rgb(160, 162, 172);
+    white-space: normal;
+    margin: 0 0 12px 0;
+    padding: 0;
+}
+
+.pf-section-label {
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: rgb(160, 162, 172);
+    margin: 14px 0 6px 0;
+    padding: 0;
+}
+
+/* Categories */
+
+.pf-category-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.pf-category {
+    flex-grow: 1;
+    flex-basis: 0;
+    min-width: 90px;
+    height: 40px;
+    margin: 0 6px 6px 0;
+    border-width: 2px;
+    border-bottom-width: 4px;
+    border-radius: 6px;
+    background-color: rgb(43, 45, 51);
+    border-color: rgb(63, 65, 71);
+    color: rgb(232, 232, 236);
+    font-size: 16px;
+    -unity-font-style: bold;
+}
+
+.pf-category:hover {
+    background-color: rgb(53, 55, 62);
+}
+
+/* Text fields */
+
+.pf-field {
+    margin: 0;
+}
+
+.pf-field > .unity-base-text-field__input,
+.pf-field > .unity-text-field__input {
+    background-color: rgb(43, 45, 51);
+    border-color: rgb(63, 65, 71);
+    border-width: 1px;
+    border-radius: 6px;
+    color: rgb(232, 232, 236);
+    font-size: 16px;
+    padding: 8px 10px;
+    min-height: 38px;
+}
+
+.pf-field:hover > .unity-base-text-field__input,
+.pf-field:hover > .unity-text-field__input {
+    background-color: rgb(48, 50, 57);
+}
+
+.pf-feedback-text {
+    flex-grow: 1;
+    min-height: 160px;
+    max-height: 420px;
+}
+
+.pf-feedback-text > .unity-base-text-field__input,
+.pf-feedback-text > .unity-text-field__input {
+    flex-grow: 1;
+    -unity-text-align: upper-left;
+    white-space: normal;
+}
+
+.pf-char-count {
+    font-size: 12px;
+    color: rgb(120, 122, 132);
+    -unity-text-align: middle-right;
+    margin: 4px 0 0 0;
+    padding: 0;
+}
+
+/* Screenshot */
+
+.pf-screenshot-preview {
+    display: none;
+}
+
+.pf-screenshot-thumb {
+    height: 180px;
+    margin-bottom: 8px;
+    background-color: rgb(20, 21, 24);
+    border-radius: 6px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+/* Footer */
+
+.pf-info {
+    font-size: 12px;
+    color: rgb(120, 122, 132);
+    white-space: normal;
+    margin: 0 0 8px 0;
+    padding: 0;
+}
+
+.pf-status {
+    display: none;
+    font-size: 14px;
+    white-space: normal;
+    padding: 8px 10px;
+    margin: 0 0 10px 0;
+    border-radius: 6px;
+    background-color: rgb(43, 45, 51);
+}
+
+.pf-status--error {
+    color: rgb(255, 140, 140);
+    background-color: rgb(70, 32, 36);
+}
+
+.pf-status--success {
+    color: rgb(140, 230, 160);
+    background-color: rgb(28, 60, 40);
+}
+
+/* ---------------------------------------------------------------- Buttons */
+
+.pf-button {
+    height: 40px;
+    margin: 0 4px;
+    padding: 0 16px;
+    border-width: 0;
+    border-radius: 6px;
+    font-size: 16px;
+    -unity-font-style: bold;
+    color: rgb(240, 240, 244);
+    background-color: rgb(64, 66, 74);
+}
+
+.pf-button:hover {
+    background-color: rgb(78, 80, 90);
+}
+
+.pf-button:active {
+    background-color: rgb(54, 56, 63);
+}
+
+.pf-button:focus {
+    border-width: 2px;
+    border-color: rgb(140, 150, 255);
+}
+
+.pf-button--primary {
+    background-color: rgb(88, 101, 242);
+}
+
+.pf-button--primary:hover {
+    background-color: rgb(106, 118, 245);
+}
+
+.pf-button--primary:active {
+    background-color: rgb(71, 82, 196);
+}
+
+.pf-button--small {
+    height: 32px;
+    font-size: 14px;
+    padding: 0 8px;
+}
+
+.pf-footer {
+    margin: 0 -4px;
+}
+
+.pf-screenshot-preview > .pf-row {
+    margin: 0 -4px;
+}
+
+#add-screenshot {
+    margin: 0;
+}
+
+/* ---------------------------------------------------------------- Snip mode */
+
+.pf-snip-mode {
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+}
+
+.pf-dim {
+    position: absolute;
+    background-color: rgba(0, 0, 0, 0.55);
+}
+
+.pf-selection {
+    position: absolute;
+    border-width: 2px;
+    border-color: rgb(255, 255, 255);
+    display: none;
+}
+
+.pf-toolbar-wrapper {
+    position: absolute;
+    top: 20px;
+    left: 0;
+    right: 0;
+    align-items: center;
+}
+
+.pf-toolbar {
+    flex-direction: row;
+    align-items: center;
+    padding: 8px;
+    background-color: rgba(30, 31, 36, 0.96);
+    border-radius: 10px;
+    border-width: 1px;
+    border-color: rgb(58, 60, 68);
+}
+
+.pf-toolbar-label {
+    margin: 0 12px 0 8px;
+    padding: 0;
+    -unity-font-style: bold;
+}
+
+.pf-hint {
+    font-size: 13px;
+    color: rgb(200, 202, 210);
+    margin: 8px 0 0 0;
+    padding: 2px 8px;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 4px;
+}
+
+.pf-hint--center {
+    align-self: center;
+}
+
+/* ---------------------------------------------------------------- Draw mode */
+
+.pf-draw-mode {
+    background-color: rgba(12, 12, 14, 0.94);
+    padding: 20px;
+}
+
+.pf-toolbar-row {
+    flex-direction: row;
+    justify-content: center;
+}
+
+.pf-divider {
+    width: 1px;
+    height: 28px;
+    margin: 0 10px;
+    background-color: rgb(70, 72, 80);
+}
+
+.pf-swatch {
+    width: 30px;
+    height: 30px;
+    margin: 0 4px;
+    padding: 0;
+    border-radius: 15px;
+    border-width: 2px;
+    border-color: rgba(0, 0, 0, 0.6);
+}
+
+.pf-swatch--selected {
+    border-width: 3px;
+    border-color: rgb(255, 255, 255);
+}
+
+.pf-size {
+    width: 40px;
+    height: 40px;
+    margin: 0 2px;
+    padding: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    border-width: 2px;
+    border-color: rgba(0, 0, 0, 0);
+    background-color: rgb(50, 52, 59);
+}
+
+.pf-size--selected {
+    border-color: rgb(255, 255, 255);
+}
+
+.pf-size-dot {
+    background-color: rgb(240, 240, 244);
+}
+
+.pf-draw-area {
+    flex-grow: 1;
+    margin-top: 16px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.pf-draw-image {
+    flex-shrink: 0;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    border-width: 1px;
+    border-color: rgb(90, 92, 100);
+}

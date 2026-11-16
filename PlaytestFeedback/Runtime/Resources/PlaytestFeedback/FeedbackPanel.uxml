@@ -1,0 +1,87 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <Style src="FeedbackPanel.uss" />
+    <ui:VisualElement name="feedback-root" class="pf-root">
+
+        <!-- Side panel with the form -->
+        <ui:VisualElement name="panel-mode" class="pf-fill pf-panel-mode">
+            <ui:VisualElement name="backdrop" class="pf-backdrop" />
+            <ui:VisualElement name="side-panel" class="pf-side-panel">
+                <ui:Label text="Send Feedback" class="pf-title" />
+                <ui:Label text="The game is paused. Tell us what happened or what you think." class="pf-subtitle" />
+
+                <ui:VisualElement name="category-section">
+                    <ui:Label text="Category" class="pf-section-label" />
+                    <ui:VisualElement name="category-row" class="pf-category-row" />
+                </ui:VisualElement>
+
+                <ui:VisualElement name="name-section">
+                    <ui:Label text="Your name (optional)" class="pf-section-label" />
+                    <ui:TextField name="name-field" class="pf-field" max-length="64" />
+                </ui:VisualElement>
+
+                <ui:Label text="Feedback" class="pf-section-label" />
+                <ui:TextField name="feedback-text" multiline="true" class="pf-field pf-feedback-text" />
+                <ui:Label name="char-count" class="pf-char-count" />
+
+                <ui:Label text="Screenshot" class="pf-section-label" />
+                <ui:Button name="add-screenshot" text="Snip Screenshot" class="pf-button pf-button--secondary" />
+                <ui:VisualElement name="screenshot-preview" class="pf-screenshot-preview">
+                    <ui:VisualElement name="screenshot-thumb" class="pf-screenshot-thumb" />
+                    <ui:VisualElement class="pf-row">
+                        <ui:Button name="edit-screenshot" text="Draw" class="pf-button pf-button--secondary pf-button--small pf-grow" />
+                        <ui:Button name="retake-screenshot" text="Retake" class="pf-button pf-button--secondary pf-button--small pf-grow" />
+                        <ui:Button name="remove-screenshot" text="Remove" class="pf-button pf-button--secondary pf-button--small pf-grow" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+
+                <ui:VisualElement class="pf-spacer" />
+
+                <ui:Label name="info-label" class="pf-info" />
+                <ui:Label name="status-label" class="pf-status" />
+                <ui:VisualElement class="pf-row pf-footer">
+                    <ui:Button name="cancel-button" text="Cancel" class="pf-button pf-button--secondary pf-grow" />
+                    <ui:Button name="submit-button" text="Send" class="pf-button pf-button--primary pf-grow" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- Full screen snip: drag a rectangle over the frozen frame -->
+        <ui:VisualElement name="snip-mode" class="pf-fill pf-snip-mode">
+            <ui:VisualElement name="snip-dim-top" class="pf-dim" picking-mode="Ignore" />
+            <ui:VisualElement name="snip-dim-bottom" class="pf-dim" picking-mode="Ignore" />
+            <ui:VisualElement name="snip-dim-left" class="pf-dim" picking-mode="Ignore" />
+            <ui:VisualElement name="snip-dim-right" class="pf-dim" picking-mode="Ignore" />
+            <ui:VisualElement name="snip-selection" class="pf-selection" picking-mode="Ignore" />
+            <ui:VisualElement class="pf-toolbar-wrapper" picking-mode="Ignore">
+                <ui:VisualElement name="snip-toolbar" class="pf-toolbar">
+                    <ui:Label text="Drag to select an area" class="pf-toolbar-label" />
+                    <ui:Button name="snip-full" text="Full Screen" class="pf-button pf-button--secondary" />
+                    <ui:Button name="snip-cancel" text="Cancel" class="pf-button pf-button--secondary" />
+                </ui:VisualElement>
+                <ui:Label text="Enter: full screen  ·  Esc: cancel" class="pf-hint" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- Draw on the snipped screenshot -->
+        <ui:VisualElement name="draw-mode" class="pf-fill pf-draw-mode">
+            <ui:VisualElement class="pf-toolbar-row">
+                <ui:VisualElement name="draw-toolbar" class="pf-toolbar">
+                    <ui:VisualElement name="color-row" class="pf-row pf-swatch-row" />
+                    <ui:VisualElement class="pf-divider" />
+                    <ui:VisualElement name="size-row" class="pf-row" />
+                    <ui:VisualElement class="pf-divider" />
+                    <ui:Button name="draw-undo" text="Undo" class="pf-button pf-button--secondary" />
+                    <ui:Button name="draw-clear" text="Clear" class="pf-button pf-button--secondary" />
+                    <ui:VisualElement class="pf-divider" />
+                    <ui:Button name="draw-cancel" text="Cancel" class="pf-button pf-button--secondary" />
+                    <ui:Button name="draw-done" text="Done" class="pf-button pf-button--primary" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:Label text="Draw on the screenshot to point things out  ·  Enter: done  ·  Esc: cancel  ·  Ctrl+Z: undo" class="pf-hint pf-hint--center" />
+            <ui:VisualElement name="draw-area" class="pf-draw-area">
+                <ui:VisualElement name="draw-image" class="pf-draw-image" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+    </ui:VisualElement>
+</ui:UXML>

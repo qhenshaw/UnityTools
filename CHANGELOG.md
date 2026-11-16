@@ -1,5 +1,16 @@
 # Changelog
 
+[6.3.0] - 2026-11-15
+- Added Playtest Feedback, moved in from the standalone com.qhenshaw.playtestfeedback package (0.1.1, commit c2342b9): players press F8 to pause the game, write feedback, pick a category, snip and draw on a screenshot, and send it with game version, system info, logs and custom game state to a Discord channel through a webhook
+- Playtest Feedback: the namespace is now UnityTools.PlaytestFeedback (and the assemblies UnityTools.PlaytestFeedback and UnityTools.PlaytestFeedback.Editor)
+- Playtest Feedback: settings moved from the Assets/Resources/PlaytestFeedbackSettings.asset asset to Project Settings > Unity Tools > Playtest Feedback, saved in ProjectSettings/UnityToolsPlaytestFeedback.asset (including the webhook URL, which is now committed with the project) and copied into builds that include the tool. An existing PlaytestFeedbackSettings asset is copied over once and deleted. FeedbackSettings is now a plain settings class; use FeedbackSettings.Current instead of FeedbackSettings.Load()
+- Playtest Feedback: Panel Settings Override and Extra Style Sheet were removed (settings are copied into builds as JSON, which can't hold asset references); edit FeedbackPanel.uss to restyle the panel
+- Playtest Feedback: menus moved to Tools > UnityTools > Playtest Feedback (Open Settings, Open Outbox Folder)
+- Playtest Feedback: fixed a custom hotkey reverting to F8 after its settings were loaded, because the default bindings were added before the saved ones were read. The hotkey now starts with no bindings, which means F8 / L3 + R3
+- To switch a project from the standalone package: remove com.qhenshaw.playtestfeedback, update UnityTools, open the project once so the settings are migrated, and replace `using PlaytestFeedback;` with `using UnityTools.PlaytestFeedback;`
+- UnityTools now depends on the UI Toolkit, UnityWebRequest, Image Conversion, Screen Capture and Audio modules, and on Input System 1.8.2 or newer
+- Added EditMode and PlayMode tests for Playtest Feedback
+
 [6.2.0] - 2026-11-15
 - **Breaking** Debug Menu: rebuilt around sections. Features call DebugMenu.Register(this, "Title", section => section.Button(...).Toggle(...).Slider(...).SliderInt(...).Dropdown(...).Readout(...)) in OnEnable and DebugMenu.Unregister(this) in OnDisable. The menu is drawn with UI Toolkit, one foldout per section
 - **Breaking** Debug Menu: the namespace is now UnityTools.DebugTools. To update a project: replace `using DebugMenu;` with `using UnityTools.DebugTools;`. [DebugCommand] and DebugMenuSystem.Instance.RegisterObject/DeregisterObject still work but are obsolete; each registered object becomes a section of buttons named after its type. Commands with parameters are skipped with a warning

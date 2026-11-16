@@ -1,7 +1,7 @@
 {
   "displayName": "Unity Tools",
   "author": "Quin Henshaw",
-  "version": "6.2.0",
+  "version": "6.3.0",
   "name": "com.qhenshaw.unitytools",
   "documentationUrl": "https://github.com/qhenshaw/unitytools",
   "changelogUrl": "https://github.com/qhenshaw/unitytools/blob/main/CHANGELOG.md",
@@ -10,16 +10,26 @@
   "unity": "6000.0",
   "dependencies": {
     "com.unity.textmeshpro": "3.0.0",
-	"com.unity.ugui": "2.0.0",
-    "com.unity.inputsystem": "1.0.0",
-	"com.unity.cinemachine": "3.0.0",
-	"com.unity.2d.sprite": "1.0.0"
+    "com.unity.ugui": "2.0.0",
+    "com.unity.inputsystem": "1.8.2",
+    "com.unity.cinemachine": "3.0.0",
+    "com.unity.2d.sprite": "1.0.0",
+    "com.unity.modules.uielements": "1.0.0",
+    "com.unity.modules.unitywebrequest": "1.0.0",
+    "com.unity.modules.imageconversion": "1.0.0",
+    "com.unity.modules.screencapture": "1.0.0",
+    "com.unity.modules.audio": "1.0.0"
   },
   "samples": [
-	{
+    {
       "displayName": "Debug Menu",
       "description": "A Debug Menu prefab with its own UXML, USS and Panel Settings to restyle. Placed in a scene, it replaces the automatic debug menu.",
       "path": "Samples~/DebugMenu"
+    },
+    {
+      "displayName": "Playtest Feedback Game Context",
+      "description": "Shows how to attach game-specific state (player position, checkpoint, inventory...) to every playtest feedback report.",
+      "path": "Samples~/PlaytestFeedbackGameContext"
     }
   ]
 }

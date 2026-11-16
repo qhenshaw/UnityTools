@@ -99,6 +99,112 @@ unity command debugmenu list [--section Player]
 unity command debugmenu do --section Player --label "God mode" --value true
 ```
 
+### Playtest Feedback
+In-game feedback tool for playtests. Players press **F8** to pause the game and open a side panel, where they pick a category (**Bug**, **Feedback**, **Idea**, or your own), write their feedback, and snip part of the screen and draw on it. The report goes to a **Discord channel** through a webhook, so there's no server to host. Every report includes the game version, date, platform, hardware, FPS, scene, recent logs, plus any game state you add.
+
+#### Setup
+1. In Discord, create a **Forum channel** for feedback (each report gets its own thread; a normal text channel works too). Channel settings => Integrations => Webhooks => New Webhook => Copy Webhook URL. Optionally create forum tags such as *Bug*, *Feedback*, *Idea*, and leave "Require people to select tags when posting" off.
+2. In Unity: Project Settings => Unity Tools => Playtest Feedback (or Tools => UnityTools => Playtest Feedback => Open Settings). Paste the webhook URL and click **Send Test Message**.
+3. Enter Play mode and press **F8**. The tool creates itself at startup, so there's nothing to add to your scenes.
+
+Settings are saved in `ProjectSettings/UnityToolsPlaytestFeedback.asset`, **including the webhook URL**, and copied into builds that include the tool.
+
+#### What a report looks like in Discord
+| Part | Contents |
+|---|---|
+| Title | `🐞 [Bug] First line of the feedback` |
+| Embed | Full feedback text, player name, category colour, and fields for version, scene, playtime, platform, GPU, resolution, FPS and error counts, plus your custom game context |
+| `screenshot.jpg` | The annotated snip, shown inline in the embed |
+| `log.txt` | The last few hundred log lines, with stack traces for errors |
+| `context.json` | Everything above as JSON, including all the game context values |
+
+#### Controls
+| Where | Input | Action |
+|---|---|---|
+| Game | F8 / L3 + R3 (configurable) | Open or close the panel |
+| Panel | Ctrl + Enter | Send |
+| Panel | Esc | Close (the draft is kept) |
+| Snip | Drag | Select an area |
+| Snip | Enter | Use the full screen |
+| Snip / Draw | Esc / gamepad B | Cancel |
+| Draw | Enter | Done |
+| Draw | Ctrl + Z | Undo |
+
+The **Hotkey** setting is a regular Input System action with the usual binding editor (Listen, several bindings, combos such as Ctrl + F8). With no bindings it uses F8 and L3 + R3.
+
+#### Adding game state
+Implement `IFeedbackContextProvider` on any component, or add single values with a lambda. Values are read once when the panel opens, before the game is paused. See the **Playtest Feedback Game Context** sample in the Package Manager.
+```cs
+using UnityTools.PlaytestFeedback;
+
+public class PlayerFeedbackContext : MonoBehaviour, IFeedbackContextProvider
+{
+    private void OnEnable() => FeedbackManager.RegisterProvider(this);
+    private void OnDisable() => FeedbackManager.UnregisterProvider(this);
+
+    public void CollectFeedbackContext(IDictionary<string, object> context)
+    {
+        context["Player Position"] = transform.position;
+        context["Health"] = GetComponent<Health>().Current;
+    }
+}
+
+FeedbackManager.AddContext("Seed", () => worldGenerator.Seed);
+```
+
+#### Scripting API
+```cs
+FeedbackManager.Open();                 // e.g. from a "Send Feedback" button in your pause menu
+FeedbackManager.Close();
+FeedbackManager.IsOpen;
+FeedbackManager.Opened    += ...;       // pause systems that ignore Time.timeScale
+FeedbackManager.Closed    += ...;
+FeedbackManager.Submitted += report => ...;
+FeedbackSettings.WebhookUrlOverride = "..."; // use a webhook from somewhere other than the settings
+FeedbackSettings.Current;               // the settings in effect
+```
+
+#### While the panel is open
+Each of these can be turned off in the settings:
+- `Time.timeScale` is set to 0 and audio is paused (`AudioListener.pause`). Both are restored on close.
+- The cursor is unlocked and shown, then restored.
+- **Every enabled Input System action is disabled**, gameplay and UI maps alike. Use *Action Maps To Keep Enabled* for exceptions such as push-to-talk.
+- **The game's `EventSystem`s are disabled** (their selection is remembered). The panel runs on its own private `EventSystem` and UI actions, so menus behind it get no clicks, navigation or submit. Turn off *Isolate UI Input* to share the game's `EventSystem`.
+- Everything is restored one frame after closing, so the Esc that closed the panel doesn't also open your pause menu.
+
+Code that reads devices directly (`Keyboard.current.spaceKey.wasPressedThisFrame`) bypasses actions, so it can't be blocked. Check `FeedbackManager.IsOpen` there.
+
+#### Reliability
+If a report can't be sent (offline, Discord down, rate limited), it's saved under `Application.persistentDataPath/PlaytestFeedback/Outbox` and sent on the next launch. Tools => UnityTools => Playtest Feedback => Open Outbox Folder opens it. Reports Discord rejects outright (bad webhook, invalid tag) are renamed to `.failed` and not retried.
+
+#### Forum tags per category
+Each category has an optional **Forum Tag Id**; when it's set, the post is tagged automatically. Discord doesn't show tag IDs in the app; read them from the channel's `available_tags` with a bot token:
+```bash
+curl -H "Authorization: Bot <token>" https://discord.com/api/v10/channels/<forum channel id>
+```
+You don't need tags: the category is always in the post title (`[Bug] …`), so Discord search works without them.
+
+#### Security and privacy
+- The webhook URL is saved in `ProjectSettings/`, which is **committed with your project**: if the repository is public, anyone can find it. It's also stored in builds, where **anyone who has a build can extract it**. Use **one webhook per playtest round** and delete it in Discord when the round ends, or immediately if it leaks. To keep it out of the repository, leave it empty and set `FeedbackSettings.WebhookUrlOverride` at runtime instead.
+- Player text can never ping `@everyone` or roles (`allowed_mentions` is empty).
+- Screenshots may show things like usernames. The panel tells players what gets sent.
+- Turn on **Development Builds Only**, or add the `PLAYTEST_FEEDBACK_DISABLED` scripting define, to keep the tool out of release builds.
+
+#### Limits
+- Discord allows about 10 MB of attachments per message. Screenshots are JPG and scaled to at most 1920 px (configurable). If the total is still too big, the log is dropped first.
+- An embed holds at most 6000 characters, so long text or many context values are trimmed in the post. The full data is always in `context.json`.
+- On Android and WebGL, builds can't read the settings copy from StreamingAssets, so no webhook is set: set `FeedbackSettings.WebhookUrlOverride` at startup there.
+
+#### Troubleshooting
+| Problem | Fix |
+|---|---|
+| Nothing happens on F8 | Check that *Enabled In Editor* (or *Auto Create*) is on in the settings. |
+| Game menus react behind the panel | Make sure *Disable Game Input* and *Isolate UI Input* are on, and *Action Maps To Keep Enabled* doesn't list your UI map. |
+| Panel opens but can't be clicked | If the project has a `PanelInputConfiguration` that stops UI Toolkit from using the `EventSystem`, turn off *Isolate UI Input* and add your UI map to *Action Maps To Keep Enabled*. |
+| Input stops working while paused | Input System *Update Mode* set to *Process Events In Fixed Update* doesn't process input when `timeScale` is 0. Use Dynamic Update, or turn off *Pause Time*. |
+| `400` error mentioning `thread_name` | The webhook isn't in a Forum channel. Untick *Post To Forum Channel*. |
+| `404 Unknown Webhook` | The webhook was deleted. Create a new one and update the settings. |
+
 ### Custom Hierarchy Drawer
 Redraws any items in the hierarchy that have ```= ``` at the start of their name with bold text and a darker background. Useful for highlighting empty category transforms. Unity's new hierarchy breaks this unfortunately.
 
