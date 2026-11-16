@@ -196,15 +196,30 @@ Debugging: Window > UnityTools > Messaging Debugger lists every tag with its pay
 
 ### Object Pooling
 A simple object pooling solution for GameObjects.  
-Your pooled prefab has a component inheriting from PooledObject.  
-Get from pool:
+Your pooled prefab has a component inheriting from PooledObject. Reference the prefab by that component type and get instances from the pool instead of instantiating them:
 ```cs
-YourType pooledObject = PoolSystem.Instance.Get(PrefabReference) as YourType;
+[SerializeField] private Bullet _bulletPrefab;
+
+Bullet bullet = PoolSystem.Instance.Get(_bulletPrefab, position, rotation);
 ```
-Return to the pool when finished:
+Return it to the pool when finished, instead of destroying it (optionally after a delay, like `Destroy(gameObject, 2f)`):
 ```cs
-pooledObject.ReturnToPool();
+bullet.ReturnToPool();
+bullet.ReturnToPool(2f);
 ```
+Instances are placed before they're activated, so `Awake` and `OnEnable` see the spawn position. A reused instance keeps its old state (velocity, health, trails), so reset it in the pool hooks:
+```cs
+public class Bullet : PooledObject
+{
+    protected override void OnTakenFromPool() { /* runs after it's placed and active */ }
+    protected override void OnReturnedToPool() { /* runs while it's still active */ }
+}
+```
+- **Prewarm Count**: instances created when the pool is first used, so the first shots don't instantiate mid-game
+- **Max Size**: most instances kept waiting in the pool; extras are destroyed when returned (0 = unlimited)
+- Pools belong to the scene they were created in and are destroyed with it. Place a PoolSystem in a scene to prewarm prefabs as soon as the scene loads; otherwise one is created on first use
+- `ReturnToPool()` on an object that didn't come from a pool (placed in the scene, or whose pool was unloaded) destroys it
+- Destroying a pooled object (or its parent) logs an error once per prefab, since the pool can't reuse it. If your PooledObject has its own `OnDestroy`, override it and call `base.OnDestroy()`
 
 ### Runtime Mesh Combine
 A situationally useful optimization tool. Add to any GameObject root in your scene and it will automatically combine meshes on Start.  

@@ -1,5 +1,19 @@
 # Changelog
 
+[5.9.0] - 2026-11-15
+- Object Pooling: added PoolSystem.Instance.Get(prefab, ...) overloads that return your own component type (Bullet bullet = PoolSystem.Instance.Get(_bulletPrefab, position, rotation)). The old Get(IPoolable) overloads still work but are obsolete
+- Object Pooling: instances are now placed (parent, position, rotation) before they're activated, so Awake and OnEnable see the spawn position. Before, they ran at the y = -1000 hide position, so trails streaked up from under the map
+- Object Pooling: new instances are created inactive, so Awake doesn't run until an instance is first used
+- Object Pooling: added OnTakenFromPool() and OnReturnedToPool() hooks to PooledObject (and IPoolable, with empty defaults) for resetting reused objects
+- Object Pooling: PoolSize is split into Prewarm Count (instances created when the pool is first used) and Max Size (0 = unlimited). Existing PoolSize values become Max Size, and PoolSize is obsolete
+- Object Pooling: added ReturnToPool(delay). Calling it again restarts the timer, and any other return cancels it
+- Object Pooling: ReturnToPool() on an object that didn't come from a pool, or whose pool was unloaded with its scene, destroys it instead of throwing
+- Object Pooling: destroying a pooled object (directly or with its parent) logs an error once per prefab, and the pool skips destroyed objects instead of handing them out
+- Object Pooling: a PoolSystem placed in a scene no longer throws. It becomes PoolSystem.Instance and prewarms a list of prefabs on Awake. A second PoolSystem passes its list to the first and removes itself
+- Object Pooling: added PoolSystem.Prewarm(prefab), Prewarm(prefab, count), CountInactive(prefab) and PoolSystem.HasInstance
+- Object Pooling: Log Creation now defaults to off
+- Added PlayMode tests for Object Pooling
+
 [5.8.0] - 2026-11-15
 - Messaging Service: a listener with the wrong payload type no longer stops the rest of a message, and sending a null payload no longer throws
 - Messaging Service: each tag carries one payload type, set by its first listener. A listener or send with a different type logs a clear error naming the tag and both types (before, a second listener type threw an unexplained ArgumentException)
