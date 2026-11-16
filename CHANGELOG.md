@@ -1,5 +1,19 @@
 # Changelog
 
+[6.0.0] - 2026-11-15
+- **Breaking** Simple State Machine: each state type now has one instance per machine, reused every time the state is entered (before, a new instance was created on every transition). To update a project: reset any fields a state changes (timers, "done" flags) in its Enter()
+- **Breaking** Simple State Machine: states use a parameterless constructor; StateMachine and Binding are set before the first Enter. To update a project: delete each state's `(StateMachine<T>, T) : base(...)` constructor
+- Simple State Machine: added AddTransitionFromAny<V>(condition), checked from every state before normal transitions and never while already in V
+- Simple State Machine: added AddTransition<U, V>(U state => bool) overloads that pass the current state typed, replacing `CurrentState is U u && u.Flag`
+- Simple State Machine: added State.TimeInState (seconds since Enter, counted from the deltaTime passed to Update)
+- Simple State Machine: added PreviousState and DrawDebugLabel(position), an editor-only Scene view label showing the current state, its time and the previous state
+- Simple State Machine: AddTransition returns a Transition handle. RemoveTransition(handle) and RemoveTransitions<U, V>() remove transitions. RemoveTransition<U, V>(condition) is obsolete: a lambda never matched, so it silently removed nothing; it now warns when nothing matched
+- Simple State Machine: Update and FixedUpdate before the first state no longer throw
+- Simple State Machine: NextState called from inside Enter, Exit or OnStateChanged now runs after the current switch finishes, so Exit/Enter calls and OnStateChanged stay in order
+- Simple State Machine: states are created without reflection, and a state without a parameterless constructor is a compile error instead of a runtime exception
+- Simple State Machine: documented that the transition added last wins when several are true
+- Added EditMode tests for Simple State Machine
+
 [5.9.0] - 2026-11-15
 - Object Pooling: added PoolSystem.Instance.Get(prefab, ...) overloads that return your own component type (Bullet bullet = PoolSystem.Instance.Get(_bulletPrefab, position, rotation)). The old Get(IPoolable) overloads still work but are obsolete
 - Object Pooling: instances are now placed (parent, position, rotation) before they're activated, so Awake and OnEnable see the spawn position. Before, they ran at the y = -1000 hide position, so trails streaked up from under the map

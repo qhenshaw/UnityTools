@@ -294,6 +294,10 @@ public class OtherClass : MonoBehaviour
 A very simple C# driven state machine.  
 Bind the StateMachine to a class and add transitions to your States.
 Call Update() and FixedUpdate() on it for use in States.
+- Each state type has **one instance per machine, reused every time it's entered**. Reset any fields the state changes in `Enter()`
+- When several transitions are true at once, the one **added last** wins. Transitions from any state are checked first
+- `TimeInState` is the seconds since the state was entered, so you don't need your own timers
+- `AddTransition` returns a handle; pass it to `RemoveTransition(handle)` to remove that transition
 ```cs
 using System;
 using SimpleStateMachine;
@@ -311,8 +315,18 @@ public class EnemyController : MonoBehaviour
         _stateMachine = new StateMachine<EnemyController>(this);
         _stateMachine.AddTransition<IdleState, ChaseState>(() => HasTarget);
         _stateMachine.AddTransition<ChaseState, IdleState>(() => !HasTarget);
+        // typed condition: gets the current state as a ChaseState
+        _stateMachine.AddTransition<ChaseState, IdleState>(chase => chase.TimeInState > 10f);
+        // checked from every state (except DeathState itself), before the others
+        _stateMachine.AddTransitionFromAny<DeathState>(() => !IsAlive);
 
         _stateMachine.NextState<IdleState>();
+    }
+
+    private void OnDrawGizmos()
+    {
+        // editor only: shows the current state above the enemy in the Scene view
+        _stateMachine?.DrawDebugLabel(transform.position + Vector3.up * 2f);
     }
 
     private void FixedUpdate()
@@ -331,7 +345,12 @@ using SimpleStateMachine;
 
 public class ChaseState : State<EnemyController>
 {
-    public ChaseState(StateMachine<EnemyController> stateMachine, EnemyController binding) : base(stateMachine, binding) { }
+    // no constructor needed: Binding and StateMachine are set before Enter
+
+    public override void Enter()
+    {
+        // reset anything this state changes, since the same instance is reused
+    }
 
     public override void Update(float deltaTime)
     {
