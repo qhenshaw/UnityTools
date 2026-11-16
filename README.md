@@ -192,7 +192,7 @@ MessagingService.Instance.AddListener(GlobalMessages.PlayerDied, PlayDeathSound)
 MessagingService.Instance.Send(GlobalMessages.LevelLoaded);
 ```
 Sending doesn't allocate, as long as the call doesn't name a single type argument: `Send(tag, payload)` is allocation-free, `Send<DamageInfo>(tag, payload)` boxes the tag (name both types, `Send<GlobalMessages, DamageInfo>`, or none).  
-Debugging: Window > UnityTools > Messaging Debugger lists every tag with its payload type, listeners and remembered payload, and every global variable with its value.
+Debugging: Tools > UnityTools > Messaging Debugger lists every tag with its payload type, listeners and remembered payload, and every global variable with its value.
 
 ### Object Pooling
 A simple object pooling solution for GameObjects.  
@@ -261,34 +261,37 @@ Right click prefab in scene => Replace with Prefab Spawner
 ```
 
 ### Service Locator
-A simple service locator system.  
-Register a unique service instance:
+A simple service locator: finds the one instance of a class (an AudioManager, a ScoreManager) without a direct reference.  
+Use it for "the one X" found by type; use Global Variables for values found by tag (e.g. the current player).  
+Register in **Awake**, and unregister when destroyed:
 ```cs
 using ServiceAccess;
 
-public class YourService : MonoBehaviour
+public class AudioManager : MonoBehaviour
 {
-    private void Start()
-    {
-        ServiceLocator.GlobalServices.Register(this);
-    }
+    private void Awake() => ServiceLocator.Register(this);
+    private void OnDestroy() => ServiceLocator.Unregister(this);
 }
 ```
-Find the instance:
+Get it in **Start** or later, so every service has registered first:
 ```cs
 using ServiceAccess;
 
-public class OtherClass : MonoBehaviour
+public class Door : MonoBehaviour
 {
+    private AudioManager _audio;
+
     private void Start()
     {
-        if(ServiceLocator.GlobalServices.TryGet(out YourService yourService))
-        {
-            // do something with yourService
-        }
+        _audio = ServiceLocator.Get<AudioManager>(this);   // logs an error pointing at this Door if there's none
+        if (ServiceLocator.TryGet(out ScoreManager score)) { /* optional service, no error */ }
     }
 }
 ```
+- Services survive scene loads. A destroyed service counts as unregistered, so the next scene's manager can register in its place
+- Registering a second live instance of the same type logs an error and keeps the first
+- `Get<IDamageable>()` finds a service registered as exactly that type, otherwise the one registered service that implements it (an error if there are several). Register under an interface with `ServiceLocator.Register<IDamageable>(this)`
+- Everything is cleared when Play starts. Registered services show in Tools > UnityTools > Messaging Debugger
 
 ### Simple State Machine
 A very simple C# driven state machine.  

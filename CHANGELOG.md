@@ -1,5 +1,18 @@
 # Changelog
 
+[6.1.0] - 2026-11-15
+- **Breaking** Service Locator: ServiceLocator is now a static class with Register, Unregister, Get and TryGet, and the ServiceLocator component (with its Register On Awake list and LocalServices) is removed. To update a project: delete ServiceLocator components from scenes and prefabs (they show as missing scripts), register those services in their own Awake, and replace `ServiceLocator.GlobalServices.X` with `ServiceLocator.X`. GlobalServices and ServiceRegistry still compile but are obsolete and forward to the static registry
+- Service Locator: global services now survive scene loads. Before, they lived on a GameObject that was destroyed by the next LoadScene, so every lookup failed afterwards
+- Service Locator: destroyed services count as unregistered, and a new instance can register in a destroyed one's place without an error
+- Service Locator: Unregister(service) only removes that exact instance, so an old object's OnDestroy no longer removes its replacement
+- Service Locator: Get<T>() finds a service registered as exactly T, otherwise the one registered service that is a T (base class or interface). Several matches log an error naming them
+- Service Locator: Get<T>(context) points its "not registered" error at the calling object, and the message explains to register in Awake and get in Start or later. TryGet never logs
+- Service Locator: registering null, a destroyed object, or an object under a type it isn't now logs an error
+- Service Locator: registering and unregistering no longer log by default; set ServiceLocator.LogChanges to log them
+- Service Locator: registered services are listed in the Messaging Debugger window (Tools > UnityTools > Messaging Debugger)
+- The Messaging Debugger window moved from Window > UnityTools to Tools > UnityTools
+- Added EditMode tests for Service Locator
+
 [6.0.0] - 2026-11-15
 - **Breaking** Simple State Machine: each state type now has one instance per machine, reused every time the state is entered (before, a new instance was created on every transition). To update a project: reset any fields a state changes (timers, "done" flags) in its Enter()
 - **Breaking** Simple State Machine: states use a parameterless constructor; StateMachine and Binding are set before the first Enter. To update a project: delete each state's `(StateMachine<T>, T) : base(...)` constructor
