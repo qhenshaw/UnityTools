@@ -9,6 +9,10 @@ using UnityEditor;
 
 namespace LightingTools
 {
+    /// <summary>
+    /// Applies static flags, Receive GI and shadow settings to every MeshRenderer and Terrain below this object
+    /// when you press Apply. Nested LightbakeSettings components use their own settings for their children.
+    /// </summary>
     [DisallowMultipleComponent]
     public class LightbakeSettings : MonoBehaviour
     {
@@ -16,6 +20,7 @@ namespace LightingTools
         // Editor and in players (otherwise builds log "different serialization layout" errors).
         // Static flags are stored as an int because StaticEditorFlags is an Editor-only type;
         // the serialized data is the same as the enum it replaces.
+        /// <summary>Starting values for the settings. Choosing a preset overwrites the fields below it; press Apply to use them.</summary>
         public enum LightBakePreset
         {
             FullStatic,
@@ -37,6 +42,7 @@ namespace LightingTools
         // Serialized so a domain reload doesn't look like a preset change and overwrite hand-tuned values.
         [SerializeField, HideInInspector] private LightBakePreset _previousPreset;
 
+        /// <summary>The selected preset.</summary>
         public LightBakePreset Preset => _preset;
 
 #if UNITY_EDITOR
@@ -47,6 +53,7 @@ namespace LightingTools
             StaticEditorFlags.OccluderStatic |
             StaticEditorFlags.OccludeeStatic;
 
+        /// <summary>The static flags Apply sets on each object. Editor only.</summary>
         public StaticEditorFlags Flags => (StaticEditorFlags)_flags;
 
         private void Reset()
@@ -105,8 +112,9 @@ namespace LightingTools
         /// <summary>
         /// Applies this component's settings to every MeshRenderer and Terrain below it, and lets nested
         /// LightbakeSettings apply theirs to their own subtrees. Objects without a MeshRenderer or Terrain
-        /// are left untouched. SkinnedMeshRenderers are skipped on purpose.
-        /// Undoable, and recorded as prefab overrides on prefab instances.
+        /// are left untouched. SkinnedMeshRenderers are skipped on purpose. Terrains get only the static flags
+        /// and shadow casting mode. Undoable, and recorded as prefab overrides on prefab instances.
+        /// Does nothing in a player build.
         /// </summary>
         public void ApplyCurrentSettings()
         {

@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace LightingTools.Editor
 {
+    /// <summary>Draws an int field marked [StaticEditorFlagsField] as a StaticEditorFlags dropdown.</summary>
     [CustomPropertyDrawer(typeof(StaticEditorFlagsFieldAttribute))]
     public class StaticEditorFlagsFieldDrawer : PropertyDrawer
     {

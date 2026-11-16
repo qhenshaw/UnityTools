@@ -7,9 +7,14 @@ using System.IO;
 
 namespace ArtPipeline
 {
+    /// <summary>
+    /// An asset that bakes a gradient into a texture file. Create it with Create > Color Gradient Editor,
+    /// then press Bake in its inspector.
+    /// </summary>
     [CreateAssetMenu(menuName = "Color Gradient Editor")]
     public class GradientEditor : ScriptableObject
     {
+        /// <summary>The image format the baked texture is saved as.</summary>
         public enum FileType { PNG, TGA, EXR }
 
         [SerializeField, GradientUsage(true)] private Gradient _gradient;
@@ -36,6 +41,10 @@ namespace ArtPipeline
         }
 
 #if UNITY_EDITOR
+        /// <summary>
+        /// Saves the gradient as a texture next to this asset, named after it (overwriting any earlier bake),
+        /// and applies the sRGB, wrap mode and mipmap import settings. Editor only.
+        /// </summary>
         public void BakeGradient()
         {
 

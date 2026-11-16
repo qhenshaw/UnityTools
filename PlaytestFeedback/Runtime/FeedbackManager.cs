@@ -68,23 +68,28 @@ namespace UnityTools.PlaytestFeedback
 
         // ================================================================== Public API
 
+        /// <summary>The running feedback tool, or null if it isn't running (turned off, or not created yet).</summary>
         public static FeedbackManager Instance { get; private set; }
 
-        /// <summary>True while the feedback panel is open (and the game is paused by it).</summary>
+        /// <summary>True while the feedback panel is open. Check it in code that reads devices directly, which the panel can't block.</summary>
         public static bool IsOpen => Instance != null && Instance._isOpen;
 
-        /// <summary>Raised after the panel opens and the game is paused. Use it to pause your own systems.</summary>
+        /// <summary>Raised after the panel opens (and pauses the game, if Pause Time is on). Use it to pause your own systems.</summary>
         public static event Action Opened;
 
-        /// <summary>Raised after the panel closes and the game is resumed.</summary>
+        /// <summary>Raised after the panel closes and time, audio and cursor are restored. Input comes back one frame later.</summary>
         public static event Action Closed;
 
         /// <summary>Raised when a report was sent, or saved to be sent later.</summary>
         public static event Action<FeedbackReport> Submitted;
 
+        /// <summary>The settings this instance uses, read from <see cref="FeedbackSettings.Current"/> when it was created.</summary>
         public FeedbackSettings Settings => settings;
 
-        /// <summary>Opens the feedback panel, same as pressing the hotkey. Useful for a "Send Feedback" menu button.</summary>
+        /// <summary>
+        /// Opens the feedback panel, same as pressing the hotkey. Useful for a "Send Feedback" menu button.
+        /// Does nothing if the tool isn't running.
+        /// </summary>
         public static void Open()
         {
             if (Instance != null) Instance.OpenInternal();
@@ -96,15 +101,17 @@ namespace UnityTools.PlaytestFeedback
             if (Instance != null) Instance.CloseInternal();
         }
 
+        /// <summary>Adds a provider whose values go into every report. Call it in OnEnable.</summary>
         public static void RegisterProvider(IFeedbackContextProvider provider)
         {
             if (provider != null && !s_Providers.Contains(provider)) s_Providers.Add(provider);
         }
 
+        /// <summary>Removes a provider added with <see cref="RegisterProvider"/>. Call it in OnDisable.</summary>
         public static void UnregisterProvider(IFeedbackContextProvider provider) => s_Providers.Remove(provider);
 
         /// <summary>
-        /// Adds a value to every report, read when the panel opens.
+        /// Adds a value to every report, read when the panel opens. Adding the same key again replaces it.
         /// Example: <c>FeedbackManager.AddContext("Gold", () => inventory.Gold);</c>
         /// </summary>
         public static void AddContext(string key, Func<object> getValue)
@@ -113,6 +120,7 @@ namespace UnityTools.PlaytestFeedback
             s_ContextValues[key] = getValue;
         }
 
+        /// <summary>Removes a value added with <see cref="AddContext"/>.</summary>
         public static void RemoveContext(string key)
         {
             if (key != null) s_ContextValues.Remove(key);

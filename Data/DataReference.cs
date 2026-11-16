@@ -48,6 +48,7 @@ namespace UnityTools.Data
 
         public DataReference() { }
 
+        /// <summary>Creates a reference to <paramref name="persistent"/>, e.g. for a DataReference made in code.</summary>
         public DataReference(T persistent) => _persistent = persistent;
 
         /// <summary>The assigned asset. Changes made to it in Play mode stay in the asset.</summary>

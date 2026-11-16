@@ -4,8 +4,13 @@ using UnityEngine;
 
 namespace LightingTools.Editor
 {
+    /// <summary>Bounds helpers for the lighting menu items.</summary>
     public static class BoundsUtils
     {
+        /// <summary>
+        /// Combined world bounds of the MeshRenderers, SkinnedMeshRenderers and Terrains in the selection and its children.
+        /// Padding is added to the total size (half on each side). Logs a warning and returns false when nothing is found.
+        /// </summary>
         public static bool TryGetSelectionBounds(out Bounds bounds, float padding = 2f)
         {
             bounds = new Bounds();
@@ -75,6 +80,7 @@ namespace LightingTools.Editor
             }
         }
 
+        /// <summary>The terrain's data bounds moved to its world position. The terrain must have TerrainData.</summary>
         public static Bounds GetTerrainWorldBounds(Terrain terrain)
         {
             Bounds bounds = terrain.terrainData.bounds;

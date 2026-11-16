@@ -12,8 +12,11 @@ namespace InspectorAttributes
     [AttributeUsage(AttributeTargets.Field, Inherited = true, AllowMultiple = false)]
     public class ButtonAttribute : PropertyAttribute
     {
+        /// <summary>Button text. Null uses the method name, made readable.</summary>
         public string Label { get; }
+        /// <summary>True lets the button run in Edit Mode. False (the default) disables it outside Play Mode.</summary>
         public bool AllowEditMode { get; }
+        /// <summary>Maximum button width in pixels; -1 fills the row.</summary>
         public int Width { get; set; } = -1;
 
         /// <summary>Name of the parameterless method to call. Use nameof(...) so renames stay in sync.</summary>
@@ -36,8 +39,11 @@ namespace InspectorAttributes
     [AttributeUsage(AttributeTargets.Field, Inherited = true, AllowMultiple = false)]
     public class InlineButtonAttribute : PropertyAttribute
     {
+        /// <summary>Name of the parameterless method to call. Use nameof(...) so renames stay in sync.</summary>
         public string Method { get; }
+        /// <summary>Button text. Null uses the method name, made readable.</summary>
         public string Label { get; }
+        /// <summary>True (the default) lets the button run in Edit Mode; false disables it outside Play Mode.</summary>
         public bool AllowEditMode { get; }
 
         /// <summary>Button width in pixels; 0 fits the label.</summary>

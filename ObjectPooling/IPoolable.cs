@@ -24,10 +24,14 @@ namespace ObjectPooling
         public GameObject GameObject { get; }
         public Transform Transform { get; }
         public string Name { get; }
+        /// <summary>Log a message when this prefab's pool is created.</summary>
         public bool LogCreation { get; }
+        /// <summary>The pool this instance belongs to. Set by the pool when the instance is created.</summary>
         public LinkedPool<IPoolable> Pool { get; set; }
+        /// <summary>True while the instance is waiting in its pool. Set by the pool.</summary>
         public bool IsInPool { get; set; }
 
+        /// <summary>Gives this instance back to its pool instead of destroying it.</summary>
         void ReturnToPool();
 
         /// <summary>Called after the object is taken from the pool: it's already positioned and active.</summary>

@@ -24,6 +24,7 @@ namespace UnityTools.DebugTools
         /// <summary>The menu currently in use, or null.</summary>
         public static DebugMenuView Active { get; private set; }
 
+        /// <summary>True while the menu is shown.</summary>
         public bool IsOpen { get; private set; }
         internal bool IsAutoSpawned { get; private set; }
 

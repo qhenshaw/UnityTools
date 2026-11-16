@@ -43,6 +43,7 @@ namespace SceneManagement
         [NonSerialized] private Material _materialInstance;
         [NonSerialized] private Material _materialSource;
 
+        /// <summary>The prefab this spawner spawns.</summary>
         public GameObject Prefab => _prefab;
 
         private void OnValidate()
@@ -58,6 +59,7 @@ namespace SceneManagement
             if (_spawnOnStart) Spawn();
         }
 
+        /// <summary>Spawns the spawner's prefab. Called on Start when Spawn On Start is on.</summary>
         public GameObject Spawn()
         {
             return Spawn(_prefab);
@@ -65,7 +67,8 @@ namespace SceneManagement
 
         /// <summary>
         /// Spawns the prefab at the spawner's position and rotation (the prefab keeps its own scale) and parents it
-        /// by the Parent Mode. Destroys the spawner afterwards if Destroy Spawner is on, in Play mode only.
+        /// by the Parent Mode. Destroys the spawner afterwards if Destroy Spawner is on, in Play mode only and not
+        /// when Parent Mode is Self. Returns the new instance, or null without a prefab.
         /// </summary>
         public GameObject Spawn(GameObject prefab)
         {
@@ -96,6 +99,7 @@ namespace SceneManagement
             return instantiated;
         }
 
+        /// <summary>Changes the prefab, renaming the spawner if Auto Name is on.</summary>
         public void SetPrefab(GameObject prefab)
         {
             _prefab = prefab;

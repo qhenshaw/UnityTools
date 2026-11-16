@@ -10,12 +10,14 @@ namespace UnityTools.DebugTools.Cli
     /// </summary>
     public static class DebugMenuCommands
     {
+        /// <summary>Returns every section (or only <paramref name="section"/>) with its controls and values, as JSON.</summary>
         [CliCommand("debugmenu", "list", "Every debug menu section with its controls and their current values.")]
         public static string List([CliArg("section", "Only this section (optional)")] string section = "")
         {
             return DebugMenuJson.List(section);
         }
 
+        /// <summary>Uses one control and returns the section's values, as JSON. See <see cref="DebugMenuJson.Do"/>.</summary>
         [CliCommand("debugmenu", "do", "Press a debug button, or set a toggle (true/false), slider (number) or dropdown (option text), by section and label. Returns the section's values afterwards.")]
         public static string Do(
             [CliArg("section", "Section title, e.g. Enemies")] string section,

@@ -7,22 +7,25 @@ using UnityEngine.SceneManagement;
 
 namespace ArtPipeline.Editor
 {
-    // Manages the painted mesh assets used by VertexPainter.
-    // Painted meshes are saved as .asset files so they can be referenced from prefabs and scenes.
-    // Painting is copy-on-write: a painter only writes to a mesh asset that it owns exclusively.
+    /// <summary>
+    /// Manages the painted mesh assets used by VertexPainter.
+    /// Painted meshes are saved as .asset files so they can be referenced from prefabs and scenes.
+    /// Painting is copy-on-write: a painter only writes to a mesh asset that it owns exclusively.
+    /// </summary>
     public static class VertexPaintStorage
     {
+        /// <summary>Asset label put on every painted mesh asset, used to find them for cleanup.</summary>
         public const string AssetLabel = "VertexPaint";
         private const string FallbackFolder = "Assets/VertexPaint";
 
-        // Returns the mesh currently displayed by the painter (no assets are created).
+        /// <summary>Returns the mesh currently displayed by the painter (no assets are created).</summary>
         public static Mesh GetDisplayMesh(VertexPainter painter)
         {
             if (painter.MeshFilter == null) return null;
             return painter.MeshFilter.sharedMesh;
         }
 
-        // Returns a mesh asset that this painter can safely write to, creating a new copy if needed.
+        /// <summary>Returns a mesh asset that this painter can safely write to, creating a new copy if needed.</summary>
         public static Mesh GetWritableMesh(VertexPainter painter)
         {
             if (painter.MeshFilter == null) return null;
@@ -45,7 +48,10 @@ namespace ArtPipeline.Editor
             return painter.PaintedMesh;
         }
 
-        // Forces the painter to use a new mesh asset copied from its current painted mesh.
+        /// <summary>
+        /// Forces the painter to use a new mesh asset copied from its current painted mesh (or the source mesh
+        /// if it has none). Also used by Save to Asset for meshes stored in the scene.
+        /// </summary>
         public static Mesh MakeUnique(VertexPainter painter)
         {
             if (painter.MeshFilter == null) return null;
@@ -57,17 +63,20 @@ namespace ArtPipeline.Editor
             return CreateCopy(painter, "Make Unique");
         }
 
+        /// <summary>True when the painted mesh is a project asset rather than mesh data stored in the scene.</summary>
         public static bool IsSavedAsAsset(VertexPainter painter)
         {
             return painter.PaintedMesh != null && AssetDatabase.Contains(painter.PaintedMesh);
         }
 
+        /// <summary>True when the source and painted meshes have different vertex counts, so rebuilding resets the colors.</summary>
         public static bool SourceTopologyChanged(VertexPainter painter)
         {
             if (painter.SourceMesh == null || painter.PaintedMesh == null) return false;
             return painter.SourceMesh.vertexCount != painter.PaintedMesh.vertexCount;
         }
 
+        /// <summary>A short status line for the inspector and overlay: where the paint is saved, or that it isn't yet.</summary>
         public static string Describe(VertexPainter painter)
         {
             if (painter.PaintedMesh == null) return "Not painted yet. A mesh asset will be created on the first stroke.";
@@ -78,8 +87,10 @@ namespace ArtPipeline.Editor
             return path;
         }
 
-        // Copies the current source mesh into the painted asset while keeping the painted colors.
-        // Use after the source model has been reimported.
+        /// <summary>
+        /// Copies the current source mesh into the painted asset, keeping the painted colors when the vertex count
+        /// is unchanged. Use after the source model has been reimported.
+        /// </summary>
         public static void RebuildFromSource(VertexPainter painter)
         {
             if (painter.SourceMesh == null)
@@ -114,7 +125,7 @@ namespace ArtPipeline.Editor
         // Raised when a painted mesh's vertices may have changed (not just its colors), so cached paint data can be rebuilt.
         internal static event System.Action<Mesh> MeshGeometryChanged;
 
-        // Restores the original mesh and removes the painter. The painted asset is left in the project.
+        /// <summary>Restores the original mesh and removes the painter. The painted asset is left in the project.</summary>
         public static void RestoreSource(VertexPainter painter)
         {
             Undo.IncrementCurrentGroup();
@@ -147,8 +158,10 @@ namespace ArtPipeline.Editor
             return source != null && source.PaintedMesh == painter.PaintedMesh;
         }
 
-        // Returns paths of all painted mesh assets in the project.
-        // Meshes are found by label, or by living in a folder created by GetSaveFolder (for meshes created before labels were added).
+        /// <summary>
+        /// Returns paths of all painted mesh assets in the project.
+        /// Meshes are found by label, or by living in a paint folder (for meshes created before labels were added).
+        /// </summary>
         public static List<string> FindAllPaintedMeshPaths()
         {
             HashSet<string> paths = new HashSet<string>();
@@ -164,13 +177,14 @@ namespace ArtPipeline.Editor
             return new List<string>(paths);
         }
 
+        /// <summary>True for folders the painter saves into: named "VertexPaint" or ending in "_VertexPaint".</summary>
         public static bool IsPaintFolder(string folder)
         {
             string name = Path.GetFileName(folder);
             return name == "VertexPaint" || name.EndsWith("_VertexPaint");
         }
 
-        // All loaded scenes plus the open prefab stage.
+        /// <summary>All loaded scenes plus the open prefab stage.</summary>
         public static List<Scene> GetEditableScenes()
         {
             List<Scene> scenes = new List<Scene>();

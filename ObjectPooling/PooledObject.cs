@@ -24,7 +24,9 @@ namespace ObjectPooling
         [field: SerializeField, Tooltip("Log a message when this prefab's pool is created")]
         public bool LogCreation { get; set; } = false;
 
+        /// <summary>Instances created when the pool is first used. Read from the prefab when its pool is created.</summary>
         public int PrewarmCount { get => _prewarmCount; set => _prewarmCount = Mathf.Max(0, value); }
+        /// <summary>Most instances kept waiting in the pool; extras returned beyond this are destroyed. 0 = unlimited. Read from the prefab when its pool is created.</summary>
         public int MaxSize { get => _maxSize; set => _maxSize = Mathf.Max(0, value); }
 
         [Obsolete("Use MaxSize (and PrewarmCount) instead.")]
@@ -34,6 +36,7 @@ namespace ObjectPooling
         public Transform Transform => transform;
         public string Name => name;
         public LinkedPool<IPoolable> Pool { get; set; }
+        /// <summary>True while this instance is waiting in its pool (inactive).</summary>
         public bool IsInPool { get; set; }
 
         /// <summary>The pool this instance belongs to, or null for objects that didn't come from a pool.</summary>

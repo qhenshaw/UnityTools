@@ -3,9 +3,12 @@ using UnityEditor;
 
 namespace ArtPipeline.Editor
 {
-    // Turns Unreal style collision meshes into Unity colliders:
-    // UCX_ = convex MeshCollider, UBX_ = BoxCollider, USP_ = SphereCollider, UCP_ = CapsuleCollider.
-    // The collider stays on the collision child (keeping its DCC transform) and the child's renderer is removed.
+    /// <summary>
+    /// Turns Unreal style collision meshes into Unity colliders when a model is imported:
+    /// UCX_ = convex MeshCollider, UBX_ = BoxCollider, USP_ = SphereCollider, UCP_ = CapsuleCollider (prefix in any case).
+    /// The collider stays on the collision child (keeping its DCC transform) and the child's MeshFilter and
+    /// MeshRenderer are removed. Turn it off with Generate Unreal Colliders in Project Settings > Unity Tools > Art Asset Import.
+    /// </summary>
     public class ModelCollisionImporter : AssetPostprocessor
     {
         private enum CollisionType { None, Convex, Box, Sphere, Capsule }

@@ -9,6 +9,10 @@ using UnityEngine.UIElements;
 
 namespace ScatterTool.Editor
 {
+    /// <summary>
+    /// The Projection Scatter tool: paints the selected Projection Scatter's mask in the Scene view (left click
+    /// paints, Ctrl + left click erases). Each stroke is one Undo step.
+    /// </summary>
     [EditorTool("Projection Scatter")]
     public class ProjectionScatterTool : EditorTool
     {
@@ -184,6 +188,10 @@ namespace ScatterTool.Editor
         internal bool IsPainting => _mousePressed;
     }
 
+    /// <summary>
+    /// Brush settings and Reset/Flood Mask buttons, shown while the Projection Scatter tool is active. Without a
+    /// Projection Scatter selected it shows a Create button instead.
+    /// </summary>
     [Overlay(typeof(SceneView), "Projection Scatter Overlay", defaultDisplay = false)]
     public class ProjectionScatterOverlay : Overlay, ITransientOverlay
     {

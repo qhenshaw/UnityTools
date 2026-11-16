@@ -5,7 +5,10 @@ using UnityEngine.Pool;
 
 namespace UnityTools.Messaging
 {
-    // Stores global values by enum tag and tells listeners when a tag's value changes.
+    /// <summary>
+    /// Stores global values by enum tag and tells listeners when a tag's value changes. Usually used through
+    /// <see cref="GlobalVariable{T}"/> fields.
+    /// </summary>
     // Values are kept in typed slots, so reading and writing value types doesn't box.
     // Thread-safe, because GlobalVariable constructors can run on Unity's loading thread.
     public class GlobalVariableService
@@ -13,7 +16,7 @@ namespace UnityTools.Messaging
         private static readonly object _instanceLock = new object();
         private static GlobalVariableService _instance;
 
-        // Created on first use (also in edit mode) and reset when Play starts, so it works with domain reload disabled.
+        /// <summary>The shared service. Created on first use (also in edit mode) and reset when Play starts.</summary>
         public static GlobalVariableService Instance
         {
             get
@@ -28,7 +31,7 @@ namespace UnityTools.Messaging
         // True while the game is running. Kept in a field because Application.isPlaying can't be read off the main thread.
         internal static bool IsPlaying { get; set; }
 
-        // Raised whenever a value is set or removed, with the tag and the new value (null after Remove).
+        /// <summary>Raised whenever any value is set or removed, with the tag and the new value (null after a remove).</summary>
         public event Action<Enum, object> ValueChanged;
 
         private readonly object _lock = new object();
@@ -59,21 +62,24 @@ namespace UnityTools.Messaging
             lock (_instanceLock) _instance = null;
         }
 
-        // ---- public API (each also has a generic overload that doesn't box the tag)
+        // ---- public API (Set, HasValue and Remove also have a generic overload that doesn't box the tag)
 
+        /// <summary>The value stored under <paramref name="tag"/>, or the default value if it has none.</summary>
         public T Get<T>(Enum tag) => Get<T>(TagKey.From(tag));
 
+        /// <summary>Stores <paramref name="value"/> under <paramref name="tag"/> and notifies its listeners.</summary>
         public void Set<T>(Enum tag, T value) => Set(TagKey.From(tag), value);
         public void Set<TTag, T>(TTag tag, T value) where TTag : struct, Enum => Set(TagKey.From(tag), value);
 
+        /// <summary>True if <paramref name="tag"/> has a value (even a null one).</summary>
         public bool HasValue(Enum tag) => HasValue(TagKey.From(tag));
         public bool HasValue<TTag>(TTag tag) where TTag : struct, Enum => HasValue(TagKey.From(tag));
 
-        // Removes the value and notifies listeners with the default value (null / 0).
+        /// <summary>Removes the value and notifies listeners with the default value (null / 0).</summary>
         public void Remove(Enum tag) => Remove(TagKey.From(tag));
         public void Remove<TTag>(TTag tag) where TTag : struct, Enum => Remove(TagKey.From(tag));
 
-        // Removes every value, notifying each tag's listeners with the default value.
+        /// <summary>Removes every value, notifying each tag's listeners with the default value.</summary>
         public void Clear()
         {
             var removed = new List<Slot>();

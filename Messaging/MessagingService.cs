@@ -5,14 +5,19 @@ using UnityEngine;
 
 namespace UnityTools.Messaging
 {
-    // Sends messages between objects and scenes, using any enum value as the tag.
-    // Each tag carries one payload type, set by its first typed listener. No-payload listeners can listen to any tag.
-    // Every method has a generic overload (TTag : struct, Enum) that calls bind to automatically, so tags aren't boxed.
+    /// <summary>
+    /// Sends messages between objects and scenes, using any enum value as the tag.
+    /// Each tag carries one payload type, set by its first typed listener. No-payload listeners can listen to any tag.
+    /// </summary>
+    /// <remarks>
+    /// Every method has a generic overload (TTag : struct, Enum) that the compiler picks when you write no type
+    /// arguments (or both), so the tag isn't boxed.
+    /// </remarks>
     public class MessagingService
     {
         private static MessagingService _instance;
 
-        // Created on first use (also in edit mode) and reset when Play starts, so it works with domain reload disabled.
+        /// <summary>The shared service. Created on first use (also in edit mode) and reset when Play starts.</summary>
         public static MessagingService Instance => _instance ??= new MessagingService();
 
         private readonly Dictionary<TagKey, TagEntry> _tags = new Dictionary<TagKey, TagEntry>();
@@ -24,31 +29,42 @@ namespace UnityTools.Messaging
 
         // ---- typed listeners
 
+        /// <summary>
+        /// Calls <paramref name="listenerMethod"/> with the payload of every later send to <paramref name="tag"/>.
+        /// The first typed listener sets the tag's payload type; a listener for another type logs an error and isn't added.
+        /// </summary>
         public void AddListener<T>(Enum tag, Action<T> listenerMethod) => AddTyped(TagKey.From(tag), listenerMethod);
         public void AddListener<TTag, T>(TTag tag, Action<T> listenerMethod) where TTag : struct, Enum => AddTyped(TagKey.From(tag), listenerMethod);
 
+        /// <summary>Removes a listener added with AddListener. Pass the same method, e.g. from OnDisable.</summary>
         public void RemoveListener<T>(Enum tag, Action<T> toRemove) => Remove(TagKey.From(tag), toRemove);
         public void RemoveListener<TTag, T>(TTag tag, Action<T> toRemove) where TTag : struct, Enum => Remove(TagKey.From(tag), toRemove);
 
         // ---- no-payload listeners: called on every send to the tag, whatever the payload
 
+        /// <summary>Calls <paramref name="listenerMethod"/> on every later send to <paramref name="tag"/>, whatever the payload.</summary>
         public void AddListener(Enum tag, Action listenerMethod) => AddUntyped(TagKey.From(tag), listenerMethod);
         public void AddListener<TTag>(TTag tag, Action listenerMethod) where TTag : struct, Enum => AddUntyped(TagKey.From(tag), listenerMethod);
 
+        /// <summary>Removes a no-payload listener added with AddListener.</summary>
         public void RemoveListener(Enum tag, Action toRemove) => Remove(TagKey.From(tag), toRemove);
         public void RemoveListener<TTag>(TTag tag, Action toRemove) where TTag : struct, Enum => Remove(TagKey.From(tag), toRemove);
 
         // ---- sending
 
-        // sendToLate: also remember the payload and give it to listeners added later (cleared by ClearSticky).
-        // Once a tag has a remembered payload, every later send to it replaces it.
+        /// <summary>
+        /// Sends <paramref name="payload"/> to every listener of <paramref name="tag"/>. With <paramref name="sendToLate"/>,
+        /// the payload is also remembered and given to listeners added later, until <see cref="ClearSticky(Enum)"/>.
+        /// Once a tag has a remembered payload, every later send to it replaces it.
+        /// </summary>
         public void Send<T>(Enum tag, T payload, bool sendToLate = false) => SendTyped(TagKey.From(tag), payload, sendToLate);
         public void Send<TTag, T>(TTag tag, T payload, bool sendToLate = false) where TTag : struct, Enum => SendTyped(TagKey.From(tag), payload, sendToLate);
 
-        // Sends without a payload. Only valid on tags that have no typed listeners.
+        /// <summary>Sends without a payload. Only valid on tags that have no typed listeners; otherwise it logs an error.</summary>
         public void Send(Enum tag) => SendUntyped(TagKey.From(tag));
         public void Send<TTag>(TTag tag) where TTag : struct, Enum => SendUntyped(TagKey.From(tag));
 
+        /// <summary>Forgets the payload remembered by a <c>sendToLate</c> send, so listeners added later don't get it.</summary>
         public void ClearSticky(Enum tag) => ClearSticky(TagKey.From(tag));
         public void ClearSticky<TTag>(TTag tag) where TTag : struct, Enum => ClearSticky(TagKey.From(tag));
 

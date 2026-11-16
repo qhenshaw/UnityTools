@@ -17,6 +17,7 @@ namespace SimpleStateMachine
         {
             /// <summary>The state this transition leaves from, or null for a transition from any state.</summary>
             public Type From { get; }
+            /// <summary>The state this transition goes to.</summary>
             public Type To { get; }
 
             internal readonly Func<State<T>> Create;
@@ -33,16 +34,22 @@ namespace SimpleStateMachine
             }
         }
 
+        /// <summary>The object the machine was created for, passed on to every state as its Binding.</summary>
         public T Binding { get; private set; }
+        /// <summary>The state the machine is in, or null before the first <see cref="NextState{S}"/>.</summary>
         public State<T> CurrentState { get; private set; }
 
         /// <summary>The state that was current before the last state change, or null.</summary>
         public State<T> PreviousState { get; private set; }
 
+        /// <summary>Log transitions added and removed, and every state entered and exited.</summary>
         public bool EnableLogging { get; set; } = false;
+        /// <summary>Check transitions at the end of <see cref="Update"/>. On by default.</summary>
         public bool UpdateConditionsCheck { get; set; } = true;
+        /// <summary>Check transitions at the end of <see cref="FixedUpdate"/>. Off by default.</summary>
         public bool FixedUpdateConditionsCheck { get; set; } = false;
 
+        /// <summary>Raised after each state change, once the new state's Enter has run, with the new state.</summary>
         public event EventHandler<State<T>> OnStateChanged;
 
         private readonly List<Transition> _transitions = new List<Transition>();
@@ -53,11 +60,13 @@ namespace SimpleStateMachine
         private Type _queuedType;
         private Func<State<T>> _queuedCreate;
 
+        /// <summary>Creates a machine for <paramref name="binding"/>, usually <c>this</c>. It has no state until <see cref="NextState{S}"/>.</summary>
         public StateMachine(T binding)
         {
             Binding = binding;
         }
 
+        /// <summary>Creates a machine for <paramref name="binding"/>, with <see cref="EnableLogging"/> set.</summary>
         public StateMachine(T binding, bool enableLogging) : this(binding)
         {
             EnableLogging = enableLogging;
@@ -191,6 +200,7 @@ namespace SimpleStateMachine
             return state;
         }
 
+        /// <summary>Calls the current state's FixedUpdate, then checks transitions if <see cref="FixedUpdateConditionsCheck"/> is on.</summary>
         public void FixedUpdate(float deltaTime)
         {
             if (CurrentState == null) return;
@@ -198,6 +208,10 @@ namespace SimpleStateMachine
             if (FixedUpdateConditionsCheck) CheckConditions();
         }
 
+        /// <summary>
+        /// Advances TimeInState, calls the current state's Update, then checks transitions if
+        /// <see cref="UpdateConditionsCheck"/> is on (the default).
+        /// </summary>
         public void Update(float deltaTime)
         {
             if (CurrentState == null) return;

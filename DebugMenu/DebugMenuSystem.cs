@@ -9,6 +9,7 @@ namespace UnityTools.DebugTools
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
     public class DebugCommandAttribute : Attribute
     {
+        /// <summary>The button label.</summary>
         public string Name { get; private set; }
 
         public DebugCommandAttribute(string name)
@@ -31,6 +32,7 @@ namespace UnityTools.DebugTools
         private static bool _warnedPlaced;
         private static bool _creating;
 
+        /// <summary>The obsolete system's shared instance, created hidden on first use.</summary>
         public static DebugMenuSystem Instance
         {
             get

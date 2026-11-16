@@ -7,6 +7,10 @@ using UnityEngine;
 
 namespace ScatterTool.Editor
 {
+    /// <summary>
+    /// The Physics Scatter tool: drops, throws and settles the selected objects with physics in edit mode.
+    /// Settings and buttons are in the Physics Scatter Overlay.
+    /// </summary>
     [EditorTool("Physics Scatter")]
     public class PhysicsScatterTool : EditorTool
     {
@@ -24,7 +28,9 @@ namespace ScatterTool.Editor
             tooltip = "Place objects in the scene using edit mode physics"
         };
 
+        /// <summary>True while the edit-mode simulation is running.</summary>
         public bool IsSimulating { get; private set; }
+        /// <summary>False for half a second after the selection is dragged, so gravity doesn't fight the drag.</summary>
         public bool IsGravityAllowed => EditorApplication.timeSinceStartup > _lastDragTime + _gravityKillDuration;
 
         private BoxBoundsHandle _boundsHandle = new BoxBoundsHandle();

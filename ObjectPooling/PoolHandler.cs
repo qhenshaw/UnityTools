@@ -8,6 +8,7 @@ namespace ObjectPooling
     /// <summary>The pool for one prefab. Created by <see cref="PoolSystem"/>; you don't need to use it directly.</summary>
     public class PoolHandler
     {
+        /// <summary>The Unity LinkedPool holding this prefab's waiting instances.</summary>
         public LinkedPool<IPoolable> Pool { get; private set; }
 
         /// <summary>False once the pool's GameObject is gone (destroyed, or unloaded with its scene).</summary>

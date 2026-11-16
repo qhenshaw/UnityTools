@@ -8,6 +8,10 @@ using FontStyle = UnityEngine.FontStyle;
 
 namespace ScatterTool.Editor
 {
+    /// <summary>
+    /// The Physics Scatter tool's settings and buttons, shown while the tool is active. The settings last until
+    /// the next domain reload.
+    /// </summary>
     [Overlay(typeof(SceneView), "Physics Scatter Overlay", defaultDisplay = false)]
     public class PhysicsScatterOverlay : Overlay, ITransientOverlay
     {
@@ -23,6 +27,9 @@ namespace ScatterTool.Editor
         public static bool IsSimulating { get; set; } = false;
         public static float TimeStep { get; private set; } = 0.02f;
         public static int StepCount { get; private set; } = 1;
+        /// <summary>
+        /// Off by default: the selection is pulled towards the move handle. On: it falls. Launch turns it on.
+        /// </summary>
         public static bool IsGravityEnabled { get; set; } = false;
         public static float MoveForce { get; private set; } = 500f;
         public static float LinearDrag { get; private set; } = 5f;

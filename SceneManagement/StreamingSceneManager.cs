@@ -25,6 +25,7 @@ namespace SceneManagement
     [DisallowMultipleComponent]
     public class StreamingSceneManager : MonoBehaviour
     {
+        /// <summary>The loaded manager, or null. A second manager destroys itself on Awake.</summary>
         public static StreamingSceneManager Instance { get; private set; }
 
         [SerializeField] private bool _unloadUnusedAssets = true;

@@ -8,16 +8,19 @@ namespace ServiceAccess
     /// <summary>
     /// Finds the one instance of a class, e.g. the AudioManager, without a direct reference.
     /// Register in Awake (<c>ServiceLocator.Register(this)</c>) and get in Start or later
-    /// (<c>ServiceLocator.Get&lt;AudioManager&gt;()</c>). Services survive scene loads; destroyed ones count as
-    /// unregistered. Everything is cleared when Play starts.
+    /// (<c>ServiceLocator.Get&lt;AudioManager&gt;()</c>). Registrations survive scene loads, but a service destroyed
+    /// with its scene counts as unregistered. Everything is cleared when Play starts.
     /// </summary>
     public static class ServiceLocator
     {
         /// <summary>One registered service, for debugging tools.</summary>
         public readonly struct ServiceInfo
         {
+            /// <summary>The type the service was registered under.</summary>
             public readonly Type RegisteredAs;
+            /// <summary>The registered object.</summary>
             public readonly object Service;
+            /// <summary>True if the service is a Unity object that has been destroyed.</summary>
             public bool IsDestroyed => IsMissing(Service);
 
             public ServiceInfo(Type registeredAs, object service)
@@ -39,7 +42,10 @@ namespace ServiceAccess
             _services.Clear();
         }
 
-        /// <summary>Registers <paramref name="service"/> as a <typeparamref name="T"/>, e.g. <c>ServiceLocator.Register(this)</c> or <c>Register&lt;IDamageable&gt;(this)</c>.</summary>
+        /// <summary>
+        /// Registers <paramref name="service"/> as a <typeparamref name="T"/>, e.g. <c>ServiceLocator.Register(this)</c> or <c>Register&lt;IDamageable&gt;(this)</c>.
+        /// Without a type argument, T is the declared type of what you pass, so <c>Register(this)</c> in a base class registers the base class.
+        /// </summary>
         public static void Register<T>(T service) where T : class
         {
             Register(typeof(T), service);

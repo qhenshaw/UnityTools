@@ -14,6 +14,7 @@ namespace UnityTools.PlaytestFeedback
     /// </remarks>
     public interface IFeedbackContextProvider
     {
+        /// <summary>Adds this provider's values to <paramref name="context"/>, keyed by the name shown in the report.</summary>
         void CollectFeedbackContext(IDictionary<string, object> context);
     }
 }

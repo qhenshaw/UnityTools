@@ -11,6 +11,10 @@ using UnityEditor.SceneManagement;
 
 namespace SceneManagement
 {
+    /// <summary>
+    /// Loads its Scene List additively: in Play mode on Awake (by name, so the scenes must be in Build Settings),
+    /// and in the editor whenever the scene it's in is opened.
+    /// </summary>
     [DefaultExecutionOrder(-10000)]
     [DisallowMultipleComponent]
     public class AdditiveSceneManager : MonoBehaviour
@@ -18,6 +22,7 @@ namespace SceneManagement
 #pragma warning disable CS0414
         [SerializeField, InlineButton(nameof(AddNewScene), "Add")] private string _newSceneName;
         [SerializeField, SceneDropdown, InlineButton(nameof(AddExistingScene), "Add")] private string _existingScene;
+        /// <summary>Asset paths of the scenes to load additively.</summary>
         [field: SerializeField, SceneDropdown] public List<string> SceneList { get; private set; } = new List<string>();
         [SerializeField, Button("Load Scene List", true, Method = nameof(LoadSceneList))] private string _loadSceneListButton;
 #pragma warning restore CS0414
@@ -27,6 +32,7 @@ namespace SceneManagement
             LoadSceneList();
         }
 
+        /// <summary>Additively loads every scene in the Scene List that isn't already loaded.</summary>
         public void LoadSceneList()
         {
             List<string> loaded = new List<string>();

@@ -5,6 +5,10 @@ using UnityEngine;
 
 namespace EditorTools
 {
+    /// <summary>
+    /// Level design shortcuts. Snap to Floor (End, or Tools > LD Shortcuts > Snap to Floor) drops the selected
+    /// objects onto the surface below them.
+    /// </summary>
     public class LDHotkeys : MonoBehaviour
     {
         private const float CastPadding = 0.5f;
@@ -48,7 +52,10 @@ namespace EditorTools
             return moves.Count;
         }
 
-        /// <summary>How far the object has to move down (negative: up) to rest on the surface below it.</summary>
+        /// <summary>
+        /// How far the object has to move down (negative: up) to rest on the surface below it. False when nothing
+        /// solid is below it.
+        /// </summary>
         internal static bool TryGetDropDistance(GameObject target, IReadOnlyList<GameObject> ignore, out float distance)
         {
             distance = 0f;

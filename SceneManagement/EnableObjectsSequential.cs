@@ -4,6 +4,10 @@ using UnityEngine;
 
 namespace SceneManagement
 {
+    /// <summary>
+    /// On Awake, disables its objects (its direct children if the list is empty), then turns them back on a few
+    /// at a time: Enabled Per Step objects every Step Time seconds. Spreads the cost of enabling many objects.
+    /// </summary>
     [DisallowMultipleComponent]
     public class EnableObjectsSequential : MonoBehaviour
     {

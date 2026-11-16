@@ -5,8 +5,10 @@ using UnityEngine;
 
 namespace UnityTools.Messaging.Editor
 {
-    // Lists every message tag (payload type, listeners, remembered payload), every global variable (type, value)
-    // and every service registered with the ServiceLocator.
+    /// <summary>
+    /// Tools > UnityTools > Messaging Debugger. Lists every message tag (payload type, listeners, remembered payload),
+    /// every global variable (type, value, listener count) and every service registered with the ServiceLocator.
+    /// </summary>
     public class MessagingDebuggerWindow : EditorWindow
     {
         private const double RefreshInterval = 0.25;

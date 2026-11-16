@@ -7,7 +7,10 @@ using UnityEngine.SceneManagement;
 
 namespace ArtPipeline.Editor
 {
-    // Finds painted mesh assets that are no longer referenced by any scene, prefab or asset and lets the user delete them.
+    /// <summary>
+    /// Finds painted mesh assets that are no longer referenced by any scene, prefab or asset and lets the user
+    /// move them to the trash. Open with Tools > Vertex Painter > Clean Up Unused Paint Meshes.
+    /// </summary>
     public class VertexPaintCleanupWindow : EditorWindow
     {
         private const int DependencyBatchSize = 200;

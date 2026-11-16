@@ -132,9 +132,11 @@ namespace UnityTools.PlaytestFeedback
         /// </summary>
         public static string WebhookUrlOverride { get; set; }
 
+        /// <summary>The webhook reports are sent to: <see cref="WebhookUrlOverride"/> if set, otherwise the Webhook URL setting.</summary>
         public string EffectiveWebhookUrl =>
             string.IsNullOrWhiteSpace(WebhookUrlOverride) ? webhookUrl?.Trim() : WebhookUrlOverride.Trim();
 
+        /// <summary>Whether Enabled In Editor (in the Editor) or Development Builds Only (in builds) lets the tool run here.</summary>
         public bool IsEnabledForThisBuild
         {
             get
@@ -151,7 +153,10 @@ namespace UnityTools.PlaytestFeedback
         private static FeedbackSettings _override;
         private static FeedbackSettings _loaded;
 
-        /// <summary>The settings in effect: Project Settings in the Editor, the embedded copy in builds.</summary>
+        /// <summary>
+        /// The settings in effect: Project Settings in the Editor, the embedded copy in builds
+        /// (the defaults, with no webhook, on Android and WebGL, which can't read it).
+        /// </summary>
         public static FeedbackSettings Current
         {
             get
@@ -164,8 +169,10 @@ namespace UnityTools.PlaytestFeedback
 
         internal static void OverrideForTests(FeedbackSettings settings) => _override = settings;
 
+        /// <summary>The settings as JSON, as copied into builds.</summary>
         public string ToJson() => JsonUtility.ToJson(this, true);
 
+        /// <summary>Settings read from JSON made by <see cref="ToJson"/>; missing values keep their defaults.</summary>
         public static FeedbackSettings FromJson(string json)
         {
             var settings = new FeedbackSettings();
@@ -202,6 +209,7 @@ namespace UnityTools.PlaytestFeedback
 
         // ------------------------------------------------------------------ Defaults and helpers
 
+        /// <summary>The default categories: Bug, Feedback and Idea.</summary>
         public static List<FeedbackCategory> DefaultCategories() => new List<FeedbackCategory>
         {
             new FeedbackCategory("Bug", new Color(0.93f, 0.26f, 0.27f), "\U0001F41E"),
@@ -209,7 +217,7 @@ namespace UnityTools.PlaytestFeedback
             new FeedbackCategory("Idea", new Color(0.98f, 0.75f, 0.18f), "\U0001F4A1"),
         };
 
-        /// <summary>F8 on keyboard, L3 + R3 (in either order) on gamepad.</summary>
+        /// <summary>A new hotkey action with the default bindings: F8 on keyboard, L3 + R3 (in either order) on gamepad.</summary>
         public static InputAction CreateDefaultToggleAction()
         {
             var action = new InputAction("Toggle Feedback Panel", InputActionType.Button);
@@ -232,6 +240,7 @@ namespace UnityTools.PlaytestFeedback
             return clone;
         }
 
+        /// <summary>True if <paramref name="url"/> looks like a Discord webhook URL (https://discord.com/api/webhooks/...).</summary>
         public static bool IsValidWebhookUrl(string url)
         {
             if (string.IsNullOrWhiteSpace(url)) return false;

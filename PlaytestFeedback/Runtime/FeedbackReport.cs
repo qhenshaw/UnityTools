@@ -9,13 +9,17 @@ namespace UnityTools.PlaytestFeedback
     /// </summary>
     public sealed class FeedbackReport
     {
+        /// <summary>A short random ID, also shown in the Discord post footer.</summary>
         public string Id { get; internal set; }
+        /// <summary>When the report was submitted, in UTC.</summary>
         public DateTime TimestampUtc { get; internal set; }
 
         /// <summary>The category the player picked, or null if none.</summary>
         public FeedbackCategory Category { get; internal set; }
 
+        /// <summary>The feedback text the player wrote.</summary>
         public string Text { get; internal set; }
+        /// <summary>The name the player entered, or empty.</summary>
         public string PlayerName { get; internal set; }
 
         /// <summary>The annotated screenshot, or null. Owned by the feedback tool; copy it if you need to keep it.</summary>

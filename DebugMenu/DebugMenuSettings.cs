@@ -37,7 +37,10 @@ namespace UnityTools.DebugTools
         private static DebugMenuSettings _override;
         private static DebugMenuSettings _loaded;
 
-        /// <summary>The settings in effect: Project Settings in the Editor, the embedded copy in builds.</summary>
+        /// <summary>
+        /// The settings in effect: Project Settings in the Editor, the embedded copy in builds
+        /// (the defaults on Android and WebGL, which can't read it).
+        /// </summary>
         public static DebugMenuSettings Current
         {
             get
@@ -50,10 +53,13 @@ namespace UnityTools.DebugTools
 
         internal static void OverrideForTests(DebugMenuSettings settings) => _override = settings;
 
+        /// <summary>A new settings object with the default values.</summary>
         public static DebugMenuSettings Defaults() => new DebugMenuSettings();
 
+        /// <summary>The settings as JSON, as copied into builds.</summary>
         public string ToJson() => JsonUtility.ToJson(this, true);
 
+        /// <summary>Settings read from JSON made by <see cref="ToJson"/>; missing values keep their defaults.</summary>
         public static DebugMenuSettings FromJson(string json)
         {
             var settings = Defaults();

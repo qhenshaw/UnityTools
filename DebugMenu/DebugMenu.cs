@@ -33,6 +33,7 @@ namespace UnityTools.DebugTools
 
         /// <summary>
         /// Adds a section of controls titled <paramref name="title"/>, owned by <paramref name="owner"/>.
+        /// <paramref name="build"/> runs once, right away; an empty title uses the owner's type name.
         /// Sections from several owners with the same title are shown together.
         /// </summary>
         [Conditional("UNITY_EDITOR"), Conditional("DEVELOPMENT_BUILD"), Conditional("DEBUG_MENU")]
@@ -68,6 +69,7 @@ namespace UnityTools.DebugTools
         }
     }
 
+    /// <summary>The kind of UI a <see cref="DebugControl"/> becomes.</summary>
     public enum DebugControlKind
     {
         Button,
@@ -87,8 +89,11 @@ namespace UnityTools.DebugTools
             Title = title;
         }
 
+        /// <summary>The object passed to <see cref="DebugMenu.Register"/>; <see cref="DebugMenu.Unregister"/> removes its sections.</summary>
         public object Owner { get; }
+        /// <summary>The section's title, shown as the foldout label.</summary>
         public string Title { get; }
+        /// <summary>The section's controls, in the order they were added.</summary>
         public List<DebugControl> Controls { get; } = new List<DebugControl>();
 
         /// <summary>A button that runs <paramref name="onClick"/>.</summary>

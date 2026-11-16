@@ -5,6 +5,10 @@ using UnityEngine.SceneManagement;
 
 namespace LightingTools.Editor
 {
+    /// <summary>
+    /// GameObject > Light > Surround with Reflection Probe / Probe Volume / Local Volume: creates one object sized
+    /// to the bounds of the selected renderers and terrains, in the selected object's scene.
+    /// </summary>
     public class ReflectionProbeHelper
     {
         [MenuItem("GameObject/Light/Surround with Reflection Probe", false, priority = -100)]

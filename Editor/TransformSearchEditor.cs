@@ -6,6 +6,7 @@ using System.Reflection;
 
 namespace EditorTools
 {
+    /// <summary>Unity's Transform inspector with a search field for the fields of the object's other components.</summary>
     [CustomEditor(typeof(Transform))]
     [CanEditMultipleObjects]
     public class TransformSearchEditor : SearchableTransformEditor
@@ -13,6 +14,7 @@ namespace EditorTools
         protected override string DefaultEditorTypeName => "UnityEditor.TransformInspector";
     }
 
+    /// <summary>Unity's RectTransform inspector with a search field for the fields of the object's other components.</summary>
     [CustomEditor(typeof(RectTransform))]
     [CanEditMultipleObjects]
     public class RectTransformSearchEditor : SearchableTransformEditor
@@ -20,8 +22,10 @@ namespace EditorTools
         protected override string DefaultEditorTypeName => "UnityEditor.RectTransformEditor";
     }
 
-    // Draws Unity's own Transform/RectTransform inspector, then a search field that lists matching fields
-    // from the other components on the inspected object(s). Each Inspector window has its own search.
+    /// <summary>
+    /// Draws Unity's own Transform/RectTransform inspector, then a search field that lists matching fields
+    /// from the other components on the inspected object(s). Each Inspector window has its own search.
+    /// </summary>
     public abstract class SearchableTransformEditor : Editor
     {
         protected abstract string DefaultEditorTypeName { get; }

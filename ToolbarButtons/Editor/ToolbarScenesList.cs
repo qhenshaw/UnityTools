@@ -9,6 +9,10 @@ using UnityEngine.SceneManagement;
 
 namespace UnityTools.ToolbarButtons
 {
+    /// <summary>
+    /// The Scene Selector toolbar element: a dropdown that opens any scene in Assets (or a Build Settings scene),
+    /// with Find Scene and Restart Scene on right click, and a dropdown that picks the scene Play mode starts from.
+    /// </summary>
     public class ToolbarScenesList
     {
 #pragma warning disable UDR0001 // Domain Reload Analyzer
@@ -38,6 +42,7 @@ namespace UnityTools.ToolbarButtons
             yield return PlayFromDropdown();
         }
 
+        /// <summary>Pings the active scene's asset in the Project window.</summary>
         public static void FindScene()
         {
             string scenePath = GetActiveScenePath();
@@ -45,6 +50,10 @@ namespace UnityTools.ToolbarButtons
             EditorGUIUtility.PingObject(AssetDatabase.LoadAssetAtPath<SceneAsset>(scenePath));
         }
 
+        /// <summary>
+        /// Reopens the active scene (asking to save changes first), or reloads it in Play mode, where it must be in
+        /// Build Settings.
+        /// </summary>
         public static void RestartScene()
         {
             string scenePath = GetActiveScenePath();

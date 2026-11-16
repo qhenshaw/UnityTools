@@ -11,8 +11,11 @@ namespace SceneManagement
     [ExecuteAlways]
     public class HideChildren : MonoBehaviour
     {
+        /// <summary>Whether the children are hidden. Setting it directly doesn't update them; use <see cref="SetHidden"/>.</summary>
         [field: SerializeField] public bool IsHidden { get; set; } = true;
+        /// <summary>Also hides this object's own components (not its Transform or this component).</summary>
         [field: SerializeField] public bool HideComponents { get; set; } = false;
+        /// <summary>Shows the children while the prefab is open in prefab mode.</summary>
         [field: SerializeField] public bool ShowInPrefabMode { get; set; } = true;
 
         internal const HideFlags HiddenFlags = HideFlags.HideInHierarchy | HideFlags.HideInInspector;
@@ -38,6 +41,7 @@ namespace SceneManagement
 
         private void Awake() => Apply();
 
+        /// <summary>Sets Is Hidden and updates the children's hide flags.</summary>
         public void SetHidden(bool hidden)
         {
             IsHidden = hidden;
@@ -61,6 +65,10 @@ namespace SceneManagement
             }
         }
 
+        /// <summary>
+        /// Hides or shows every child of the object (active and inactive) and, if hideComponents, the object's own
+        /// components. Other hide flags are kept.
+        /// </summary>
         public static void SetChildrenHideFlags(GameObject gameObject, bool hidden, bool hideComponents)
         {
             Transform[] transforms = gameObject.GetComponentsInChildren<Transform>(true);

@@ -13,7 +13,8 @@ namespace ScatterTool
 {
     /// <summary>
     /// Paints a mask that scatters prefabs onto the surfaces below it, in edit mode. Its children are generated:
-    /// every change regenerates them, destroying anything placed under it.
+    /// with Auto Bake on, every change regenerates them, and Bake and Clear always do, destroying anything placed
+    /// under it.
     /// </summary>
     /// <remarks>
     /// The serialized settings exist in every build so scene data loads cleanly, but the component does nothing
@@ -32,6 +33,10 @@ namespace ScatterTool
             }
         }
 
+        /// <summary>
+        /// Only places a prefab on surfaces whose normal is within Angle Threshold degrees of a direction: Custom
+        /// Direction, the projector's facing (Projector), or any surface (None).
+        /// </summary>
         [System.Serializable]
         public class NormalFilter : ISerializationCallbackReceiver
         {
@@ -70,6 +75,10 @@ namespace ScatterTool
             }
         }
 
+        /// <summary>
+        /// A random rotation within the X, Y and Z ranges (degrees), applied on top of the surface's orientation
+        /// (Surface) or no base rotation (World, None).
+        /// </summary>
         [System.Serializable]
         public class RotationRange : ISerializationCallbackReceiver
         {
@@ -118,6 +127,10 @@ namespace ScatterTool
             }
         }
 
+        /// <summary>
+        /// A fixed plus random offset from the hit point, along the surface (Surface) or in world axes (World).
+        /// The default mode, None, ignores the offset values.
+        /// </summary>
         [System.Serializable]
         public class PositionOffset
         {
@@ -166,6 +179,10 @@ namespace ScatterTool
             public int PrefabIndex;
         }
 
+        /// <summary>
+        /// A value between Min and Max, times Multiplier: picked from the painted weight through Weight Curve when
+        /// Based On Weight is on, otherwise at random.
+        /// </summary>
         [System.Serializable]
         public class ValueRange : ISerializationCallbackReceiver
         {
@@ -211,6 +228,10 @@ namespace ScatterTool
             }
         }
 
+        /// <summary>
+        /// One entry in the Prefabs list: the prefab, how often it's picked (Weight) and how it's placed.
+        /// Nothing is scattered while any entry has no prefab.
+        /// </summary>
         [System.Serializable]
         public class PrefabItem : ISerializationCallbackReceiver
         {
@@ -247,6 +268,7 @@ namespace ScatterTool
         [SerializeField, Range(0.01f, 1f)] private float _weightCutoff = 0.01f;
         [SerializeField, Range(0.1f, 10f)] private float _scaleMultiplier = 1f;
         [SerializeField] private PrefabItem[] _prefabs;
+        /// <summary>How many prefabs the last regeneration placed.</summary>
         [field: SerializeField] public int InstanceCount { get; private set; } = 0;
 
 #pragma warning disable 0414
@@ -257,8 +279,10 @@ namespace ScatterTool
         private string _bake = "Bake";
 #pragma warning restore 0414
 
+        /// <summary>The number of mask cells: Resolution squared.</summary>
         public int TotalWeights => _resolution * _resolution;
 
+        /// <summary>The painted mask, one 0-1 weight per cell, row by row.</summary>
         public float[] Weights
         {
             get
@@ -278,6 +302,7 @@ namespace ScatterTool
             set => _bounds = value;
         }
 
+        /// <summary>The volume's width, height and projection depth (Z). Each side is at least 0.1.</summary>
         public Vector3 Size
         {
             get => _size;
@@ -566,6 +591,7 @@ namespace ScatterTool
             return transform.TransformPoint(localPos);
         }
 
+        /// <summary>Where the ray crosses the volume's top face, if it lands inside the volume's width and height.</summary>
         public bool GetMouseHit(Ray mouseRay, out RaycastHit hit)
         {
             Vector3 planeNormal = -transform.forward;
@@ -601,6 +627,7 @@ namespace ScatterTool
             EditorUtility.SetDirty(this);
         }
 
+        /// <summary>Replaces the whole mask. The array must have <see cref="TotalWeights"/> entries. Record Undo first.</summary>
         public void SetWeights(float[] newWeights)
         {
             if (newWeights.Length != Weights.Length)

@@ -5,6 +5,10 @@ using UnityEditor.SceneManagement;
 
 namespace SceneManagement.Editor
 {
+    /// <summary>
+    /// Opens an Additive Scene Manager's Scene List when its scene is opened in the editor, and adds the
+    /// GameObject > Scene Management > Additive Scene Manager menu item.
+    /// </summary>
     [InitializeOnLoad]
     public class EditorAdditiveSceneManager
     {

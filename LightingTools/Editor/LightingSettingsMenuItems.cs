@@ -11,6 +11,10 @@ using UnityEngine.Rendering.HighDefinition;
 
 namespace LightingTools.Editor
 {
+    /// <summary>
+    /// GameObject > Light > Assign Volume to Open Scenes (HDRP only): with a Volume selected, makes its profile the
+    /// Static Lighting Sky of every loaded scene and copies its scene's Lighting Settings asset to them.
+    /// </summary>
     public static class LightingSettingsMenuItems
     {
 #if HDRP

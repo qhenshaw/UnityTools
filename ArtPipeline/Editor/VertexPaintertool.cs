@@ -11,6 +11,10 @@ using UnityEngine.UIElements;
 
 namespace ArtPipeline.Editor
 {
+    /// <summary>
+    /// Scene view tool (paint brush icon in the Tools overlay) that paints vertex colors onto the selected
+    /// object's VertexPainter. Left-drag paints; each stroke is one undo step.
+    /// </summary>
     [EditorTool("Vertex Painter")]
     public class VertexPaintertool : EditorTool
     {
@@ -338,14 +342,23 @@ namespace ArtPipeline.Editor
         }
     }
 
+    /// <summary>
+    /// Scene view panel shown while the Vertex Painter tool is active: Add Vertex Painter Component, Reset Colors,
+    /// paint color with Base/R/G/B/A presets, and brush Radius, Strength, Falloff and Dot Size.
+    /// </summary>
     [Overlay(typeof(SceneView), "Vertex Painter Overlay", defaultDisplay = false)]
     public class VertexPainterOverlay : Overlay, ITransientOverlay
     {
         public static bool IsVisible { get; set; } = false;
+        /// <summary>Brush radius in world units.</summary>
         public static float Radius { get; private set; } = 1f;
+        /// <summary>How fast paint builds up, from 0 to 1.</summary>
         public static float Strength { get; private set; } = 1f;
+        /// <summary>The color the brush moves vertex colors towards. Black with zero alpha is the base layer.</summary>
         public static Color Color { get; private set; } = new Color(0f, 0f, 0f, 0f);
+        /// <summary>Brush strength from the center (0) to the edge (1) of the radius.</summary>
         public static AnimationCurve Falloff { get; private set; } = new AnimationCurve(new Keyframe[] { new Keyframe(0f, 1f, 0f, 0f), new Keyframe(1f, 0f, -3f, 3f) });
+        /// <summary>Size of the preview dot drawn on each affected vertex; 0 hides the dots.</summary>
         public static float DotSize { get; private set; } = 0.1f;
 
         public static event EventHandler OnResetColorInput;
@@ -532,8 +545,10 @@ namespace ArtPipeline.Editor
 
     public class SceneMeshRaycast
     {
-        // Raycast against all scene geometry (not just colliders). Editor use only because it uses undocumented editor functionality
-        // (and also because it is extremely slow).
+        /// <summary>
+        /// Raycasts against the meshes of the given renderers (no colliders needed) and returns the closest hit.
+        /// Editor only, because it uses an undocumented editor method, and slow.
+        /// </summary>
         public static bool Raycast(Ray ray, Renderer[] renderers, out RaycastHit hit, out GameObject gameObject, System.Func<GameObject, bool> validate = null)
         {
             float bestDist = float.MaxValue;

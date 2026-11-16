@@ -11,6 +11,7 @@ namespace ArtPipeline.Editor
     /// <summary>
     /// Builds VFS/Uber materials from a base colour, normal and mask texture, and assigns textures to its blend layers.
     /// Textures are identified by the part of their name after the last underscore.
+    /// Needs the VFS/Uber shader, which is not part of this package. Menu items are under Assets > Create > VFS Uber.
     /// </summary>
     public class MaterialCreator
     {
@@ -45,6 +46,7 @@ namespace ArtPipeline.Editor
 
         private static readonly string[] _layerNames = { "Base", "R-L", "G-E", "B-G", "A-C" };
 
+        /// <summary>Creates a VFS/Uber material next to the selected base colour texture, using the 3 selected textures.</summary>
         [MenuItem("Assets/Create/VFS Uber/Create Material from Textures", false, -230)]
         public static void CreateUberMaterial() { CreateUberMaterial(UberShaderName); }
 
@@ -96,7 +98,7 @@ namespace ArtPipeline.Editor
         }
 
         /// <summary>
-        /// The material name: the texture name without its suffix or underscores, as before
+        /// The material name: the texture name without its suffix or underscores
         /// ("Rock_Moss_BaseColor" becomes "RockMoss").
         /// </summary>
         internal static string BaseName(string textureName)

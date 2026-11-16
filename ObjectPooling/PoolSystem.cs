@@ -17,6 +17,7 @@ namespace ObjectPooling
 
         private static PoolSystem _instance;
 
+        /// <summary>The PoolSystem in use. One is created in the active scene if none exists yet.</summary>
         public static PoolSystem Instance
         {
             get

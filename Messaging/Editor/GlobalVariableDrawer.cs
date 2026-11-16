@@ -4,8 +4,10 @@ using UnityEngine;
 
 namespace UnityTools.Messaging.Editor
 {
-    // Draws a GlobalVariable as one read-only row: label, tag, and value.
-    // In edit mode the value is the starting value from code, in Play it is the live global value.
+    /// <summary>
+    /// Draws a GlobalVariable as one read-only row: label, tag, and value.
+    /// In edit mode the value is the starting value from code, in Play it is the live global value.
+    /// </summary>
     [CustomPropertyDrawer(typeof(GlobalVariable<>), true)]
     public class GlobalVariableDrawer : PropertyDrawer
     {
