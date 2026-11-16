@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEditor;
 
-namespace ArtPipeline.Editor
+namespace UnityTools.Art.Editor
 {
     /// <summary>
     /// Turns Unreal style collision meshes into Unity colliders when a model is imported:

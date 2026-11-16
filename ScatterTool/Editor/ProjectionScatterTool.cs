@@ -7,7 +7,7 @@ using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace ScatterTool.Editor
+namespace UnityTools.Scatter.Editor
 {
     /// <summary>
     /// The Projection Scatter tool: paints the selected Projection Scatter's mask in the Scene view (left click

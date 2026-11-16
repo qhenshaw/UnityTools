@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEditor.SceneManagement;
 
-namespace SceneManagement.Editor
+namespace UnityTools.Scenes.Editor
 {
     /// <summary>
     /// Opens an Additive Scene Manager's Scene List when its scene is opened in the editor, and adds the

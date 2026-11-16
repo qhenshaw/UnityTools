@@ -1,3 +1,3 @@
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("SceneManagement.Tests")]
+[assembly: InternalsVisibleTo("UnityTools.Scenes.Tests")]

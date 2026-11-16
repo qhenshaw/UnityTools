@@ -5,7 +5,7 @@ using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
-namespace InspectorAttributes.Editors
+namespace UnityTools.Attributes.Editor
 {
     /// <summary>
     /// Draws "Label [field] [button]". Unity gives a field only one PropertyDrawer, so this drawer draws the field

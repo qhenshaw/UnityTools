@@ -2,10 +2,10 @@
     "name": "UnityTools.EditorTools.Tests",
     "rootNamespace": "UnityTools.EditorTools.Tests",
     "references": [
-        "EditorTools",
-        "ArtPipeline",
-        "ArtPipeline.Editor",
-        "UnityTools.ToolbarButtons",
+        "UnityTools.EditorTools",
+        "UnityTools.Art",
+        "UnityTools.Art.Editor",
+        "UnityTools.Toolbar",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

@@ -1,5 +1,5 @@
 using UnityEngine;
-using InspectorAttributes;
+using UnityTools.Attributes;
 using UnityEngine.Search;
 using System.Collections.Generic;
 using System;
@@ -9,7 +9,7 @@ using Random = UnityEngine.Random;
 using UnityEditor;
 #endif
 
-namespace ScatterTool
+namespace UnityTools.Scatter
 {
     /// <summary>
     /// Paints a mask that scatters prefabs onto the surfaces below it, in edit mode. Its children are generated:

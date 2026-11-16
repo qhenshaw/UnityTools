@@ -10,7 +10,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 #endif
 
-namespace SceneManagement
+namespace UnityTools.Scenes
 {
     /// <summary>
     /// Keeps one set of scenes loaded at a time, by name. <see cref="LoadSet"/> loads the scenes of a new set, then

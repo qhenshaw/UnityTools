@@ -1,15 +1,15 @@
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using ArtPipeline;
-using ArtPipeline.Editor;
-using EditorTools;
+using UnityTools.Art;
+using UnityTools.Art.Editor;
+using UnityTools.EditorTools;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
-using UnityTools.ToolbarButtons;
+using UnityTools.Toolbar;
 
 namespace UnityTools.EditorTools.Tests
 {

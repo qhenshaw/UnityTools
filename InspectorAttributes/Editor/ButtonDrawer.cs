@@ -1,7 +1,7 @@
 ﻿using UnityEditor;
 using UnityEngine;
 
-namespace InspectorAttributes.Editors
+namespace UnityTools.Attributes.Editor
 {
     [CustomPropertyDrawer(typeof(ButtonAttribute))]
     public class ButtonDrawer : PropertyDrawer

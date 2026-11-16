@@ -1,7 +1,7 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace LightingTools.Editor
+namespace UnityTools.Lighting.Editor
 {
     /// <summary>Draws an int field marked [StaticEditorFlagsField] as a StaticEditorFlags dropdown.</summary>
     [CustomPropertyDrawer(typeof(StaticEditorFlagsFieldAttribute))]

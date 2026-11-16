@@ -5,7 +5,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace ArtPipeline.Editor
+namespace UnityTools.Art.Editor
 {
     /// <summary>
     /// Finds painted mesh assets that are no longer referenced by any scene, prefab or asset and lets the user

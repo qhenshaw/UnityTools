@@ -1,7 +1,7 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace ArtPipeline.Editor
+namespace UnityTools.Art.Editor
 {
     [CustomEditor(typeof(VertexPainter))]
     public class VertexPainterEditor : UnityEditor.Editor

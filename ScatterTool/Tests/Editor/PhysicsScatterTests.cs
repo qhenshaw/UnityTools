@@ -2,12 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using NUnit.Framework;
-using ScatterTool.Editor;
+using UnityTools.Scatter.Editor;
 using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace ScatterTool.Tests
+namespace UnityTools.Scatter.Tests
 {
     public class PhysicsScatterTests
     {

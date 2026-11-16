@@ -2,13 +2,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
-using ScatterTool.Editor;
+using UnityTools.Scatter.Editor;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
-namespace ScatterTool.Tests
+namespace UnityTools.Scatter.Tests
 {
     public class ProjectionScatterTests
     {

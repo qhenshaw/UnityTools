@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 
-namespace SceneManagement
+namespace UnityTools.Scenes
 {
     /// <summary>
     /// Draws the meshes of a prefab where it would spawn, without instantiating it. Each mesh is placed with its

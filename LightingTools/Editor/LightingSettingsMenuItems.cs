@@ -9,7 +9,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.Rendering.HighDefinition;
 #endif
 
-namespace LightingTools.Editor
+namespace UnityTools.Lighting.Editor
 {
     /// <summary>
     /// GameObject > Light > Assign Volume to Open Scenes (HDRP only): with a Volume selected, makes its profile the

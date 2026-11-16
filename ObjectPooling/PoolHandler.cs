@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.Pool;
 using Object = UnityEngine.Object;
 
-namespace ObjectPooling
+namespace UnityTools.Pooling
 {
     /// <summary>The pool for one prefab. Created by <see cref="PoolSystem"/>; you don't need to use it directly.</summary>
     public class PoolHandler

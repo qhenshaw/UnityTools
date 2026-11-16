@@ -3,7 +3,7 @@ using UnityEditor;
 using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 
-namespace LightingTools.Editor
+namespace UnityTools.Lighting.Editor
 {
     /// <summary>
     /// GameObject > Light > Surround with Reflection Probe / Probe Volume / Local Volume: creates one object sized

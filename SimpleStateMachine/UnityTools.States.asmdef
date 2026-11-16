@@ -1,10 +1,8 @@
 {
-    "name": "UnityTools.ToolbarButtons",
-    "rootNamespace": "UnityTools.ToolbarButtons",
+    "name": "UnityTools.States",
+    "rootNamespace": "UnityTools.States",
     "references": [],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

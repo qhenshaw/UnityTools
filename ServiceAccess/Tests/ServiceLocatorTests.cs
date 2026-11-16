@@ -1,11 +1,11 @@
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
-using ServiceAccess;
+using UnityTools.Services;
 using UnityEngine;
 using UnityEngine.TestTools;
 
-namespace UnityTools.ServiceAccess.Tests
+namespace UnityTools.Services.Tests
 {
     public class ServiceLocatorTests
     {

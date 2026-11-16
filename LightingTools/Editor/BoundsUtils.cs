@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-namespace LightingTools.Editor
+namespace UnityTools.Lighting.Editor
 {
     /// <summary>Bounds helpers for the lighting menu items.</summary>
     public static class BoundsUtils

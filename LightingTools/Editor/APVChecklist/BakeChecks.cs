@@ -7,7 +7,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.HighDefinition;
 
-namespace LightingTools.Editor.APVChecklist
+namespace UnityTools.Lighting.Editor.APVChecklist
 {
     internal sealed class ScenesSavedCheck : SetupCheck
     {

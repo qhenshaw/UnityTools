@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 
-namespace EditorTools
+namespace UnityTools.EditorTools
 {
     /// <summary>Unity's Transform inspector with a search field for the fields of the object's other components.</summary>
     [CustomEditor(typeof(Transform))]

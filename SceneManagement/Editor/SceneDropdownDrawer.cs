@@ -7,7 +7,7 @@ using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 
-namespace SceneManagement.Editor
+namespace UnityTools.Scenes.Editor
 {
     /// <summary>
     /// Draws a [SceneDropdown] string as a button that opens a searchable scene picker (Unity's AdvancedDropdown,
@@ -55,7 +55,7 @@ namespace SceneManagement.Editor
             }
 
             // Odin and other inspectors may pick this drawer over [InlineButton]'s; keep the button either way.
-            position = InspectorAttributes.Editors.InlineButtonGUI.Draw(position, property, fieldInfo);
+            position = UnityTools.Attributes.Editor.InlineButtonGUI.Draw(position, property, fieldInfo);
 
             bool storeName = attribute is SceneDropdownAttribute sceneAttribute && sceneAttribute.StoreName;
             string stored = property.stringValue;

@@ -1,13 +1,13 @@
 using UnityEngine;
 using UnityEngine.Rendering;
-using InspectorAttributes;
+using UnityTools.Attributes;
 
 #if UNITY_EDITOR
 using System.Collections.Generic;
 using UnityEditor;
 #endif
 
-namespace LightingTools
+namespace UnityTools.Lighting
 {
     /// <summary>
     /// Applies static flags, Receive GI and shadow settings to every MeshRenderer and Terrain below this object

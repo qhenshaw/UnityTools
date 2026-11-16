@@ -1,8 +1,8 @@
 {
-    "name": "UnityTools.ObjectPooling.Tests",
-    "rootNamespace": "UnityTools.ObjectPooling.Tests",
+    "name": "UnityTools.Pooling.Tests",
+    "rootNamespace": "UnityTools.Pooling.Tests",
     "references": [
-        "ObjectPooling.Runtime",
+        "UnityTools.Pooling",
         "UnityEngine.TestRunner"
     ],
     "includePlatforms": [],

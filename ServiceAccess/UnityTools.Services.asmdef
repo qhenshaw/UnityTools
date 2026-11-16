@@ -1,6 +1,6 @@
 {
-    "name": "ObjectPooling.Runtime",
-    "rootNamespace": "ObjectPooling",
+    "name": "UnityTools.Services",
+    "rootNamespace": "UnityTools.Services",
     "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using Object = UnityEngine.Object;
 
-namespace ServiceAccess
+namespace UnityTools.Services
 {
     /// <summary>Old API, kept so existing code compiles. Every instance forwards to the one static <see cref="ServiceLocator"/>.</summary>
     [Obsolete("Use the static ServiceLocator methods instead: ServiceLocator.Register(this), ServiceLocator.Get<T>(), ServiceLocator.TryGet(out T service).")]

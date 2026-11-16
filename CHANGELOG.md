@@ -1,6 +1,28 @@
 # Changelog
 All notable changes to Unity Tools. Versions are git tags: install one with `https://github.com/qhenshaw/UnityTools.git#<version>`.
 
+## 7.0.0 - 2026-11-15
+- **Breaking** Every tool now uses a `UnityTools.*` namespace, and every assembly is named after its namespace. Scripts need their `using` lines updated, and your own assembly definitions that reference these assemblies by name need the new names (references by GUID, Unity's default, keep working). Scene, prefab and asset references are unaffected.
+
+| Tool | Old namespace | Old assembly | New namespace and assembly |
+|---|---|---|---|
+| Object Pooling | `ObjectPooling` | `ObjectPooling.Runtime` | `UnityTools.Pooling` |
+| Simple State Machine | `SimpleStateMachine` | `SimpleStateMachine` | `UnityTools.States` |
+| Service Locator | `ServiceAccess` | `ServiceAccess` | `UnityTools.Services` |
+| Messaging Service, Global Variables | `UnityTools.Messaging` | `Messaging` | `UnityTools.Messaging` |
+| Debug Menu | `UnityTools.DebugTools` | `DebugMenu.Runtime` | `UnityTools.DebugTools` |
+| Scenes, Prefab Spawner, Scene Dropdown | `SceneManagement` | `SceneManagement` | `UnityTools.Scenes` |
+| Projection and Physics Scatter | `ScatterTool` | `ScatterTool` | `UnityTools.Scatter` |
+| Art pipeline | `ArtPipeline` | `ArtPipeline` | `UnityTools.Art` |
+| Lighting tools | `LightingTools` | `LightingTools` | `UnityTools.Lighting` |
+| Inspector Attributes | `InspectorAttributes` | `InspectorAttributes` | `UnityTools.Attributes` |
+| Inspector Attributes (editor) | `InspectorAttributes.Editors` | `InspectorAttributes.Editors` | `UnityTools.Attributes.Editor` |
+| Snap to Floor, Transform Search | `EditorTools` | `EditorTools` | `UnityTools.EditorTools` |
+| Toolbar Buttons | `UnityTools.ToolbarButtons` | `UnityTools.ToolbarButtons` | `UnityTools.Toolbar` |
+
+- Editor code follows the same pattern, in `<namespace>.Editor` (e.g. `SceneManagement.Editor` is now `UnityTools.Scenes.Editor`). UnityTools.Data and UnityTools.PlaytestFeedback are unchanged.
+- To update a project: replace each old `using` line with the new one, e.g. `using ObjectPooling;` becomes `using UnityTools.Pooling;`, and update any fully qualified names such as `SceneManagement.StreamingSceneManager`.
+
 ## 6.9.0 - 2026-11-15
 - README rewritten: a table of contents, tools grouped by category (gameplay systems, debugging and playtesting, scenes, level design, art pipeline, lighting, editor and inspector), every section checked against the code, and code samples that compile as written (with their usings)
 - README: corrected the requirements (Odin isn't needed; URP or HDRP is), menu paths, setting names and defaults throughout, and removed the Custom Hierarchy Drawer section (removed in 5.1.1)

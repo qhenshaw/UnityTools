@@ -1,3 +1,3 @@
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("ScatterTool.Tests")]
+[assembly: InternalsVisibleTo("UnityTools.Scatter.Tests")]

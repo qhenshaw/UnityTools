@@ -1,4 +1,4 @@
-namespace UnityTools.ServiceAccess.Tests
+namespace UnityTools.Services.Tests
 {
     public interface ITestSound { }
     public interface ITestShared { }

@@ -1,12 +1,10 @@
 {
-    "name": "InspectorAttributes.Editors",
-    "rootNamespace": "InspectorAttributes.Editors",
+    "name": "UnityTools.Scatter",
+    "rootNamespace": "UnityTools.Scatter",
     "references": [
         "GUID:64b01bc802468004990f810413075ca2"
     ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

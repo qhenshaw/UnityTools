@@ -1,10 +1,12 @@
 {
-    "name": "LightingTools",
-    "rootNamespace": "LightingTools",
+    "name": "UnityTools.EditorTools",
+    "rootNamespace": "UnityTools.EditorTools",
     "references": [
-        "GUID:64b01bc802468004990f810413075ca2"
+        "GUID:df380645f10b7bc4b97d4f5eb6303d95"
     ],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

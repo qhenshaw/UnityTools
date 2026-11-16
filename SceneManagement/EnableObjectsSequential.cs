@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace SceneManagement
+namespace UnityTools.Scenes
 {
     /// <summary>
     /// On Awake, disables its objects (its direct children if the list is empty), then turns them back on a few

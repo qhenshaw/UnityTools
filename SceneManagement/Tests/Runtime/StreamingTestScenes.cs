@@ -9,7 +9,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 #endif
 
-namespace SceneManagement.PlayModeTests
+namespace UnityTools.Scenes.PlayModeTests
 {
     /// <summary>
     /// Creates small test scenes in Assets/UnityToolsStreamingTests before the PlayMode run and adds them to

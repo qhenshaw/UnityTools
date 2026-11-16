@@ -5,9 +5,9 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
-using static SceneManagement.PlayModeTests.StreamingTestScenes;
+using static UnityTools.Scenes.PlayModeTests.StreamingTestScenes;
 
-namespace SceneManagement.PlayModeTests
+namespace UnityTools.Scenes.PlayModeTests
 {
     [PrebuildSetup(typeof(StreamingTestScenes)), PostBuildCleanup(typeof(StreamingTestScenes))]
     public class StreamingSceneManagerTests

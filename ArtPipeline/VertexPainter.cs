@@ -1,11 +1,11 @@
 using UnityEngine;
 using UnityEngine.Serialization;
 
-namespace ArtPipeline
+namespace UnityTools.Art
 {
     /// <summary>
     /// Holds references to the original mesh and its painted copy.
-    /// The painted copy is a mesh asset saved in the project (see ArtPipeline.Editor.VertexPaintStorage),
+    /// The painted copy is a mesh asset saved in the project (see UnityTools.Art.Editor.VertexPaintStorage),
     /// so it can be referenced from prefabs and scenes without embedding mesh data.
     /// Needs a MeshFilter and MeshRenderer; paint it with the Vertex Painter tool in the Scene view.
     /// </summary>

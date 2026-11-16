@@ -1,9 +1,9 @@
 {
-    "name": "ScatterTool.Tests",
-    "rootNamespace": "ScatterTool.Tests",
+    "name": "UnityTools.Scatter.Tests",
+    "rootNamespace": "UnityTools.Scatter.Tests",
     "references": [
-        "ScatterTool",
-        "ScatterTool.Editor",
+        "UnityTools.Scatter",
+        "UnityTools.Scatter.Editor",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

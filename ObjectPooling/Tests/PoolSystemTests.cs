@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
-using ObjectPooling;
+using UnityTools.Pooling;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
-namespace UnityTools.ObjectPooling.Tests
+namespace UnityTools.Pooling.Tests
 {
     public class PoolSystemTests
     {

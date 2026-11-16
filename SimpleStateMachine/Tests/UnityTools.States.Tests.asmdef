@@ -1,8 +1,8 @@
 {
-    "name": "UnityTools.SimpleStateMachine.Tests",
-    "rootNamespace": "UnityTools.SimpleStateMachine.Tests",
+    "name": "UnityTools.States.Tests",
+    "rootNamespace": "UnityTools.States.Tests",
     "references": [
-        "SimpleStateMachine",
+        "UnityTools.States",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

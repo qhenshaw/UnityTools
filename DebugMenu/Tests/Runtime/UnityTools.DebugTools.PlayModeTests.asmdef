@@ -2,7 +2,7 @@
     "name": "UnityTools.DebugTools.PlayModeTests",
     "rootNamespace": "UnityTools.DebugTools.PlayModeTests",
     "references": [
-        "DebugMenu.Runtime",
+        "UnityTools.DebugTools",
         "Unity.InputSystem",
         "UnityEngine.TestRunner"
     ],

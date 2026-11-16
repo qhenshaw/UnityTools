@@ -2,7 +2,7 @@
     "name": "UnityTools.Messaging.Tests",
     "rootNamespace": "UnityTools.Messaging.Tests",
     "references": [
-        "Messaging",
+        "UnityTools.Messaging",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

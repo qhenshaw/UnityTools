@@ -1,8 +1,10 @@
 {
-    "name": "EditorTools",
-    "rootNamespace": "EditorTools",
+    "name": "UnityTools.Scenes.Editor",
+    "rootNamespace": "UnityTools.Scenes.Editor",
     "references": [
-        "GUID:df380645f10b7bc4b97d4f5eb6303d95"
+        "GUID:6161bd5fe5f00164b8a2b3ad53b3ff7e",
+        "GUID:df380645f10b7bc4b97d4f5eb6303d95",
+        "GUID:5fd455f40a56e114fbcccf5da6ebae2f"
     ],
     "includePlatforms": [
         "Editor"

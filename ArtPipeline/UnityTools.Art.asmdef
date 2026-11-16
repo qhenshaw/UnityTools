@@ -1,9 +1,7 @@
 {
-    "name": "SceneManagement",
-    "rootNamespace": "SceneManagement",
-    "references": [
-        "GUID:64b01bc802468004990f810413075ca2"
-    ],
+    "name": "UnityTools.Art",
+    "rootNamespace": "UnityTools.Art",
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

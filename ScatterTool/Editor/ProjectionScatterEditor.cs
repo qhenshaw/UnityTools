@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 
-namespace ScatterTool.Editor
+namespace UnityTools.Scatter.Editor
 {
     [CustomEditor(typeof(ProjectionScatter))]
     public class ProjectionScatterEditor : UnityEditor.Editor

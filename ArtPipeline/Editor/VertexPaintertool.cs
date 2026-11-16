@@ -9,7 +9,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.UIElements;
 
-namespace ArtPipeline.Editor
+namespace UnityTools.Art.Editor
 {
     /// <summary>
     /// Scene view tool (paint brush icon in the Tools overlay) that paints vertex colors onto the selected

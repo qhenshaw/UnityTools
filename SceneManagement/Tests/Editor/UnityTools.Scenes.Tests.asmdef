@@ -1,11 +1,15 @@
 {
-    "name": "SceneManagement.PlayModeTests",
-    "rootNamespace": "SceneManagement.PlayModeTests",
+    "name": "UnityTools.Scenes.Tests",
+    "rootNamespace": "UnityTools.Scenes.Tests",
     "references": [
-        "SceneManagement",
-        "UnityEngine.TestRunner"
+        "UnityTools.Scenes",
+        "UnityTools.Scenes.Editor",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
     ],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": true,

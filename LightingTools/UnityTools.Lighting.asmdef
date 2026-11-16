@@ -1,6 +1,6 @@
 {
-    "name": "ScatterTool",
-    "rootNamespace": "ScatterTool",
+    "name": "UnityTools.Lighting",
+    "rootNamespace": "UnityTools.Lighting",
     "references": [
         "GUID:64b01bc802468004990f810413075ca2"
     ],

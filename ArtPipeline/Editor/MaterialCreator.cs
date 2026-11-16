@@ -6,7 +6,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-namespace ArtPipeline.Editor
+namespace UnityTools.Art.Editor
 {
     /// <summary>
     /// Builds VFS/Uber materials from a base colour, normal and mask texture, and assigns textures to its blend layers.

@@ -7,7 +7,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 
-namespace ScatterTool.Editor
+namespace UnityTools.Scatter.Editor
 {
     /// <summary>
     /// One edit-mode physics simulation of the selected objects. Start freezes every other Rigidbody in the open

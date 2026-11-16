@@ -1,8 +1,12 @@
 {
-    "name": "ServiceAccess",
-    "rootNamespace": "ServiceAccess",
-    "references": [],
-    "includePlatforms": [],
+    "name": "UnityTools.Art.Editor",
+    "rootNamespace": "UnityTools.Art.Editor",
+    "references": [
+        "GUID:e40c9a556db2b2a489435da3bc0b062f"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

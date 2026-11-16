@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace SceneManagement
+namespace UnityTools.Scenes
 {
     /// <summary>
     /// Draws a string field (or every element of a string list/array) as a searchable dropdown of the scenes in the

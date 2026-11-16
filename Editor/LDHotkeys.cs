@@ -3,7 +3,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-namespace EditorTools
+namespace UnityTools.EditorTools
 {
     /// <summary>
     /// Level design shortcuts. Snap to Floor (End, or Tools > LD Shortcuts > Snap to Floor) drops the selected

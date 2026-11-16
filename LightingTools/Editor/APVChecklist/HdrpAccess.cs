@@ -9,7 +9,7 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.HighDefinition;
 using Object = UnityEngine.Object;
 
-namespace LightingTools.Editor.APVChecklist
+namespace UnityTools.Lighting.Editor.APVChecklist
 {
     /// <summary>
     /// HDRP and APV settings the checklist reads and writes. Public APIs are used where they exist; everything

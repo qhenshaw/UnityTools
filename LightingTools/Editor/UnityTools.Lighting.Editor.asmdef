@@ -1,6 +1,6 @@
 {
-    "name": "LightingTools.Editor",
-    "rootNamespace": "LightingTools.Editor",
+    "name": "UnityTools.Lighting.Editor",
+    "rootNamespace": "UnityTools.Lighting.Editor",
     "references": [
         "GUID:c6841b88c81d3964885de7265f04d681",
         "GUID:df380645f10b7bc4b97d4f5eb6303d95",

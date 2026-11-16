@@ -11,7 +11,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 #endif
 
-namespace SceneManagement
+namespace UnityTools.Scenes
 {
     /// <summary>
     /// Stands in for a prefab in a scene and spawns it at runtime, at the spawner's position and rotation.

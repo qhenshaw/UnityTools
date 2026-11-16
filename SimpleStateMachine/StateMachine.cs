@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace SimpleStateMachine
+namespace UnityTools.States
 {
     /// <summary>
     /// A small state machine bound to an object (usually the MonoBehaviour that owns it). Add transitions, enter the

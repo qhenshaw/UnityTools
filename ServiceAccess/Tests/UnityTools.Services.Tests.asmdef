@@ -1,8 +1,8 @@
 {
-    "name": "UnityTools.ServiceAccess.Tests",
-    "rootNamespace": "UnityTools.ServiceAccess.Tests",
+    "name": "UnityTools.Services.Tests",
+    "rootNamespace": "UnityTools.Services.Tests",
     "references": [
-        "ServiceAccess",
+        "UnityTools.Services",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

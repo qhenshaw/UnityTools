@@ -1,9 +1,9 @@
 using NUnit.Framework;
-using SceneManagement.Editor;
+using UnityTools.Scenes.Editor;
 using UnityEditor;
 using UnityEngine;
 
-namespace SceneManagement.Tests
+namespace UnityTools.Scenes.Tests
 {
     public class SceneBuildCheckTests
     {

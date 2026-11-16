@@ -2,8 +2,8 @@
     "name": "UnityTools.Messaging.Editor",
     "rootNamespace": "UnityTools.Messaging.Editor",
     "references": [
-        "Messaging",
-        "ServiceAccess"
+        "UnityTools.Messaging",
+        "UnityTools.Services"
     ],
     "includePlatforms": [
         "Editor"

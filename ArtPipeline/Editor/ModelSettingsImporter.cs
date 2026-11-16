@@ -1,6 +1,6 @@
 using UnityEditor;
 
-namespace ArtPipeline.Editor
+namespace UnityTools.Art.Editor
 {
     /// <summary>
     /// Sets Generate Mesh LODs, Import Cameras and Import Lights from Project Settings > Unity Tools > Art Asset Import

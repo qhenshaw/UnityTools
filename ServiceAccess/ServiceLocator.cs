@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace ServiceAccess
+namespace UnityTools.Services
 {
     /// <summary>
     /// Finds the one instance of a class, e.g. the AudioManager, without a direct reference.

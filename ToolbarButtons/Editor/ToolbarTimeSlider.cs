@@ -3,7 +3,7 @@ using UnityEditor;
 using UnityEditor.Toolbars;
 using UnityEngine;
 
-namespace UnityTools.ToolbarButtons
+namespace UnityTools.Toolbar
 {
     /// <summary>
     /// A Time Scale slider and reset button that work in Play mode only. Exiting Play mode puts the time scale back

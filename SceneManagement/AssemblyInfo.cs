@@ -1,4 +1,4 @@
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("SceneManagement.Tests")]
-[assembly: InternalsVisibleTo("SceneManagement.PlayModeTests")]
+[assembly: InternalsVisibleTo("UnityTools.Scenes.Tests")]
+[assembly: InternalsVisibleTo("UnityTools.Scenes.PlayModeTests")]

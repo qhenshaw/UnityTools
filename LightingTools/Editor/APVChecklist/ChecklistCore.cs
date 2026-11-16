@@ -6,7 +6,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 
-namespace LightingTools.Editor.APVChecklist
+namespace UnityTools.Lighting.Editor.APVChecklist
 {
     internal enum CheckStatus
     {

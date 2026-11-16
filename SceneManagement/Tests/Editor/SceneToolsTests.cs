@@ -9,7 +9,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
-namespace SceneManagement.Tests
+namespace UnityTools.Scenes.Tests
 {
     /// <summary>EditMode tests for PrefabSpawner, MeshPreview, HideChildren and AdditiveSceneManager.</summary>
     public class SceneToolsTests

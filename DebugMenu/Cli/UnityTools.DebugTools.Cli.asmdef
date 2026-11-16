@@ -2,7 +2,7 @@
     "name": "UnityTools.DebugTools.Cli",
     "rootNamespace": "UnityTools.DebugTools.Cli",
     "references": [
-        "DebugMenu.Runtime",
+        "UnityTools.DebugTools",
         "Unity.Pipeline.Attributes"
     ],
     "includePlatforms": [

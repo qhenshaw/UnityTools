@@ -2,7 +2,7 @@
     "name": "UnityTools.DebugTools.Tests",
     "rootNamespace": "UnityTools.DebugTools.Tests",
     "references": [
-        "DebugMenu.Runtime",
+        "UnityTools.DebugTools",
         "UnityTools.DebugTools.Editor",
         "Unity.InputSystem",
         "UnityEngine.TestRunner",

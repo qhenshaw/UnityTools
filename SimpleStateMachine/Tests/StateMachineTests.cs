@@ -1,11 +1,11 @@
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
-using SimpleStateMachine;
+using UnityTools.States;
 using UnityEngine;
 using UnityEngine.TestTools;
 
-namespace UnityTools.SimpleStateMachine.Tests
+namespace UnityTools.States.Tests
 {
     /// <summary>Stands in for the MonoBehaviour a state machine is bound to.</summary>
     public class TestOwner

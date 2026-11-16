@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.Pool;
 using UnityEngine.Serialization;
 
-namespace ObjectPooling
+namespace UnityTools.Pooling
 {
     /// <summary>
     /// Base class for pooled prefabs. Get instances with <c>PoolSystem.Instance.Get(prefab, position, rotation)</c>

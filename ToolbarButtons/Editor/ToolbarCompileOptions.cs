@@ -4,7 +4,7 @@ using UnityEditor.Compilation;
 using UnityEditor.Toolbars;
 using UnityEngine;
 
-namespace UnityTools.ToolbarButtons
+namespace UnityTools.Toolbar
 {
     /// <summary>The Auto Refresh mode (all three of Unity's modes) and a button that always recompiles.</summary>
     [InitializeOnLoad]

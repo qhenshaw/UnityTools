@@ -1,7 +1,9 @@
 {
-    "name": "SimpleStateMachine",
-    "rootNamespace": "SimpleStateMachine",
-    "references": [],
+    "name": "UnityTools.Scenes",
+    "rootNamespace": "UnityTools.Scenes",
+    "references": [
+        "GUID:64b01bc802468004990f810413075ca2"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

@@ -61,7 +61,7 @@ https://github.com/qhenshaw/UnityTools.git
 ```
 To lock a project to one version, add the version tag (see the [changelog](CHANGELOG.md) for versions):
 ```
-https://github.com/qhenshaw/UnityTools.git#6.8.0
+https://github.com/qhenshaw/UnityTools.git#7.0.0
 ```
 GameEvents were replaced by the Messaging Service in 5.0.0. For GameEvents, use `#4.5.0`.
 
@@ -74,7 +74,7 @@ Reuses GameObjects instead of instantiating and destroying them, for things like
 
 Give the prefab a component that inherits from `PooledObject`, reference the prefab by that type, and get instances from the pool:
 ```cs
-using ObjectPooling;
+using UnityTools.Pooling;
 using UnityEngine;
 
 public class Gun : MonoBehaviour
@@ -94,7 +94,7 @@ bullet.ReturnToPool(2f);
 ```
 A reused instance keeps its old state (velocity, health, trails), so reset it in the pool hooks:
 ```cs
-using ObjectPooling;
+using UnityTools.Pooling;
 
 public class Bullet : PooledObject
 {
@@ -114,7 +114,7 @@ public class Bullet : PooledObject
 ## Simple State Machine
 A small C# state machine: each state is a class, and transitions are conditions between state types.
 ```cs
-using SimpleStateMachine;
+using UnityTools.States;
 using UnityEngine;
 
 public class EnemyController : MonoBehaviour
@@ -148,7 +148,7 @@ public class EnemyController : MonoBehaviour
 }
 ```
 ```cs
-using SimpleStateMachine;
+using UnityTools.States;
 
 public class ChaseState : State<EnemyController>
 {
@@ -183,7 +183,7 @@ Finds "the one" instance of a class (an AudioManager, a ScoreManager) without a 
 
 Register in **Awake**, and unregister when destroyed:
 ```cs
-using ServiceAccess;
+using UnityTools.Services;
 using UnityEngine;
 
 public class AudioManager : MonoBehaviour
@@ -194,7 +194,7 @@ public class AudioManager : MonoBehaviour
 ```
 Get it in **Start** or later, so every service has registered first:
 ```cs
-using ServiceAccess;
+using UnityTools.Services;
 using UnityEngine;
 
 public class Door : MonoBehaviour
@@ -516,7 +516,7 @@ You don't need tags: the category is always in the post title (`[Bug] …`), so 
 ## Streaming Scene Manager
 Keeps one set of scenes loaded at a time, for levels split into areas. Create one with GameObject > Scene Management > Streaming Scene Manager in a scene that stays loaded, list the scenes that are always loaded under **Persistent** and the first set under **Initial**, and add **Streaming Scene Transition** triggers (GameObject > Scene Management > Streaming Scene Transition) that load a set when the player walks in.
 ```cs
-using SceneManagement;
+using UnityTools.Scenes;
 using UnityEngine;
 
 public class LoadingScreen : MonoBehaviour
@@ -686,7 +686,7 @@ Adds a search field to the Transform and RectTransform inspectors that shows mat
 ## Inspector Attributes
 Small attributes for adding buttons to inspectors, used by these tools. For anything bigger, use Odin, Naughty Attributes or Alchemy.
 ```cs
-using InspectorAttributes;
+using UnityTools.Attributes;
 using UnityEngine;
 
 public class Baker : MonoBehaviour
@@ -703,13 +703,13 @@ public class Baker : MonoBehaviour
 ```
 - `[Button]` buttons are greyed out outside Play mode unless the second argument (`allowEditMode`) is `true`. `[InlineButton]` works in edit mode by default.
 - Methods must be parameterless instance methods; private methods and methods in base classes work. Buttons run on every selected object as one Undo step, after the inspector has finished drawing. A missing method shows on the button as `(!)` with the reason in its tooltip.
-- `InlineButton` works alongside another drawer on the same field (e.g. a dropdown). If your own PropertyDrawer should keep the button when an inspector such as Odin picks your drawer, call `position = InlineButtonGUI.Draw(position, property, fieldInfo);` (namespace `InspectorAttributes.Editors`) at the start of its `OnGUI`.
-- `Button` can clash with `UnityEngine.UI.Button` or `UnityEngine.UIElements.Button` in files that use those namespaces: write `InspectorAttributes.Button` there.
+- `InlineButton` works alongside another drawer on the same field (e.g. a dropdown). If your own PropertyDrawer should keep the button when an inspector such as Odin picks your drawer, call `position = InlineButtonGUI.Draw(position, property, fieldInfo);` (namespace `UnityTools.Attributes.Editor`) at the start of its `OnGUI`.
+- `Button` can clash with `UnityEngine.UI.Button` or `UnityEngine.UIElements.Button` in files that use those namespaces: write `UnityTools.Attributes.Button` there.
 
 ## Scene Dropdown
 `[SceneDropdown]` draws a string field (or every element of a string list or array) as a searchable scene picker, grouped by folder.
 ```cs
-using SceneManagement;
+using UnityTools.Scenes;
 using UnityEngine;
 
 public class LevelSelect : MonoBehaviour
@@ -725,17 +725,23 @@ public class LevelSelect : MonoBehaviour
 ---
 
 ## Assemblies and namespaces
-Every runtime assembly is auto-referenced, so scripts in the default Assembly-CSharp can use them directly. If your scripts are in their own assembly definition, add these references:
+Every tool's namespace and assembly start with `UnityTools.`. The runtime assemblies are auto-referenced, so scripts in the default Assembly-CSharp can use them directly. If your scripts are in their own assembly definition, add the assembly to its references.
 
-| Tool | Assembly | Namespace |
-|---|---|---|
-| Object Pooling | `ObjectPooling.Runtime` | `ObjectPooling` |
-| Simple State Machine | `SimpleStateMachine` | `SimpleStateMachine` |
-| Service Locator | `ServiceAccess` | `ServiceAccess` |
-| Messaging Service, Global Variables | `Messaging` | `UnityTools.Messaging` |
-| Data Reference | `UnityTools.Data` | `UnityTools.Data` |
-| Debug Menu | `DebugMenu.Runtime` | `UnityTools.DebugTools` |
-| Playtest Feedback | `UnityTools.PlaytestFeedback` | `UnityTools.PlaytestFeedback` |
-| Scenes, Prefab Spawner, Scene Dropdown | `SceneManagement` | `SceneManagement` |
-| Projection Scatter | `ScatterTool` | `ScatterTool` |
-| Inspector Attributes | `InspectorAttributes` | `InspectorAttributes` |
+| Tool | Namespace and assembly |
+|---|---|
+| Object Pooling | `UnityTools.Pooling` |
+| Simple State Machine | `UnityTools.States` |
+| Service Locator | `UnityTools.Services` |
+| Messaging Service, Global Variables | `UnityTools.Messaging` |
+| Data Reference | `UnityTools.Data` |
+| Debug Menu | `UnityTools.DebugTools` |
+| Playtest Feedback | `UnityTools.PlaytestFeedback` |
+| Scenes, Prefab Spawner, Scene Dropdown | `UnityTools.Scenes` |
+| Projection Scatter, Physics Scatter | `UnityTools.Scatter` |
+| Mesh Importer, Material Creator, Vertex Painter, Gradient Editor | `UnityTools.Art` |
+| Lighting tools | `UnityTools.Lighting` |
+| Inspector Attributes | `UnityTools.Attributes` |
+| Snap to Floor, Transform Search | `UnityTools.EditorTools` |
+| Toolbar Buttons | `UnityTools.Toolbar` |
+
+Editor code is in `<namespace>.Editor` (e.g. `UnityTools.Scenes.Editor`). Upgrading from 6.x? See the [7.0.0 changelog](CHANGELOG.md) for the old names.

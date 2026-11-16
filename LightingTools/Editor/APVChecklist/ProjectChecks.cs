@@ -3,7 +3,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine.Rendering.HighDefinition;
 
-namespace LightingTools.Editor.APVChecklist
+namespace UnityTools.Lighting.Editor.APVChecklist
 {
     internal sealed class HdrpUsesApvCheck : SetupCheck
     {

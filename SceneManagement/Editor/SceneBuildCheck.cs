@@ -3,7 +3,7 @@ using System.IO;
 using System.Linq;
 using UnityEditor;
 
-namespace SceneManagement.Editor
+namespace UnityTools.Scenes.Editor
 {
     /// <summary>Checks whether scenes are in Build Settings (and so can be loaded at runtime), and adds them.</summary>
     internal static class SceneBuildCheck

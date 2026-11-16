@@ -1,6 +1,6 @@
 {
-    "name": "ArtPipeline",
-    "rootNamespace": "ArtPipeline",
+    "name": "UnityTools.Pooling",
+    "rootNamespace": "UnityTools.Pooling",
     "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -5,7 +5,7 @@ using UnityEditor.IMGUI.Controls;
 using UnityEditor.Overlays;
 using UnityEngine;
 
-namespace ScatterTool.Editor
+namespace UnityTools.Scatter.Editor
 {
     /// <summary>
     /// The Physics Scatter tool: drops, throws and settles the selected objects with physics in edit mode.

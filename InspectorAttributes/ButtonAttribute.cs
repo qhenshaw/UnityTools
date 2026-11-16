@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace InspectorAttributes
+namespace UnityTools.Attributes
 {
     /// <summary>
     /// Draws a full-width button in place of the field it's on. Name the method with <see cref="Method"/>:

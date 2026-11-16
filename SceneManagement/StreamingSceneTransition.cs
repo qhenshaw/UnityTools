@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEditor;
 #endif
 
-namespace SceneManagement
+namespace UnityTools.Scenes
 {
     /// <summary>
     /// A trigger that asks the <see cref="StreamingSceneManager"/> to load a set of scenes when an object with the

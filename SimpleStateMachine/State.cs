@@ -1,4 +1,4 @@
-namespace SimpleStateMachine
+namespace UnityTools.States
 {
     /// <summary>
     /// One state of a <see cref="StateMachine{T}"/>. Each state type has a single instance per machine that is

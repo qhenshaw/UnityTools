@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace UnityTools.ServiceAccess.Tests
+namespace UnityTools.Services.Tests
 {
     public class TestScoreManager : ScriptableObject, ITestShared { }
 }

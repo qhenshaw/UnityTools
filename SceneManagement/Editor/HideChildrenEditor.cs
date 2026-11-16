@@ -1,7 +1,7 @@
 using UnityEditor;
 using UnityEditor.SceneManagement;
 
-namespace SceneManagement.Editor
+namespace UnityTools.Scenes.Editor
 {
     /// <summary>
     /// Shows the children of HideChildren components (with Show In Prefab Mode on) while their prefab is open in

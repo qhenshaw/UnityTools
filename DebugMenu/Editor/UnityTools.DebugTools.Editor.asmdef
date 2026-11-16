@@ -2,7 +2,7 @@
     "name": "UnityTools.DebugTools.Editor",
     "rootNamespace": "UnityTools.DebugTools.Editor",
     "references": [
-        "DebugMenu.Runtime",
+        "UnityTools.DebugTools",
         "Unity.InputSystem"
     ],
     "includePlatforms": [

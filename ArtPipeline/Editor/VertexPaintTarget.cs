@@ -6,7 +6,7 @@ using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 
-namespace ArtPipeline.Editor
+namespace UnityTools.Art.Editor
 {
     // Cached paint data for the mesh being painted, so the brush costs scale with the brush size instead of the mesh size:
     // - world-space vertex positions, rebuilt only when the mesh or its transform changes

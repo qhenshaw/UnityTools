@@ -1,8 +1,8 @@
 using System.Collections.Generic;
-using ObjectPooling;
+using UnityTools.Pooling;
 using UnityEngine;
 
-namespace UnityTools.ObjectPooling.Tests
+namespace UnityTools.Pooling.Tests
 {
     /// <summary>Records its lifecycle calls, and the position it was at for each one.</summary>
     public class PooledTestObject : PooledObject

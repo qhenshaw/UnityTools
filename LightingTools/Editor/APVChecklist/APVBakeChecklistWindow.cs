@@ -11,7 +11,7 @@ using Object = UnityEngine.Object;
 using UnityEngine.Rendering;
 #endif
 
-namespace LightingTools.Editor.APVChecklist
+namespace UnityTools.Lighting.Editor.APVChecklist
 {
     /// <summary>
     /// Walkthrough for an HDRP light bake that uses Adaptive Probe Volumes and no lightmaps. Every row checks one

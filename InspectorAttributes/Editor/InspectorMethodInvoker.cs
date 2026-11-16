@@ -7,7 +7,7 @@ using UnityEditor;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace InspectorAttributes.Editors
+namespace UnityTools.Attributes.Editor
 {
     /// <summary>
     /// Finds and calls the method behind a [Button] or [InlineButton]. Shared by both drawers.

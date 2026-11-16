@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.Pool;
 
-namespace ObjectPooling
+namespace UnityTools.Pooling
 {
     /// <summary>
     /// A component that <see cref="PoolSystem"/> can pool. Most pooled prefabs should inherit

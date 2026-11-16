@@ -5,7 +5,7 @@ using UnityEditor;
 using System.IO;
 #endif
 
-namespace ArtPipeline
+namespace UnityTools.Art
 {
     /// <summary>
     /// An asset that bakes a gradient into a texture file. Create it with Create > Color Gradient Editor,

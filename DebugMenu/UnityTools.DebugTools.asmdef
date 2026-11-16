@@ -1,12 +1,10 @@
 {
-    "name": "ArtPipeline.Editor",
-    "rootNamespace": "ArtPipeline.Editor",
+    "name": "UnityTools.DebugTools",
+    "rootNamespace": "UnityTools.DebugTools",
     "references": [
-        "GUID:e40c9a556db2b2a489435da3bc0b062f"
+        "GUID:75469ad4d38634e559750d17036d5f7c"
     ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

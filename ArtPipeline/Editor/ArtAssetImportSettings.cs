@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
 
-namespace ArtPipeline.Editor
+namespace UnityTools.Art.Editor
 {
     // Values the import postprocessors use, read fresh from disk for every import (see ArtAssetImportSettings.ReadForImport).
     internal readonly struct ArtImportValues

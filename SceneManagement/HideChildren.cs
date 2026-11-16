@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace SceneManagement
+namespace UnityTools.Scenes
 {
     /// <summary>
     /// Hides this object's children (active and inactive) from the Hierarchy and Inspector, and optionally its own

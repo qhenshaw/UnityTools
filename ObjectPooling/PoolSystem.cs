@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace ObjectPooling
+namespace UnityTools.Pooling
 {
     /// <summary>
     /// Keeps one pool per prefab. <see cref="Instance"/> is created on first use in the active scene, and its

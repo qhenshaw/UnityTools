@@ -2,14 +2,14 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using InspectorAttributes;
+using UnityTools.Attributes;
 using System;
 
 #if UNITY_EDITOR
 using UnityEditor.SceneManagement;
 #endif
 
-namespace SceneManagement
+namespace UnityTools.Scenes
 {
     /// <summary>
     /// Loads its Scene List additively: in Play mode on Awake (by name, so the scenes must be in Build Settings),

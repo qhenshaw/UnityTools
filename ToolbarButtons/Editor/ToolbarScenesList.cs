@@ -7,7 +7,7 @@ using UnityEditor.Toolbars;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace UnityTools.ToolbarButtons
+namespace UnityTools.Toolbar
 {
     /// <summary>
     /// The Scene Selector toolbar element: a dropdown that opens any scene in Assets (or a Build Settings scene),

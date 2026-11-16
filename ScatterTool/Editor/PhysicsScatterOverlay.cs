@@ -6,7 +6,7 @@ using UnityEngine.UIElements;
 using Color = UnityEngine.Color;
 using FontStyle = UnityEngine.FontStyle;
 
-namespace ScatterTool.Editor
+namespace UnityTools.Scatter.Editor
 {
     /// <summary>
     /// The Physics Scatter tool's settings and buttons, shown while the tool is active. The settings last until
