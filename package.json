@@ -30,6 +30,11 @@
       "displayName": "Playtest Feedback Game Context",
       "description": "Shows how to attach game-specific state (player position, checkpoint, inventory...) to every playtest feedback report.",
       "path": "Samples~/PlaytestFeedbackGameContext"
+    },
+    {
+      "displayName": "Placement Graph",
+      "description": "A forest floor Placement Graph (trees, undergrowth and rocks) with prefab palettes, primitive-based prefabs and a demo scene. Materials use HDRP/Lit.",
+      "path": "Samples~/PlacementGraph"
     }
   ]
 }
