@@ -223,6 +223,7 @@ namespace UnityTools.Placement
 
         private static void DestroyGenerated(GameObject target, bool record)
         {
+            DestroyGeneratedMeshes(target, record);
 #if UNITY_EDITOR
             if (record && !Application.isPlaying) { Undo.DestroyObjectImmediate(target); return; }
             if (!Application.isPlaying) { DestroyImmediate(target); return; }

@@ -62,6 +62,9 @@ namespace UnityTools.Placement
         /// <summary>Where Spawn Instanced sends instances. Null skips them.</summary>
         public IInstanceOutput Instances;
 
+        /// <summary>Where Spawn Spline Mesh sends generated meshes. Null skips them.</summary>
+        public IMeshOutput Meshes;
+
         /// <summary>
         /// Values that replace the graph's parameter defaults for this run, matched by name and type. The component
         /// fills it from its overrides.

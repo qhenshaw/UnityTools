@@ -140,4 +140,49 @@ namespace UnityTools.Placement.Editor
             AddSetting<float>(context, "Rotation Step", "Also snap the rotation about Y to multiples of this many degrees (0 = off).");
         }
     }
+
+    [Node("Modular", null, "Assembly")]
+    [Serializable]
+    internal class AssemblyNode : PlacementGraphNode
+    {
+        protected override PlacementNode CreateRuntimeInstance() => new Placement.AssemblyNode();
+
+        protected override void DefinePointPorts(IPortDefinitionContext context)
+        {
+            AddPointInput(context, InPort);
+            AddPointOutput(context, OutPort);
+        }
+
+        protected override void DefineSettings(IPortDefinitionContext context)
+        {
+            AddSetting<GameObject>(context, "Prefab", "A prefab whose direct children are the parts stamped at every point.");
+            AddSetting<float>(context, "Drop Chance", "The chance each part is left out at a point.");
+            AddSetting<float>(context, "Rotation Jitter", "Turns each part about its up axis by up to this many degrees either way.");
+            AddSetting<float>(context, "Scale Jitter", "Scales each part by up to this fraction either way.");
+        }
+    }
+
+    [Node("Spawners", null, "Spawn Spline Mesh")]
+    [Serializable]
+    internal class SpawnSplineMeshNode : PlacementGraphNode
+    {
+        protected override PlacementNode CreateRuntimeInstance() => new Placement.SpawnSplineMeshNode();
+
+        protected override void DefinePointPorts(IPortDefinitionContext context)
+        {
+            AddPointInput(context, InPort);
+            AddPointOutput(context, OutPort);
+        }
+
+        protected override void DefineSettings(IPortDefinitionContext context)
+        {
+            AddSetting<Mesh>(context, "Mesh", "Needs Read/Write enabled.");
+            AddSetting<Material>(context, "Material");
+            AddSetting<Placement.Subdivide.SourceMode>(context, "Source", "The input points as a polyline, the volume's bottom edges, or the spline's knots.");
+            AddSetting<bool>(context, "Closed", "Input Points: also join the last point to the first.");
+            AddSetting<Placement.Subdivide.Axis>(context, "Mesh Axis", "Which local axis of the mesh runs along the line.");
+            AddSetting<bool>(context, "Stretch To Fit", "Stretch the copies to cover the line exactly.");
+            AddSetting<UnityEngine.Rendering.ShadowCastingMode>(context, "Shadow Casting");
+        }
+    }
 }

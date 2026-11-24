@@ -169,6 +169,84 @@ namespace UnityTools.Placement.Tests
         }
 
         [Test]
+        public void Assembly_StampsChildrenRelativeToEachPoint_WithDeterministicVariation()
+        {
+            GameObject assembly = Prefab("Campfire");
+            var log = new GameObject("Log").transform;
+            log.SetParent(assembly.transform, false);
+            log.localPosition = new Vector3(1f, 0f, 0f);
+            log.localRotation = Quaternion.Euler(0f, 90f, 0f);
+            var stone = new GameObject("Stone").transform;
+            stone.SetParent(assembly.transform, false);
+            stone.localPosition = new Vector3(0f, 0f, 2f);
+
+            PlacementPoint origin = PlacementPoint.At(new Vector3(10f, 0f, 0f), 5u);
+            origin.Rotation = Quaternion.Euler(0f, 90f, 0f);
+            origin.Scale = Vector3.one * 2f;
+            var input = new PointData(new List<PlacementPoint> { origin });
+            PointData stamped = Run(new AssemblyNode { Prefab = assembly }, new PlacementContext(), input)[0];
+            Assert.AreEqual(2, stamped.Count);
+            PointAttribute<Object> prefabs = stamped.GetAttribute<Object>(PointAttributeNames.Prefab);
+            Assert.AreEqual(log.gameObject, prefabs.Get(0));
+            // The log sits 1 m along the point's local X (scaled by 2, turned 90 degrees): 2 m along world -Z.
+            Assert.That(Vector3.Distance(new Vector3(10f, 0f, -2f), stamped.Points[0].Position), Is.LessThan(1e-4f));
+            Assert.That(Quaternion.Angle(Quaternion.Euler(0f, 180f, 0f), stamped.Points[0].Rotation), Is.LessThan(0.01f));
+            Assert.That(Vector3.Distance(new Vector3(14f, 0f, 0f), stamped.Points[1].Position), Is.LessThan(1e-4f));
+
+            var many = new PointData();
+            for (int i = 0; i < 200; i++) many.Points.Add(PlacementPoint.At(new Vector3(i * 5f, 0f, 0f), (uint)(i + 1)));
+            var dropping = new AssemblyNode { Prefab = assembly, DropChance = 0.5f, RotationJitter = 30f };
+            PointData first = Run(dropping, new PlacementContext(), many)[0];
+            PointData second = Run(dropping, new PlacementContext(), many)[0];
+            Assert.That(first.Count, Is.InRange(150, 250), "About half of 400 parts.");
+            CollectionAssert.AreEqual(first.Points.Select(p => p.Position), second.Points.Select(p => p.Position));
+            CollectionAssert.AreEqual(first.Points.Select(p => p.Rotation), second.Points.Select(p => p.Rotation));
+        }
+
+        [Test]
+        public void SpawnSplineMesh_BendsAMeshAlongTheLine_AndClearRemovesIt()
+        {
+            GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            _created.Add(cube);
+            Mesh mesh = cube.GetComponent<MeshFilter>().sharedMesh;
+            var node = new SpawnSplineMeshNode { Mesh = mesh, StretchToFit = true };
+            node.Name = "Mesh";
+            var line = new List<Vector3> { Vector3.zero, new Vector3(4.2f, 0f, 0f), new Vector3(4.2f, 0f, 3f) };
+            Mesh bent = node.Bend(line, false, 0, out string warning);
+            _created.Add(bent);
+            Assert.IsNull(warning);
+            Assert.AreEqual(mesh.vertexCount * 7, bent.vertexCount, "7.2 m of a 1 m mesh rounds to 7 stretched copies.");
+            Bounds bounds = bent.bounds;
+            Assert.AreEqual(-0.5f, bounds.min.z, 1e-3f, "Starts half a unit to the side of the line.");
+            Assert.AreEqual(4.7f, bounds.max.x, 1e-3f, "Reaches the corner plus the mesh's half width.");
+            Assert.AreEqual(3f, bounds.max.z, 1e-3f, "Ends at the last point.");
+
+            // Through the component: one object per line, removed by Clear with its mesh.
+            var graph = ScriptableObject.CreateInstance<PlacementGraphAsset>();
+            _created.Add(graph);
+            var markers = new List<PlacementNode> { new ChildMarkersNode(), new SpawnSplineMeshNode { Mesh = mesh } };
+            for (int i = 0; i < markers.Count; i++) markers[i].Name = i.ToString();
+            graph.SetContents(markers, new List<PlacementEdge> { new(0, 0, 1, 0) });
+            var component = new GameObject("Placement Graph").AddComponent<PlacementGraph>();
+            _created.Add(component.gameObject);
+            var markerRoot = new GameObject("Markers").transform;
+            markerRoot.SetParent(component.transform, false);
+            new GameObject("A").transform.SetParent(markerRoot, false);
+            var b = new GameObject("B").transform;
+            b.SetParent(markerRoot, false);
+            b.localPosition = new Vector3(3f, 0f, 0f);
+            component.Markers = markerRoot;
+            component.Graph = graph;
+            component.RegenerateChanged();
+            MeshFilter generated = component.GetComponentsInChildren<MeshFilter>().Single();
+            Mesh generatedMesh = generated.sharedMesh;
+            Assert.AreEqual(SpawnSplineMeshNode.GeneratedMeshName, generatedMesh.name);
+            component.RegenerateChanged();
+            Assert.IsTrue(generatedMesh == null, "Regenerating destroys the old mesh.");
+            Assert.AreEqual(1, component.GetComponentsInChildren<MeshFilter>().Length);
+        }
+
+        [Test]
         public void CreateGrid_AndSnapToGrid()
         {
             var context = new PlacementContext { LocalBounds = new Bounds(Vector3.zero, new Vector3(4f, 2f, 4f)) };

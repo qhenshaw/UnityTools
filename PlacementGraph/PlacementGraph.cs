@@ -14,7 +14,7 @@ namespace UnityTools.Placement
     [ExecuteAlways]
     [DisallowMultipleComponent]
     [AddComponentMenu("UnityTools/Placement Graph")]
-    public partial class PlacementGraph : MonoBehaviour, IPlacementOutput, IInstanceOutput
+    public partial class PlacementGraph : MonoBehaviour, IPlacementOutput, IInstanceOutput, IMeshOutput
     {
         [Tooltip("The compiled graph: a .placegraph asset.")]
         [SerializeField] private PlacementGraphAsset _graph;
@@ -175,6 +175,7 @@ namespace UnityTools.Placement
                 Seed = _seed,
                 Output = output,
                 Instances = output != null ? this : null,
+                Meshes = output != null ? this : null,
                 NodeOutputs = _lastOutputs
             };
             if (_markers != null)
@@ -207,10 +208,19 @@ namespace UnityTools.Placement
 #if UNITY_EDITOR
             if (!Application.isPlaying)
             {
-                // Prefab assets keep their prefab connection; anything else (a scene object) is copied.
-                instance = PrefabUtility.IsPartOfPrefabAsset(prefab)
-                    ? PrefabUtility.InstantiatePrefab(prefab, SpawnParent) as GameObject
-                    : Instantiate(prefab, SpawnParent);
+                // Prefab assets keep their prefab connection; a part inside a prefab (from Assembly) keeps the link to
+                // its own prefab when it is a nested prefab, and is copied otherwise, as is any scene object.
+                GameObject source = prefab;
+                bool linked = PrefabUtility.IsPartOfPrefabAsset(prefab);
+                if (linked && prefab.transform.parent != null)
+                {
+                    source = PrefabUtility.IsAnyPrefabInstanceRoot(prefab) ? PrefabUtility.GetCorrespondingObjectFromSource(prefab) : null;
+                    linked = source != null;
+                    if (!linked) source = prefab;
+                }
+                instance = linked
+                    ? PrefabUtility.InstantiatePrefab(source, SpawnParent) as GameObject
+                    : Instantiate(source, SpawnParent);
                 if (instance == null) return;
                 if (_record) Undo.RegisterCreatedObjectUndo(instance, "Generate Placement Graph");
             }
@@ -244,6 +254,40 @@ namespace UnityTools.Placement
             string warning = GetOrAddInstances().Add(prefab, Matrix4x4.TRS(position, rotation, scale), settings, _currentCell);
             if (warning != null) _instanceWarnings.Add($"Spawn Instanced: {warning}");
             InstanceCount++;
+        }
+
+        void IMeshOutput.AddMesh(Mesh mesh, Material material, UnityEngine.Rendering.ShadowCastingMode shadows)
+        {
+            var holder = new GameObject("Spline Mesh");
+            holder.transform.SetParent(SpawnParent, false);
+            holder.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+            holder.AddComponent<MeshFilter>().sharedMesh = mesh;
+            MeshRenderer renderer = holder.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = material;
+            renderer.shadowCastingMode = shadows;
+#if UNITY_EDITOR
+            if (_record && !Application.isPlaying) Undo.RegisterCreatedObjectUndo(holder, "Generate Placement Graph");
+#endif
+            InstanceCount++;
+        }
+
+        /// <summary>
+        /// Destroys the meshes Spawn Spline Mesh generated under <paramref name="root"/>. Skipped when the destroy is
+        /// recorded for Undo, which needs the meshes to bring the objects back.
+        /// </summary>
+        private static void DestroyGeneratedMeshes(GameObject root, bool record)
+        {
+            if (record) return;
+            foreach (MeshFilter filter in root.GetComponentsInChildren<MeshFilter>(true))
+            {
+                Mesh mesh = filter.sharedMesh;
+                if (mesh == null || mesh.name != SpawnSplineMeshNode.GeneratedMeshName) continue;
+#if UNITY_EDITOR
+                if (AssetDatabase.Contains(mesh)) continue;
+                if (!Application.isPlaying) { DestroyImmediate(mesh); continue; }
+#endif
+                Destroy(mesh);
+            }
         }
 
         private void ClearInstances(bool record)
@@ -323,6 +367,7 @@ namespace UnityTools.Placement
             }
             foreach (GameObject child in children)
             {
+                DestroyGeneratedMeshes(child, record);
 #if UNITY_EDITOR
                 if (record && !Application.isPlaying) { Undo.DestroyObjectImmediate(child); continue; }
                 if (!Application.isPlaying) { DestroyImmediate(child); continue; }

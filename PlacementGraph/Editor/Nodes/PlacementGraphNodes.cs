@@ -144,7 +144,7 @@ namespace UnityTools.Placement.Editor
             IPort port = GetInputPortByName("Apply To");
             if (port == null || port.IsConnected || !port.TryGetValue(out Placement.TransformPointsNode.ApplyModes mode)) return;
             if (mode == Placement.TransformPointsNode.ApplyModes.All) return;
-            if (Graph != null && Graph.GetNodes().Any(n => n is SelectPrefabNode || n is ISubgraphNode)) return;
+            if (Graph != null && Graph.GetNodes().Any(n => n is SelectPrefabNode || n is SubdivideNode || n is AssemblyNode || n is ISubgraphNode)) return;
             problems.Add("Transform Points filters by prefab (Apply To), but there's no Select Prefab before it, so no point has a Prefab and nothing is transformed. Add a Select Prefab node before it.");
         }
     }
@@ -173,8 +173,8 @@ namespace UnityTools.Placement.Editor
         {
             IPort entries = GetInputPortByName(EntriesPort);
             if (entries != null && entries.IsConnected) return;
-            // Points can bring their own prefab from Select Prefab, which makes the entries optional.
-            if (Graph != null && Graph.GetNodes().Any(n => n is SelectPrefabNode || n is ISubgraphNode)) return;
+            // Points can bring their own prefab (Select Prefab, Subdivide, Assembly), which makes the entries optional.
+            if (Graph != null && Graph.GetNodes().Any(n => n is SelectPrefabNode || n is SubdivideNode || n is AssemblyNode || n is ISubgraphNode)) return;
             problems.Add("Spawn Prefabs has no entries. Wire Prefab Entry nodes into Entries.");
         }
     }
