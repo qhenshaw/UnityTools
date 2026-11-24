@@ -7,7 +7,7 @@ namespace UnityTools.Placement.Editor
 {
     // The Graph Toolkit nodes for the samplers, noise, filters, Transform Points and Spawn Prefabs. Each one mirrors a
     // runtime node: the same point ports in the same order, then one setting port per runtime setting (named after
-    // the field, defaulting to a fresh runtime node's value). Enums are options.
+    // the field, defaulting to a fresh runtime node's value).
 
     [Node("Sources", null, "Volume Sampler")]
     [Serializable]
@@ -79,19 +79,9 @@ namespace UnityTools.Placement.Editor
 
         protected override void DefineSettings(IPortDefinitionContext context)
         {
+            AddSetting<Placement.DensityFilterNode.FilterMode>(context, "Mode",
+                "Threshold keeps points at or above Threshold; Random keeps each point with its density as the chance.");
             AddSetting<float>(context, "Threshold", "Threshold mode: points at or above this density are kept.");
-        }
-
-        protected override void OnDefineOptions(IOptionDefinitionContext context)
-        {
-            context.AddOption<Placement.DensityFilterNode.FilterMode>("Mode")
-                .WithDefaultValue(((Placement.DensityFilterNode)Defaults).Mode);
-        }
-
-        protected override void ApplyOptions(PlacementNode runtime)
-        {
-            var node = (Placement.DensityFilterNode)runtime;
-            node.Mode = GetOption("Mode", node.Mode);
         }
     }
 

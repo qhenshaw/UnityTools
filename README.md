@@ -631,12 +631,37 @@ Places prefabs procedurally with a node graph, in the spirit of Unreal's PCG: no
 | Merge | Combines A and B into one set, A first. |
 | Copy Points | Places a copy of the Pattern points at every Source point, moved, rotated and scaled by it (pattern positions are relative to the pattern's centre). Densities multiply. |
 
-- **Settings are ports.** Each node's numbers, toggles, vectors, layer masks and palettes are input ports with an inline field, so you can type a value or wire something into them. Mode choices (Density Filter, Spline Sampler) are in the node's inspector.
+- **Settings are ports.** Every node setting (numbers, toggles, vectors, modes, layer masks and palettes) is an input port with an inline field, so you can type a value or wire something into it.
 - **Parameters.** To expose a setting per component, add a variable in the graph's Blackboard, set its kind to **Input**, and drag it onto the graph and wire it into the setting. Input variables of type float, int, bool, Vector3, Prefab Palette or LayerMask become the graph's parameters, with the variable's value as the default. One variable can drive several settings. Local variables set values too but aren't exposed.
 - The Placement Graph component lists the graph's parameters under **Parameters**: tick one to override it for this instance, untick it to go back to the graph's default. From code: `SetParameter(name, value)`, `ClearParameter(name)` and `ParameterOverrides`; `SyncParameters()` matches the list to the graph after it changes (the inspector does this for you).
 - **Subgraphs.** Reuse part of a graph by making it a subgraph: drag another .placegraph into the graph, or create a local subgraph from the graph window. In the subgraph, Blackboard variables of kind **Input** become the subgraph node's input ports and variables of kind **Output** its output ports. Use a Point Data variable for points (wire an Input one out to the first node, and the last node into an Output one) and value variables for settings. On import, subgraphs are inlined: every use gets its own copy of the nodes and its own random numbers. A subgraph's Input variables aren't parameters of the graph that uses it, but you can wire that graph's own parameters into the subgraph node's ports. Editing a subgraph asset reimports the graphs that use it. A subgraph can't contain itself.
 - Several wires into one input are merged. Samplers stop at 250,000 points and warn, so a tiny Spacing can't freeze the editor.
 - From code: `Generate()`, `Clear()`, `Evaluate()` (runs the graph without touching the scene) and the `Graph`, `Seed`, `Size`, `Markers` and `Spline` properties (`Spline` only with the Splines package). A compiled graph (`PlacementGraphAsset`) has no editor dependency.
+
+### Authoring graphs from code
+Editor scripts and AI agents can build and edit graphs with `UnityTools.Placement.Editor.PlacementGraphAuthoring`. The result is an ordinary .placegraph asset that opens in the graph window; it uses Graph Toolkit's own editing API. Node names are the titles in the graph window, and port and setting names are as shown on the nodes (matching ignores case and spaces).
+
+```csharp
+using UnityTools.Placement;
+using UnityTools.Placement.Editor;
+
+PlacementGraphHandle graph = PlacementGraphAuthoring.Create("Assets/Forest.placegraph");
+PlacementNodeHandle ground = graph.AddNode("Surface Sampler").Set("Spacing", 1.5f);
+PlacementNodeHandle noise = graph.AddNode("Noise Density").Set("Scale", 12f);
+PlacementNodeHandle filter = graph.AddNode<DensityFilterNode>().Set("Mode", "Random");
+PlacementNodeHandle spawn = graph.AddNode("Spawn Prefabs").Set("Palette", "Assets/Trees.asset");
+graph.Connect(ground, "Out", noise, "In");
+graph.Connect(noise, "Out", filter, "In");
+graph.Connect(filter, "Out", spawn, "In");
+graph.AddParameter("Spacing", 1.5f);            // an Input variable: a per-component parameter
+graph.BindParameter("Spacing", ground, "Spacing");
+PlacementGraphAsset compiled = graph.Save();      // writes the file and reimports it
+```
+
+- `PlacementGraphAuthoring.ListNodeTypes()` returns every node type with its category, point ports and settings (name, type, default); `DescribeNodeTypes()` gives the same as text, which is handy for an agent.
+- `Open(path)` edits an existing graph: `Nodes`, `FindNode(title)`, `Get(setting)`, `Disconnect`, `RemoveNode`. `Validate()` lists what the graph window would warn about, and `Compile()` compiles in memory without saving.
+- Subgraphs: in the subgraph, `AddPointInput(name)` and `AddPointOutput(name)` add the point ports and `AddParameter` the value ports; in the graph using it, `AddSubgraph(path)` adds the node, whose ports are named after those variables.
+- Values convert where it's clear: numbers between numeric types, enum names (`"Threshold"`), an int for a LayerMask, three numbers for a Vector3 and an asset path for a Prefab Palette. Unknown nodes, ports or settings and mismatched types throw an exception that lists what's available.
 
 ## Snap to Floor
 Press **End** (Tools > LD Shortcuts > Snap to Floor) to drop every selected object onto the first solid surface below it, as one Undo step.

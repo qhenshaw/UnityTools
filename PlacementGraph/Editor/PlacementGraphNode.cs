@@ -15,7 +15,8 @@ namespace UnityTools.Placement.Editor
     /// <item>Setting ports are value inputs with an inline field, declared after the point ports with
     /// <see cref="AddSetting{T}"/>. A setting called "Min Angle" sets the runtime field MinAngle, and its default
     /// comes from a fresh runtime node. Wiring a Blackboard variable into it makes the setting a graph parameter.</item>
-    /// <item>Options (shown in the node's inspector) are for choices that aren't parameters, such as a mode enum.</item>
+    /// <item>There are no node options: Graph Toolkit can't set those from code, and every setting being a port keeps
+    /// graphs scriptable (see <see cref="PlacementGraphAuthoring"/>).</item>
     /// </list>
     /// </summary>
     [Serializable]
@@ -71,14 +72,49 @@ namespace UnityTools.Placement.Editor
         /// <summary>Creates the runtime node with its default settings.</summary>
         protected abstract PlacementNode CreateRuntimeInstance();
 
-        /// <summary>Copies options (not settings) to the runtime node, e.g. a mode enum.</summary>
-        protected virtual void ApplyOptions(PlacementNode runtime) { }
+        /// <summary>A port as declared by a node type, for <see cref="Describe"/>.</summary>
+        internal sealed class PortDescription
+        {
+            public string Name;
+            public Type DataType;
+            public bool IsInput;
+            public object DefaultValue;
+            public string Tooltip;
+        }
 
-        protected static void AddPointInput(IPortDefinitionContext context, string name) =>
-            context.AddInputPort<PointData>(name).Build();
+        // Set while Describe runs: the Add methods record ports here instead of building them.
+        [NonSerialized] private List<PortDescription> _describing;
 
-        protected static void AddPointOutput(IPortDefinitionContext context, string name) =>
-            context.AddOutputPort<PointData>(name).Build();
+        /// <summary>The ports this node type declares, in order, without adding it to a graph.</summary>
+        internal List<PortDescription> Describe()
+        {
+            _describing = new List<PortDescription>();
+            try
+            {
+                DefinePointPorts(null);
+                DefineSettings(null);
+                return _describing;
+            }
+            finally
+            {
+                _describing = null;
+            }
+        }
+
+        /// <summary>The runtime node type this node builds.</summary>
+        internal Type RuntimeType => Defaults.GetType();
+
+        protected void AddPointInput(IPortDefinitionContext context, string name)
+        {
+            if (_describing != null) _describing.Add(new PortDescription { Name = name, DataType = typeof(PointData), IsInput = true });
+            else context.AddInputPort<PointData>(name).Build();
+        }
+
+        protected void AddPointOutput(IPortDefinitionContext context, string name)
+        {
+            if (_describing != null) _describing.Add(new PortDescription { Name = name, DataType = typeof(PointData), IsInput = false });
+            else context.AddOutputPort<PointData>(name).Build();
+        }
 
         /// <summary>A setting port: a value input with an inline field, defaulting to the runtime node's field.</summary>
         protected void AddSetting<T>(IPortDefinitionContext context, string name, string tooltip = null)
@@ -86,6 +122,11 @@ namespace UnityTools.Placement.Editor
             FieldInfo field = PlacementExecutor.FindField(Defaults.GetType(), FieldNameOf(name));
             if (field == null || field.FieldType != typeof(T))
                 throw new InvalidOperationException($"{GetType().Name}: setting '{name}' needs a public {typeof(T).Name} field {FieldNameOf(name)} on {Defaults.GetType().Name}.");
+            if (_describing != null)
+            {
+                _describing.Add(new PortDescription { Name = name, DataType = typeof(T), IsInput = true, DefaultValue = field.GetValue(Defaults), Tooltip = tooltip });
+                return;
+            }
             IInputPortBuilder<T> builder = context.AddInputPort<T>(name).WithDefaultValue((T)field.GetValue(Defaults));
             if (typeof(T) == typeof(float) || typeof(T) == typeof(int) || typeof(T) == typeof(Vector3)) builder = builder.Delayed();
             if (!string.IsNullOrEmpty(tooltip)) builder = builder.WithTooltip(tooltip);
@@ -99,7 +140,7 @@ namespace UnityTools.Placement.Editor
         public IEnumerable<IPort> GetSettingPorts() => GetInputPorts().Where(port => !IsPointPort(port));
 
         /// <summary>
-        /// Builds the runtime node: defaults, then options, then every setting port's value, resolved by
+        /// Builds the runtime node: defaults, then every setting port's value, resolved by
         /// <paramref name="resolver"/>. Settings that read a graph parameter are added to <paramref name="bindings"/>
         /// as (field, parameter name).
         /// </summary>
@@ -107,7 +148,6 @@ namespace UnityTools.Placement.Editor
         {
             resolver ??= SettingResolver.Default;
             PlacementNode runtime = CreateRuntimeInstance();
-            ApplyOptions(runtime);
             foreach (IPort port in GetSettingPorts())
             {
                 FieldInfo field = PlacementExecutor.FindField(runtime.GetType(), FieldNameOf(port.Name));
@@ -121,12 +161,6 @@ namespace UnityTools.Placement.Editor
             return runtime;
         }
 
-        /// <summary>Reads an option's value, or <paramref name="fallback"/> when it's missing or a different type.</summary>
-        protected T GetOption<T>(string name, T fallback)
-        {
-            INodeOption option = GetNodeOptionByName(name);
-            return option != null && option.TryGetValue(out T value) ? value : fallback;
-        }
 
         /// <summary>Problems that should be reported in the graph window, e.g. a spawner with no palette.</summary>
         public virtual void Validate(List<string> problems) { }

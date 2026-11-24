@@ -153,20 +153,10 @@ namespace UnityTools.Placement.Editor
 
         protected override void DefineSettings(IPortDefinitionContext context)
         {
+            AddSetting<Placement.SplineSamplerNode.SampleMode>(context, "Mode",
+                "Along: points along the spline. Inside: a grid inside the closed spline, seen from above.");
             AddSetting<float>(context, "Spacing", "Distance between points along the spline, or grid spacing for Inside.");
             AddSetting<float>(context, "Jitter", "Inside only.");
-        }
-
-        protected override void OnDefineOptions(IOptionDefinitionContext context)
-        {
-            context.AddOption<Placement.SplineSamplerNode.SampleMode>("Mode")
-                .WithDefaultValue(((Placement.SplineSamplerNode)Defaults).Mode);
-        }
-
-        protected override void ApplyOptions(PlacementNode runtime)
-        {
-            var node = (Placement.SplineSamplerNode)runtime;
-            node.Mode = GetOption("Mode", node.Mode);
         }
     }
 #endif
