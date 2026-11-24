@@ -141,6 +141,80 @@ namespace UnityTools.Placement.Tests
         }
 
         [Test]
+        public void SaveGeneratedOff_MarksGeneratedObjectsAsNotSaved()
+        {
+            PlacementGraph component = Component(PlacementGraph.GenerateMode.EditorOnly, cellSize: 50f);
+            component.Generate();
+            Transform cell = component.transform.GetChild(0);
+            Assert.AreEqual(HideFlags.None, cell.gameObject.hideFlags, "Saved by default.");
+
+            component.SaveGenerated = false;
+            component.Generate();
+            foreach (Transform child in component.transform)
+                Assert.IsTrue((child.gameObject.hideFlags & HideFlags.DontSaveInEditor) != 0, child.name);
+
+            component.CellSize = 0f;
+            component.Generate();
+            Assert.Greater(component.transform.childCount, 0);
+            foreach (Transform child in component.transform)
+                Assert.IsTrue((child.gameObject.hideFlags & HideFlags.DontSaveInEditor) != 0, "Unpartitioned objects too.");
+        }
+
+        [Test]
+        public void TrackSceneChanges_RegeneratesTheCellsAMovedMarkerTouches()
+        {
+            PlacementGraph component = Component(PlacementGraph.GenerateMode.NearPlayer);
+            var prop = component.Graph.Nodes.OfType<SpawnPrefabsNode>().Single().Entries;
+            var nodes = new List<PlacementNode> { new ChildMarkersNode { Name = "0" }, new SpawnPrefabsNode { Entries = prop, Name = "1" } };
+            component.Graph.SetContents(nodes, new List<PlacementEdge> { new(0, 0, 1, 0) });
+            var markers = new GameObject("Markers").transform;
+            markers.SetParent(component.transform, false);
+            var marker = new GameObject("Marker").transform;
+            marker.SetParent(markers, false);
+            marker.position = Origin + new Vector3(5f, 0f, 5f);
+            component.Markers = markers;
+            component.LoadRadius = 25f;
+            var source = new[] { Origin };
+            while (component.RuntimeTick(1000f, source) > 0) { }
+
+            marker.position = Origin + new Vector3(6f, 0f, 5f);
+            Assert.AreEqual(0, component.RuntimeTick(1000f, source), "Off by default: loaded cells don't notice.");
+
+            component.TrackSceneChanges = true;
+            component.RuntimeTick(1000f, source); // Takes its first look at the inputs.
+            marker.position = Origin + new Vector3(7f, 0f, 5f);
+            Assert.AreEqual(1, component.RuntimeTick(1000f, source), "Only the marker's cell reruns.");
+            CollectionAssert.AreEqual(new[] { new Vector2Int(0, 0) }, component.LastRegeneratedCells);
+        }
+
+        [Test]
+        public void MaxPoolSize_DestroysObjectsPastTheCap()
+        {
+            PlacementGraph component = Component(PlacementGraph.GenerateMode.NearPlayer);
+            component.MaxPoolSize = 3;
+            component.LoadRadius = 8f;
+            component.UnloadRadius = 9f;
+            var source = new[] { Origin + new Vector3(-30f, 0f, 0f) };
+            while (component.RuntimeTick(1000f, source) > 0) { }
+            source[0] = Origin + new Vector3(300f, 0f, 300f); // Outside the volume: everything unloads, nothing loads.
+            component.RuntimeTick(1000f, source);
+            Assert.AreEqual(0, component.CellIndices.Count());
+            Assert.AreEqual(3, component.PooledCount);
+        }
+
+        [Test]
+        public void Use3DDistance_CountsHeight()
+        {
+            PlacementGraph component = Component(PlacementGraph.GenerateMode.NearPlayer);
+            component.LoadRadius = 12f;
+            var above = new[] { Origin + new Vector3(0f, 100f, 0f) };
+            Assert.Greater(component.RuntimeTick(1000f, above), 0, "Flat distance ignores the height.");
+            component.Clear();
+            component.Use3DDistance = true;
+            Assert.AreEqual(0, component.RuntimeTick(1000f, above), "100 m up is out of range in 3D.");
+        }
+
+        [Test]
         public void SetParameter_AtRuntime_RegeneratesTheLoadedCells()
         {
             PlacementGraph component = Component(PlacementGraph.GenerateMode.NearPlayer);

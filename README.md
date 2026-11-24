@@ -665,9 +665,12 @@ Places prefabs procedurally with a node graph, in the spirit of Unreal's PCG: no
 - **Editor Only** (default): generated in the editor and saved with the scene.
 - **On Load**: also generated when the scene loads if nothing was saved with it, and again whenever a parameter changes (`SetParameter`).
 - **Near Player**: cells around each **Generation Source** (Add Component > UnityTools > Generation Source on the player or camera; without one, the main camera) are generated when their centre comes within **Load Radius** and unloaded beyond **Unload Radius**, nearest first, spending at most **Frame Budget Ms** per frame (at least one cell per frame when there's work). It uses Cell Size, or 32 m when that's 0. Cells generated in the editor and saved are kept while they're near. `SetParameter` reruns the loaded cells within the budget.
-- **Pooling** (on): at runtime the objects of unloaded cells are deactivated and reused for new cells instead of destroyed and created. Spawn Instanced draws without GameObjects either way.
+- **Pooling** (on): at runtime the objects of unloaded cells are deactivated and reused for new cells instead of destroyed and created; **Max Pool Size** caps how many are kept per prefab (0 = no limit). Spawn Instanced draws without GameObjects either way.
+- **Save Generated** (on): turn it off to keep generated objects and instances out of the scene file. They're rebuilt when the scene opens in the editor, and Near Player streams everything in at runtime.
+- **Track Scene Changes** (off): with Near Player, also regenerate loaded cells when markers, the spline or Placement Zones move at runtime. It checks them every frame, so leave it off when they don't move.
+- **Use 3D Distance** (off): Near Player measures distance to cells flat on the ground; turn this on for vertical worlds.
 - Results are the same in the editor and at runtime for the same seed (compare with the same Cell Size, since partitioned grids are anchored at the component's origin).
-- Limits: at runtime, markers, splines and zones that move don't regenerate cells that are already loaded (call `SetParameter`, or change the graph); `RuntimeTick(budgetMs, sources)` can drive Near Player yourself.
+- `RuntimeTick(budgetMs, sources)` can drive Near Player yourself. Editor Only behaves like a build in Play mode: nothing is generated at runtime.
 
 ### Authoring graphs from code
 Editor scripts and AI agents can build and edit graphs with `UnityTools.Placement.Editor.PlacementGraphAuthoring`. The result is an ordinary .placegraph asset that opens in the graph window; it uses Graph Toolkit's own editing API. Node names are the titles in the graph window, and port and setting names are as shown on the nodes (matching ignores case and spaces).

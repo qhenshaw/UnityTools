@@ -231,6 +231,7 @@ namespace UnityTools.Placement
             }
             instance.transform.SetPositionAndRotation(position, rotation);
             instance.transform.localScale = scale;
+            if (_spawnParent == null) FlagGenerated(instance);
             InstanceCount++;
         }
 
@@ -251,7 +252,9 @@ namespace UnityTools.Placement
 
         void IInstanceOutput.AddInstance(GameObject prefab, Vector3 position, Quaternion rotation, Vector3 scale, InstanceDrawSettings settings)
         {
-            string warning = GetOrAddInstances().Add(prefab, Matrix4x4.TRS(position, rotation, scale), settings, _currentCell);
+            PlacementInstances instances = GetOrAddInstances();
+            instances.hideFlags = GeneratedFlags;
+            string warning = instances.Add(prefab, Matrix4x4.TRS(position, rotation, scale), settings, _currentCell);
             if (warning != null) _instanceWarnings.Add($"Spawn Instanced: {warning}");
             InstanceCount++;
         }
@@ -260,6 +263,7 @@ namespace UnityTools.Placement
         {
             var holder = new GameObject("Spline Mesh");
             holder.transform.SetParent(SpawnParent, false);
+            FlagGenerated(holder);
             holder.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
             holder.AddComponent<MeshFilter>().sharedMesh = mesh;
             MeshRenderer renderer = holder.AddComponent<MeshRenderer>();
@@ -438,6 +442,8 @@ namespace UnityTools.Placement
             _previousRotation = transform.rotation;
             _previousInputsHash = InputsHash();
             EditorApplication.update += EditorUpdate;
+            // Generated objects that weren't saved with the scene are rebuilt when it opens.
+            if (!_saveGenerated && !Application.isPlaying && !HasGenerated()) MarkDirty();
         }
 
         private void OnDisable()
@@ -494,38 +500,6 @@ namespace UnityTools.Placement
         }
 
         private int _previousInputsHash;
-
-        /// <summary>A hash of the markers' and spline's transforms and knots, so moving them regenerates with Auto Generate.</summary>
-        private int InputsHash()
-        {
-            unchecked
-            {
-                int hash = 17;
-                if (_markers != null)
-                {
-                    foreach (Transform marker in _markers)
-                    {
-                        hash = hash * 31 + marker.position.GetHashCode();
-                        hash = hash * 31 + marker.rotation.GetHashCode();
-                        hash = hash * 31 + marker.lossyScale.GetHashCode();
-                        hash = hash * 31 + (marker.gameObject.activeSelf ? 1 : 0);
-                    }
-                }
-#if UNITYTOOLS_SPLINES
-                if (_spline != null)
-                {
-                    hash = hash * 31 + _spline.transform.localToWorldMatrix.GetHashCode();
-                    foreach (UnityEngine.Splines.Spline spline in _spline.Splines)
-                    {
-                        hash = hash * 31 + (spline.Closed ? 1 : 0);
-                        foreach (UnityEngine.Splines.BezierKnot knot in spline.Knots) hash = hash * 31 + knot.GetHashCode();
-                    }
-                }
-#endif
-                hash = hash * 31 + SceneInputSignature(Matrix4x4.TRS(transform.position, transform.rotation, Vector3.one).inverse, LocalBounds);
-                return hash;
-            }
-        }
 
         private void OnDrawGizmosSelected()
         {

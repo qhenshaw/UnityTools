@@ -185,6 +185,7 @@ namespace UnityTools.Placement
             ClearCell(cell, record);
             cell.Container = new GameObject($"Cell {index.x},{index.y}");
             cell.Container.transform.SetParent(transform, false);
+            FlagGenerated(cell.Container);
             _spawnParent = cell.Container.transform;
             _currentCell = CellId(index);
             // Objects are spawned without their own Undo entries: registering the container afterwards covers

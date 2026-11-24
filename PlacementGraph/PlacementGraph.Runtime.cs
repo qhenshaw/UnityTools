@@ -35,6 +35,14 @@ namespace UnityTools.Placement
         [SerializeField, Min(0f)] private float _frameBudgetMs = 2f;
         [Tooltip("At runtime, keep the objects of unloaded cells and reuse them for new cells instead of destroying and creating them.")]
         [SerializeField] private bool _pooling = true;
+        [Tooltip("Pooling: the most objects kept per prefab; more are destroyed. 0 = no limit.")]
+        [SerializeField, Min(0)] private int _maxPoolSize;
+        [Tooltip("Save generated objects and instances with the scene. Off: they're regenerated when the scene opens, and Near Player streams everything in at runtime, keeping the scene file small.")]
+        [SerializeField] private bool _saveGenerated = true;
+        [Tooltip("Near Player: also regenerate loaded cells when markers, the spline or Placement Zones move at runtime (costs a little each frame).")]
+        [SerializeField] private bool _trackSceneChanges;
+        [Tooltip("Near Player: measure distance to cells in 3D instead of flat on the ground, for vertical worlds.")]
+        [SerializeField] private bool _use3DDistance;
 
         [NonSerialized] private bool _runtimeDirty;
         [NonSerialized] private bool _simulateRuntime;
@@ -50,6 +58,36 @@ namespace UnityTools.Placement
         public float UnloadRadius { get => _unloadRadius; set => _unloadRadius = Mathf.Max(0f, value); }
         public float FrameBudgetMs { get => _frameBudgetMs; set => _frameBudgetMs = Mathf.Max(0f, value); }
         public bool Pooling { get => _pooling; set => _pooling = value; }
+        public int MaxPoolSize { get => _maxPoolSize; set => _maxPoolSize = Mathf.Max(0, value); }
+        public bool TrackSceneChanges { get => _trackSceneChanges; set => _trackSceneChanges = value; }
+        public bool Use3DDistance { get => _use3DDistance; set => _use3DDistance = value; }
+
+        /// <summary>Whether generated objects and instances are saved with the scene.</summary>
+        public bool SaveGenerated
+        {
+            get => _saveGenerated;
+            set { _saveGenerated = value; MarkDirty(); }
+        }
+
+        [NonSerialized] private int _runtimeInputsHash;
+        [NonSerialized] private bool _runtimeInputsHashValid;
+
+        /// <summary>Hide flags for generated objects: none, or not saved with the scene when Save Generated is off.</summary>
+        private HideFlags GeneratedFlags => _saveGenerated ? HideFlags.None : HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
+
+        /// <summary>Marks a generated object (and so its children) to be saved or not, following Save Generated.</summary>
+        private void FlagGenerated(GameObject generated) => generated.hideFlags = GeneratedFlags;
+
+        /// <summary>Whether anything generated exists now: generated children or instances.</summary>
+        private bool HasGenerated()
+        {
+            foreach (Transform child in transform)
+            {
+                if (!IsInput(child)) return true;
+            }
+            PlacementInstances instances = GetComponent<PlacementInstances>();
+            return instances != null && instances.InstanceCount > 0;
+        }
 
         /// <summary>Objects waiting in the pool, over all prefabs.</summary>
         public int PooledCount
@@ -75,7 +113,7 @@ namespace UnityTools.Placement
         private void Start()
         {
             if (!Application.isPlaying) return;
-            if (_generateOn == GenerateMode.OnLoad && InstanceCount == 0) Regenerate(record: false, force: false);
+            if (_generateOn == GenerateMode.OnLoad && !HasGenerated()) Regenerate(record: false, force: false);
             _runtimeDirty = false;
         }
 
@@ -109,6 +147,15 @@ namespace UnityTools.Placement
                 _cachedGraphSignature = GraphSignature();
                 _graphSignatureValid = true;
             }
+            // Moved markers, spline or zones (with Track Scene Changes) make the loaded cells check their inputs again.
+            if (_trackSceneChanges)
+            {
+                int inputs = InputsHash();
+                if (_runtimeInputsHashValid && inputs != _runtimeInputsHash)
+                    foreach (CellRecord cell in _cells) _staleCells.Add(cell.Index);
+                _runtimeInputsHash = inputs;
+                _runtimeInputsHashValid = true;
+            }
             // After a change every loaded cell is checked again, over as many frames as the budget needs.
             if (_runtimeDirty) foreach (CellRecord cell in _cells) _staleCells.Add(cell.Index);
             _runtimeDirty = false;
@@ -120,8 +167,10 @@ namespace UnityTools.Placement
                 float best = float.PositiveInfinity;
                 foreach (Vector3 source in sources)
                 {
-                    var flat = new Vector2(source.x - centre.x, source.z - centre.z);
-                    best = Mathf.Min(best, flat.magnitude);
+                    float distance = _use3DDistance
+                        ? Vector3.Distance(source, centre)
+                        : new Vector2(source.x - centre.x, source.z - centre.z).magnitude;
+                    best = Mathf.Min(best, distance);
                 }
                 return best;
             }
@@ -214,6 +263,8 @@ namespace UnityTools.Placement
             {
                 _poolRoot = new GameObject("Pool").transform;
                 _poolRoot.SetParent(transform, false);
+                // The pool is runtime-only: never saved.
+                _poolRoot.gameObject.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
                 _poolRoot.gameObject.SetActive(false);
             }
             var children = new List<Transform>();
@@ -221,10 +272,48 @@ namespace UnityTools.Placement
             foreach (Transform child in children)
             {
                 if (!_instanceSources.TryGetValue(child.gameObject, out GameObject prefab)) continue;
+                if (!_pool.TryGetValue(prefab, out Stack<GameObject> stack)) _pool[prefab] = stack = new Stack<GameObject>();
+                // Past the cap the object goes with its cell, which destroys it.
+                if (_maxPoolSize > 0 && stack.Count >= _maxPoolSize)
+                {
+                    _instanceSources.Remove(child.gameObject);
+                    continue;
+                }
                 child.gameObject.SetActive(false);
                 child.SetParent(_poolRoot, false);
-                if (!_pool.TryGetValue(prefab, out Stack<GameObject> stack)) _pool[prefab] = stack = new Stack<GameObject>();
                 stack.Push(child.gameObject);
+            }
+        }
+
+        /// <summary>A hash of the markers' and spline's transforms and knots, so moving them regenerates with Auto Generate (and at runtime with Track Scene Changes).</summary>
+        private int InputsHash()
+        {
+            unchecked
+            {
+                int hash = 17;
+                if (_markers != null)
+                {
+                    foreach (Transform marker in _markers)
+                    {
+                        hash = hash * 31 + marker.position.GetHashCode();
+                        hash = hash * 31 + marker.rotation.GetHashCode();
+                        hash = hash * 31 + marker.lossyScale.GetHashCode();
+                        hash = hash * 31 + (marker.gameObject.activeSelf ? 1 : 0);
+                    }
+                }
+#if UNITYTOOLS_SPLINES
+                if (_spline != null)
+                {
+                    hash = hash * 31 + _spline.transform.localToWorldMatrix.GetHashCode();
+                    foreach (UnityEngine.Splines.Spline spline in _spline.Splines)
+                    {
+                        hash = hash * 31 + (spline.Closed ? 1 : 0);
+                        foreach (UnityEngine.Splines.BezierKnot knot in spline.Knots) hash = hash * 31 + knot.GetHashCode();
+                    }
+                }
+#endif
+                hash = hash * 31 + SceneInputSignature(Matrix4x4.TRS(transform.position, transform.rotation, Vector3.one).inverse, LocalBounds);
+                return hash;
             }
         }
     }
