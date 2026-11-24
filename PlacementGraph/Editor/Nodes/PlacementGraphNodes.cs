@@ -153,7 +153,6 @@ namespace UnityTools.Placement.Editor
     [Serializable]
     internal class SpawnPrefabsNode : PlacementGraphNode
     {
-
         protected override PlacementNode CreateRuntimeInstance() => new Placement.SpawnPrefabsNode();
 
         protected override void DefinePointPorts(IPortDefinitionContext context)
@@ -167,7 +166,7 @@ namespace UnityTools.Placement.Editor
         {
             AddSetting<bool>(context, "Keep Prefab Rotation", "Apply the prefab's own root rotation after the point's.");
             AddSetting<bool>(context, "Keep Prefab Scale", "Multiply the point's scale by the prefab's own root scale.");
-            AddSetting<bool>(context, "Apply Entry Adjustments", "Apply the palette entry's position offset, rotation and scale.");
+            AddSetting<bool>(context, "Apply Entry Adjustments", "Apply the entry's position offset, rotation and scale.");
         }
 
         public override void Validate(List<string> problems)
@@ -177,6 +176,21 @@ namespace UnityTools.Placement.Editor
             // Points can bring their own prefab from Select Prefab, which makes the entries optional.
             if (Graph != null && Graph.GetNodes().Any(n => n is SelectPrefabNode || n is ISubgraphNode)) return;
             problems.Add("Spawn Prefabs has no entries. Wire Prefab Entry nodes into Entries.");
+        }
+    }
+
+    [Node("Spawners", null, "Spawn Instanced")]
+    [Serializable]
+    internal class SpawnInstancedNode : SpawnPrefabsNode
+    {
+        protected override PlacementNode CreateRuntimeInstance() => new Placement.SpawnInstancedNode();
+
+        protected override void DefineSettings(IPortDefinitionContext context)
+        {
+            base.DefineSettings(context);
+            AddSetting<UnityEngine.Rendering.ShadowCastingMode>(context, "Shadow Casting", "Whether the instances cast shadows.");
+            AddSetting<bool>(context, "Receive Shadows");
+            AddSetting<int>(context, "Layer", "The layer to draw on, or -1 for each part's own layer in the prefab.");
         }
     }
 }

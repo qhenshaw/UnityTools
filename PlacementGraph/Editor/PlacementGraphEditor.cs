@@ -44,6 +44,9 @@ namespace UnityTools.Placement.Editor
             }
 
             foreach (string warning in graph.LastWarnings) EditorGUILayout.HelpBox(warning, MessageType.Warning);
+            PlacementInstances instances = graph.Instances;
+            if (instances != null && instances.InstanceCount > 0)
+                EditorGUILayout.HelpBox($"Instanced: {instances.InstanceCount} meshes in {instances.Batches.Count} batches, {instances.DrawCallCount} draw calls per camera.", MessageType.None);
 
             if (graph.Graph == null) return;
             _showNodes = EditorGUILayout.Foldout(_showNodes, "Nodes (points out, last run)", true);

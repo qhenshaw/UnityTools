@@ -22,6 +22,13 @@ namespace UnityTools.Placement
         [Tooltip("Apply the entry's position offset, rotation and scale.")]
         public bool ApplyEntryAdjustments = true;
 
+        /// <summary>Whether there's somewhere to send what this node places.</summary>
+        protected virtual bool HasOutput(PlacementContext context) => context.Output != null;
+
+        /// <summary>Places one prefab copy.</summary>
+        protected virtual void Emit(PlacementContext context, GameObject prefab, Vector3 position, Quaternion rotation, Vector3 scale) =>
+            context.Output.Spawn(prefab, position, rotation, scale);
+
         public override int InputCount => 1;
         public override int OutputCount => 1;
 
@@ -37,7 +44,7 @@ namespace UnityTools.Placement
                 context.Warn(this, "No entries with a prefab and a weight above 0, and the points have no Prefab attribute from Select Prefab. Wire Prefab Entry nodes into Entries.");
                 return;
             }
-            if (context.Output == null) return;
+            if (!HasOutput(context)) return;
 
             PointAttribute<Vector3> entryOffsets = input.GetAttribute<Vector3>(PointAttributeNames.EntryOffset);
             PointAttribute<Vector3> entryRotations = input.GetAttribute<Vector3>(PointAttributeNames.EntryRotation);
@@ -84,7 +91,7 @@ namespace UnityTools.Placement
                 Transform root = prefab.transform;
                 if (KeepPrefabRotation) rotation *= root.localRotation;
                 if (KeepPrefabScale) scale = Vector3.Scale(root.localScale, scale);
-                context.Output.Spawn(prefab, position, rotation, scale);
+                Emit(context, prefab, position, rotation, scale);
             }
             if (missing > 0) context.Warn(this, $"{missing} points had no prefab (a Prefab attribute that's empty or not a prefab, and no entries).");
         }

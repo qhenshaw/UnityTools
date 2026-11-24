@@ -14,7 +14,7 @@ namespace UnityTools.Placement
     [ExecuteAlways]
     [DisallowMultipleComponent]
     [AddComponentMenu("UnityTools/Placement Graph")]
-    public class PlacementGraph : MonoBehaviour, IPlacementOutput
+    public class PlacementGraph : MonoBehaviour, IPlacementOutput, IInstanceOutput
     {
         [Tooltip("The compiled graph: a .placegraph asset.")]
         [SerializeField] private PlacementGraphAsset _graph;
@@ -158,6 +158,7 @@ namespace UnityTools.Placement
                 LocalBounds = LocalBounds,
                 Seed = _seed,
                 Output = output,
+                Instances = output != null ? this : null,
                 NodeOutputs = _lastOutputs
             };
             if (_markers != null)
@@ -205,6 +206,38 @@ namespace UnityTools.Placement
             InstanceCount++;
         }
 
+        private readonly List<string> _instanceWarnings = new List<string>();
+
+        /// <summary>The instanced meshes from Spawn Instanced nodes, kept on a companion component. Null until there are some.</summary>
+        public PlacementInstances Instances => GetComponent<PlacementInstances>();
+
+        private PlacementInstances GetOrAddInstances()
+        {
+            PlacementInstances instances = GetComponent<PlacementInstances>();
+            if (instances != null) return instances;
+#if UNITY_EDITOR
+            if (_record && !Application.isPlaying) return Undo.AddComponent<PlacementInstances>(gameObject);
+#endif
+            return gameObject.AddComponent<PlacementInstances>();
+        }
+
+        void IInstanceOutput.AddInstance(GameObject prefab, Vector3 position, Quaternion rotation, Vector3 scale, InstanceDrawSettings settings)
+        {
+            string warning = GetOrAddInstances().Add(prefab, Matrix4x4.TRS(position, rotation, scale), settings);
+            if (warning != null) _instanceWarnings.Add($"Spawn Instanced: {warning}");
+            InstanceCount++;
+        }
+
+        private void ClearInstances(bool record)
+        {
+            PlacementInstances instances = GetComponent<PlacementInstances>();
+            if (instances == null) return;
+#if UNITY_EDITOR
+            if (record && !Application.isPlaying) Undo.RecordObject(instances, "Clear Placement Graph");
+#endif
+            instances.Clear();
+        }
+
         /// <summary>Destroys every child (they're all generated) and runs the graph again. One Undo step in the editor.</summary>
         public void Generate()
         {
@@ -225,8 +258,10 @@ namespace UnityTools.Placement
             Undo.SetCurrentGroupName("Clear Placement Graph");
             Undo.RecordObject(this, "Clear Placement Graph");
             ClearChildren(record: true);
+            ClearInstances(record: true);
 #else
             ClearChildren(record: false);
+            ClearInstances(record: false);
 #endif
             InstanceCount = 0;
         }
@@ -237,8 +272,10 @@ namespace UnityTools.Placement
             if (record) Undo.RecordObject(this, "Generate Placement Graph");
 #endif
             ClearChildren(record);
+            ClearInstances(record);
             InstanceCount = 0;
             _record = record;
+            _instanceWarnings.Clear();
             try
             {
                 Evaluate(this);
@@ -247,6 +284,7 @@ namespace UnityTools.Placement
             {
                 _record = false;
             }
+            _lastWarnings.AddRange(_instanceWarnings);
             foreach (string warning in _lastWarnings) Debug.LogWarning($"{name}: {warning}", this);
         }
 
