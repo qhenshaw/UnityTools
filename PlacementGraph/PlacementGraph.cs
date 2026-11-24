@@ -14,7 +14,7 @@ namespace UnityTools.Placement
     [ExecuteAlways]
     [DisallowMultipleComponent]
     [AddComponentMenu("UnityTools/Placement Graph")]
-    public class PlacementGraph : MonoBehaviour, IPlacementOutput, IInstanceOutput
+    public partial class PlacementGraph : MonoBehaviour, IPlacementOutput, IInstanceOutput
     {
         [Tooltip("The compiled graph: a .placegraph asset.")]
         [SerializeField] private PlacementGraphAsset _graph;
@@ -23,6 +23,12 @@ namespace UnityTools.Placement
         [SerializeField] private bool _autoGenerate = true;
         [Tooltip("Size of the generation volume, centred on this object.")]
         [SerializeField] private Vector3 _size = new Vector3(20f, 10f, 20f);
+        [Tooltip("0: run the graph once for the whole volume. Above 0: split the volume into square cells of this size " +
+                 "(metres) that run separately, so edits regenerate only the cells they touch.")]
+        [SerializeField, Min(0f)] private float _cellSize;
+        [Tooltip("With cells: how far each cell also looks into its neighbours, so filters like Self Pruning and " +
+                 "Difference see points across the border. Use at least their largest radius.")]
+        [SerializeField, Min(0f)] private float _cellOverlap = 2f;
         [Tooltip("Optional. The active children of this Transform are the points of Child Markers nodes. If it is a " +
                  "child of this object it is kept when the graph regenerates.")]
         [SerializeField] private Transform _markers;
@@ -149,13 +155,18 @@ namespace UnityTools.Placement
             new Vector3(Mathf.Max(0.1f, size.x), Mathf.Max(0.1f, size.y), Mathf.Max(0.1f, size.z));
 
         /// <summary>Runs the graph without touching the scene and returns every node's outputs, by node index.</summary>
-        public PointData[][] Evaluate(IPlacementOutput output = null)
+        public PointData[][] Evaluate(IPlacementOutput output = null) => EvaluateRegion(output, LocalBounds, null);
+
+        /// <summary>Runs the graph over <paramref name="bounds"/>; with <paramref name="owned"/> set, it's one partition cell.</summary>
+        private PointData[][] EvaluateRegion(IPlacementOutput output, Bounds bounds, Bounds? owned)
         {
             if (_graph == null) return Array.Empty<PointData[]>();
             var context = new PlacementContext
             {
                 LocalToWorld = Matrix4x4.TRS(transform.position, transform.rotation, Vector3.one),
-                LocalBounds = LocalBounds,
+                LocalBounds = bounds,
+                OwnedBounds = owned,
+                AnchorGridToOrigin = owned.HasValue,
                 Seed = _seed,
                 Output = output,
                 Instances = output != null ? this : null,
@@ -191,15 +202,15 @@ namespace UnityTools.Placement
             {
                 // Prefab assets keep their prefab connection; anything else (a scene object) is copied.
                 instance = PrefabUtility.IsPartOfPrefabAsset(prefab)
-                    ? PrefabUtility.InstantiatePrefab(prefab, transform) as GameObject
-                    : Instantiate(prefab, transform);
+                    ? PrefabUtility.InstantiatePrefab(prefab, SpawnParent) as GameObject
+                    : Instantiate(prefab, SpawnParent);
                 if (instance == null) return;
                 if (_record) Undo.RegisterCreatedObjectUndo(instance, "Generate Placement Graph");
             }
             else
 #endif
             {
-                instance = Instantiate(prefab, transform);
+                instance = Instantiate(prefab, SpawnParent);
             }
             instance.transform.SetPositionAndRotation(position, rotation);
             instance.transform.localScale = scale;
@@ -223,7 +234,7 @@ namespace UnityTools.Placement
 
         void IInstanceOutput.AddInstance(GameObject prefab, Vector3 position, Quaternion rotation, Vector3 scale, InstanceDrawSettings settings)
         {
-            string warning = GetOrAddInstances().Add(prefab, Matrix4x4.TRS(position, rotation, scale), settings);
+            string warning = GetOrAddInstances().Add(prefab, Matrix4x4.TRS(position, rotation, scale), settings, _currentCell);
             if (warning != null) _instanceWarnings.Add($"Spawn Instanced: {warning}");
             InstanceCount++;
         }
@@ -244,9 +255,9 @@ namespace UnityTools.Placement
 #if UNITY_EDITOR
             if (!CanRegenerate()) return;
             Undo.SetCurrentGroupName("Generate Placement Graph");
-            Regenerate(record: true);
+            Regenerate(record: true, force: true);
 #else
-            Regenerate(record: false);
+            Regenerate(record: false, force: true);
 #endif
         }
 
@@ -263,11 +274,18 @@ namespace UnityTools.Placement
             ClearChildren(record: false);
             ClearInstances(record: false);
 #endif
+            _cells.Clear();
             InstanceCount = 0;
         }
 
-        private void Regenerate(bool record)
+        private void Regenerate(bool record, bool force)
         {
+            if (_cellSize > 0f)
+            {
+                RegeneratePartitioned(record, force);
+                return;
+            }
+            _cells.Clear();
 #if UNITY_EDITOR
             if (record) Undo.RecordObject(this, "Generate Placement Graph");
 #endif
@@ -416,7 +434,8 @@ namespace UnityTools.Placement
             if (_graph == null || !CanRegenerate()) return;
 
             // Automatic runs aren't recorded: undoing the change that caused one marks this dirty and it reruns to match.
-            Regenerate(record: false);
+            // Partitioned graphs regenerate only the cells the change touched.
+            Regenerate(record: false, force: false);
             SceneView.RepaintAll();
         }
 

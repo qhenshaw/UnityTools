@@ -55,6 +55,8 @@ namespace UnityTools.Placement
             for (int i = 0; i < input.Count; i++)
             {
                 PlacementPoint point = input.Points[i];
+                // In a partitioned graph only the cell that owns the point places it; the overlap is for context.
+                if (!context.IsOwned(point.Position)) continue;
                 Vector3 position = point.Position;
                 Quaternion rotation = point.Rotation;
                 Vector3 scale = point.Scale;

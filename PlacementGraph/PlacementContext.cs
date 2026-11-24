@@ -20,6 +20,36 @@ namespace UnityTools.Placement
         /// <summary>The generation volume, in the component's local space.</summary>
         public Bounds LocalBounds = new Bounds(Vector3.zero, Vector3.one * 10f);
 
+        /// <summary>
+        /// Partitioned runs: grids are anchored at the component's origin (not centred in the volume), so each cell
+        /// samples the same global grid. Set by the component when Cell Size is used.
+        /// </summary>
+        public bool AnchorGridToOrigin;
+
+        /// <summary>
+        /// Partitioned runs: the part of the volume this run owns, in local space. Spawners only place points inside it,
+        /// although <see cref="LocalBounds"/> (the cell plus its overlap) is sampled, so nodes see points across the
+        /// border. Null when the graph isn't partitioned.
+        /// </summary>
+        public Bounds? OwnedBounds;
+
+        private Matrix4x4 _ownedFrom = new Matrix4x4();
+        private Matrix4x4 _worldToLocal;
+
+        /// <summary>Whether a spawner should place a point at <paramref name="worldPosition"/> in this run.</summary>
+        public bool IsOwned(Vector3 worldPosition)
+        {
+            if (OwnedBounds == null) return true;
+            if (_ownedFrom != LocalToWorld)
+            {
+                _ownedFrom = LocalToWorld;
+                _worldToLocal = LocalToWorld.inverse;
+            }
+            Vector3 local = _worldToLocal.MultiplyPoint3x4(worldPosition);
+            Bounds owned = OwnedBounds.Value;
+            return local.x >= owned.min.x && local.x < owned.max.x && local.z >= owned.min.z && local.z < owned.max.z;
+        }
+
         /// <summary>The component's seed. Nodes mix it with their own seed and each point's seed.</summary>
         public int Seed;
 
