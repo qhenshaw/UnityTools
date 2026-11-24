@@ -29,6 +29,9 @@ namespace UnityTools.Placement
         protected virtual void Emit(PlacementContext context, GameObject prefab, Vector3 position, Quaternion rotation, Vector3 scale) =>
             context.Output.Spawn(prefab, position, rotation, scale);
 
+        /// <summary>Points whose final scale is below this on any axis aren't placed.</summary>
+        public const float MinScale = 0.001f;
+
         public override int InputCount => 1;
         public override int OutputCount => 1;
 
@@ -93,6 +96,8 @@ namespace UnityTools.Placement
                 Transform root = prefab.transform;
                 if (KeepPrefabRotation) rotation *= root.localRotation;
                 if (KeepPrefabScale) scale = Vector3.Scale(root.localScale, scale);
+                // A point scaled to (almost) nothing, e.g. by an edge falloff at 0, would only make an invisible object.
+                if (Mathf.Abs(scale.x) < MinScale || Mathf.Abs(scale.y) < MinScale || Mathf.Abs(scale.z) < MinScale) continue;
                 Emit(context, prefab, position, rotation, scale);
             }
             if (missing > 0) context.Warn(this, $"{missing} points had no prefab (a Prefab attribute that's empty or not a prefab, and no entries).");

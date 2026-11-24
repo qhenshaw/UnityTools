@@ -83,6 +83,7 @@ namespace UnityTools.Placement.Editor
             AddSetting<Placement.DensityFilterNode.FilterMode>(context, "Mode",
                 "Threshold keeps points at or above Threshold; Random keeps each point with its density as the chance.");
             AddSetting<float>(context, "Threshold", "Threshold mode: points at or above this density are kept.");
+            AddSetting<string>(context, "Density Attribute", "Optional. A Float attribute (e.g. EdgeFalloff) multiplied into each point's density before filtering.");
         }
     }
 

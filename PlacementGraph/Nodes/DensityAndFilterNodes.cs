@@ -54,6 +54,8 @@ namespace UnityTools.Placement
 
         public FilterMode Mode = FilterMode.Random;
         [Range(0f, 1f)] public float Threshold = 0.5f;
+        [Tooltip("Optional. A Float attribute (e.g. EdgeFalloff) multiplied into each point's density before filtering.")]
+        public string DensityAttribute = "";
 
         public override int InputCount => 1;
         /// <summary>Output 0: kept. Output 1: rejected.</summary>
@@ -65,12 +67,16 @@ namespace UnityTools.Placement
             PointData input = inputs[0];
             var kept = PointData.Derive(input, input.Count);
             var rejected = PointData.Derive(input);
+            PointAttribute<float> attribute = string.IsNullOrEmpty(DensityAttribute) ? null : input.GetAttribute<float>(DensityAttribute);
+            if (!string.IsNullOrEmpty(DensityAttribute) && attribute == null)
+                context.Warn(this, $"There's no Float attribute called '{DensityAttribute}'; using density alone.");
             for (int i = 0; i < input.Count; i++)
             {
                 PlacementPoint point = input.Points[i];
+                float density = attribute != null ? point.Density * attribute.Get(i) : point.Density;
                 bool keep = Mode == FilterMode.Threshold
-                    ? point.Density >= Threshold
-                    : PlacementRandom.Value(PlacementRandom.Hash(point.Seed, seed)) < point.Density;
+                    ? density >= Threshold
+                    : PlacementRandom.Value(PlacementRandom.Hash(point.Seed, seed)) < density;
                 (keep ? kept : rejected).AddFrom(input, i);
             }
             outputs[0] = kept;

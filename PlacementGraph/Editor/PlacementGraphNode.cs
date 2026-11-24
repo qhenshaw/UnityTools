@@ -167,6 +167,15 @@ namespace UnityTools.Placement.Editor
             builder.Build();
         }
 
+        /// <summary>The Edge Falloff settings shared by area sources (Spline Sampler Inside, Scene Input zones).</summary>
+        protected void AddEdgeFalloffSettings(IPortDefinitionContext context, string when)
+        {
+            AddSetting<float>(context, "Edge Falloff Distance", when + "metres inward from the edge over which the Edge Falloff attribute rises to 1. 0 turns it off.");
+            AddSetting<FalloffCurve>(context, "Edge Falloff Curve", when + "how the attribute rises from the edge: Linear, Smooth, Ease In or Ease Out.");
+            AddSetting<float>(context, "Edge Falloff Min", when + "the attribute's value at the edge. Above 0 keeps a minimum, e.g. so scaled prefabs never reach 0.");
+            AddSetting<string>(context, "Edge Falloff Attribute", when + "the Float attribute to write. Use it as Transform Points' Scale Attribute or Density Filter's Density Attribute.");
+        }
+
         /// <summary>True for a port that carries points rather than a setting.</summary>
         public static bool IsPointPort(IPort port) => port.DataType == typeof(PointData);
 

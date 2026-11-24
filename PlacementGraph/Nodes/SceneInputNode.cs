@@ -46,6 +46,14 @@ namespace UnityTools.Placement
         [Min(0.01f)] public float Spacing = 1f;
         [Tooltip("Only objects whose bounds overlap the generation volume.")]
         public bool OnlyOverlapping = true;
+        [Tooltip("Points Inside Zones: metres inward from the zone's sides (seen from above) over which the Edge Falloff attribute rises to 1. 0 turns it off.")]
+        [Min(0f)] public float EdgeFalloffDistance = 0f;
+        [Tooltip("Points Inside Zones: how the Edge Falloff attribute rises from the edge.")]
+        public FalloffCurve EdgeFalloffCurve = FalloffCurve.Linear;
+        [Tooltip("Points Inside Zones: the Edge Falloff value at the zone's edge. Above 0 keeps a minimum, e.g. for scale.")]
+        [Range(0f, 1f)] public float EdgeFalloffMin = 0f;
+        [Tooltip("Points Inside Zones: the Float attribute the edge falloff is written to. Other points get 1.")]
+        public string EdgeFalloffAttribute = EdgeFalloff.DefaultAttribute;
 
         public override int InputCount => 0;
         public override int OutputCount => 1;
@@ -171,6 +179,8 @@ namespace UnityTools.Placement
                 PointAttribute<UnityEngine.Object> zones = result.GetOrAddAttribute<UnityEngine.Object>(ZoneAttribute);
                 uint nodeSeed = PlacementRandom.Hash(context.SeedHash, NodeSeed);
                 float spacing = Mathf.Max(0.01f, Spacing);
+                bool falloff = Output == OutputMode.PointsInsideZones && EdgeFalloffDistance > 0f && !string.IsNullOrEmpty(EdgeFalloffAttribute);
+                PointAttribute<float> edge = falloff ? result.GetOrAddAttribute<float>(EdgeFalloffAttribute) : null;
 
                 foreach (Match match in matches)
                 {
@@ -182,6 +192,7 @@ namespace UnityTools.Placement
                         point.Rotation = t.rotation;
                         point.Scale = t.lossyScale;
                         point.Normal = t.up;
+                        edge?.Set(result.Count, 1f);
                         Add(result, objects, zones, point, match);
                         continue;
                     }
@@ -204,6 +215,11 @@ namespace UnityTools.Placement
                         var position = new Vector3((x + 0.5f) * spacing, bounds.center.y, (z + 0.5f) * spacing);
                         if (!match.Zone.Contains(position)) continue;
                         PlacementPoint point = PlacementPoint.At(position, PlacementRandom.Hash(objectSeed, unchecked((uint)x), unchecked((uint)z)));
+                        if (falloff)
+                        {
+                            float inside = match.Zone.InsideDistanceFromAbove(position);
+                            edge.Set(result.Count, EdgeFalloff.Evaluate(inside, EdgeFalloffDistance, EdgeFalloffCurve, EdgeFalloffMin));
+                        }
                         Add(result, objects, zones, point, match);
                     }
                 }

@@ -28,6 +28,14 @@ namespace UnityTools.Placement
         [Min(0.01f)] public float Spacing = 1f;
         [Tooltip("Inside only: how far grid points move from their cell centres.")]
         [Range(0f, 1f)] public float Jitter = 0.5f;
+        [Tooltip("Inside only: metres inward from the outline over which the Edge Falloff attribute rises to 1. 0 turns it off.")]
+        [Min(0f)] public float EdgeFalloffDistance = 0f;
+        [Tooltip("Inside only: how the Edge Falloff attribute rises from the edge.")]
+        public FalloffCurve EdgeFalloffCurve = FalloffCurve.Linear;
+        [Tooltip("Inside only: the Edge Falloff value at the outline. Above 0 keeps a minimum, e.g. for scale.")]
+        [Range(0f, 1f)] public float EdgeFalloffMin = 0f;
+        [Tooltip("Inside only: the Float attribute the edge falloff is written to.")]
+        public string EdgeFalloffAttribute = EdgeFalloff.DefaultAttribute;
 
         /// <summary>Segments per spline when its outline is traced for Inside.</summary>
         private const int OutlineSegments = 128;
@@ -145,12 +153,19 @@ namespace UnityTools.Placement
 
             PointData grid = GridSampling.SampleTop(context, this, Spacing, Jitter);
             var result = new PointData();
+            bool falloff = EdgeFalloffDistance > 0f && !string.IsNullOrEmpty(EdgeFalloffAttribute);
+            PointAttribute<float> edge = falloff ? result.GetOrAddAttribute<float>(EdgeFalloffAttribute) : null;
             foreach (PlacementPoint point in grid.Points)
             {
                 var flat = new Vector2(point.Position.x, point.Position.z);
                 foreach (Vector2[] outline in outlines)
                 {
                     if (!Contains(outline, flat)) continue;
+                    if (falloff)
+                    {
+                        float inside = EdgeFalloff.DistanceToOutline(outline, flat);
+                        edge.Set(result.Count, EdgeFalloff.Evaluate(inside, EdgeFalloffDistance, EdgeFalloffCurve, EdgeFalloffMin));
+                    }
                     result.Points.Add(point);
                     break;
                 }

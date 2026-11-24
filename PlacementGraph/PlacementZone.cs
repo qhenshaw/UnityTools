@@ -79,6 +79,66 @@ namespace UnityTools.Placement
             }
         }
 
+        /// <summary>
+        /// Like <see cref="SignedDistance"/>, but seen from above: the distance in XZ to the zone's sides, ignoring its
+        /// top and bottom (a box's Y faces, a sphere's height). Edge falloffs use this, so a flat box falls off
+        /// from its sides rather than from its thickness.
+        /// </summary>
+        public float SignedDistanceFromAbove(Vector3 world)
+        {
+            switch (_shape)
+            {
+                case ZoneShape.Sphere:
+                {
+                    Vector3 offset = world - transform.position;
+                    return new Vector2(offset.x, offset.z).magnitude - WorldRadius;
+                }
+#if UNITYTOOLS_SPLINES
+                case ZoneShape.Spline:
+                {
+                    // The outline the point is inside decides; the distance loop is the fast one edge falloffs use.
+                    var flat = new Vector2(world.x, world.z);
+                    List<Vector2[]> outlines = Outlines();
+                    if (outlines.Count == 0) return float.PositiveInfinity;
+                    float outside = float.PositiveInfinity;
+                    foreach (Vector2[] outline in outlines)
+                    {
+                        float edge = EdgeFalloff.DistanceToOutline(outline, flat);
+                        if (SplineSamplerNode.Contains(outline, flat)) return -edge;
+                        outside = Mathf.Min(outside, edge);
+                    }
+                    return outside;
+                }
+#endif
+                default:
+                {
+                    Vector3 local = transform.InverseTransformPoint(world);
+                    Vector3 half = _size * 0.5f;
+                    Vector3 scale = transform.lossyScale;
+                    var q = new Vector2(
+                        (Mathf.Abs(local.x) - half.x) * Mathf.Abs(scale.x),
+                        (Mathf.Abs(local.z) - half.z) * Mathf.Abs(scale.z));
+                    return Vector2.Max(q, Vector2.zero).magnitude + Mathf.Min(Mathf.Max(q.x, q.y), 0f);
+                }
+            }
+        }
+
+        /// <summary>
+        /// For a point already known to be inside the zone: its distance to the zone's sides seen from above, as
+        /// <see cref="SignedDistanceFromAbove"/> but cheaper, since a single spline outline needs no inside test.
+        /// </summary>
+        public float InsideDistanceFromAbove(Vector3 world)
+        {
+#if UNITYTOOLS_SPLINES
+            if (_shape == ZoneShape.Spline)
+            {
+                List<Vector2[]> outlines = Outlines();
+                if (outlines.Count == 1) return EdgeFalloff.DistanceToOutline(outlines[0], new Vector2(world.x, world.z));
+            }
+#endif
+            return Mathf.Max(0f, -SignedDistanceFromAbove(world));
+        }
+
         /// <summary>Whether <paramref name="world"/> is inside the zone.</summary>
         public bool Contains(Vector3 world)
         {

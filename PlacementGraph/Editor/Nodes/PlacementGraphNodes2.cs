@@ -134,6 +134,7 @@ namespace UnityTools.Placement.Editor
             AddSetting<Placement.SceneInputNode.OutputMode>(context, "Output", "One point per object, or a grid of points inside each zone.");
             AddSetting<float>(context, "Spacing", "Points Inside Zones: grid spacing in metres.");
             AddSetting<bool>(context, "Only Overlapping", "Only objects whose bounds overlap the generation volume.");
+            AddEdgeFalloffSettings(context, "Points Inside Zones: ");
         }
     }
 
@@ -178,6 +179,7 @@ namespace UnityTools.Placement.Editor
                 "Along: points along the spline. Inside: a grid inside the closed spline, seen from above.");
             AddSetting<float>(context, "Spacing", "Distance between points along the spline, or grid spacing for Inside.");
             AddSetting<float>(context, "Jitter", "Inside only.");
+            AddEdgeFalloffSettings(context, "Inside only: ");
         }
     }
 #endif
