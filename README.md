@@ -610,7 +610,7 @@ Places prefabs procedurally with a node graph, in the spirit of Unreal's PCG: no
 - Results are deterministic: the same graph, **Seed** and volume always give the same placement, and each node draws its own random numbers, so changing one node doesn't reshuffle the others.
 - Placed prefabs keep their prefab connection. Inside a prefab instance it doesn't regenerate (the children belong to the prefab); edit it in prefab mode or unpack the instance.
 - The inspector lists every node with the number of points it produced on the last run. **Show** draws that node's points in the Scene view (red to green by density, with their normals).
-- Nodes:
+- Nodes, grouped in the graph window's add-node menu under Sources, Density, Filters, Points and Spawners:
 
 | Node | What it does |
 |---|---|

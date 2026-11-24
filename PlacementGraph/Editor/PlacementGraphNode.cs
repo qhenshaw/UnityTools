@@ -23,14 +23,20 @@ namespace UnityTools.Placement.Editor
         /// <summary>The node's stable id, created the first time its ports are defined.</summary>
         public string Id => _id;
 
-        /// <summary>Name shown in logs and the component's node list.</summary>
-        public virtual string DisplayName
+        /// <summary>Name shown in logs and the component's node list: the title from <see cref="NodeAttribute"/>, as in the graph window.</summary>
+        public virtual string DisplayName => TitleOf(GetType());
+
+        /// <summary>
+        /// The title a node type shows in the graph window: its <see cref="NodeAttribute"/> title, or the class name
+        /// without "Node", split into words.
+        /// </summary>
+        public static string TitleOf(Type type)
         {
-            get
-            {
-                string name = GetType().Name;
-                return name.EndsWith("Node") ? name.Substring(0, name.Length - 4) : name;
-            }
+            var attribute = (NodeAttribute)Attribute.GetCustomAttribute(type, typeof(NodeAttribute), false);
+            if (attribute != null && !string.IsNullOrEmpty(attribute.Title)) return attribute.Title;
+            string name = type.Name;
+            if (name.EndsWith("Node")) name = name.Substring(0, name.Length - 4);
+            return UnityEditor.ObjectNames.NicifyVariableName(name);
         }
 
         protected sealed override void OnDefinePorts(IPortDefinitionContext context)

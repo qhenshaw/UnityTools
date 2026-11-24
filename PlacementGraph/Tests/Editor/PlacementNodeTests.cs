@@ -307,13 +307,37 @@ namespace UnityTools.Placement.Tests
 #endif
 
         [Test]
+        public void EditorNodes_HaveReadableTitles()
+        {
+            const string path = "Assets/__PlacementNodeTitles.placegraph";
+            _assets.Add(path);
+            var graph = GraphDatabase.CreateGraph<Editor.PlacementGraphDefinition>(path);
+            graph.AddNode(new Editor.VolumeSamplerNode());
+            graph.AddNode(new Editor.SpawnPrefabsNode());
+            List<INode> nodes = graph.GetNodes().ToList();
+            Assert.AreEqual("Volume Sampler", nodes[0].Title);
+            Assert.AreEqual("Spawn Prefabs", nodes[1].Title);
+            Assert.AreEqual("Self Pruning", Editor.PlacementGraphNode.TitleOf(typeof(Editor.SelfPruningNode)));
+
+            foreach (System.Type type in EditorNodeTypes())
+            {
+                var attribute = (NodeAttribute)System.Attribute.GetCustomAttribute(type, typeof(NodeAttribute));
+                Assert.IsNotNull(attribute, $"{type.Name} has no [Node] attribute.");
+                Assert.IsFalse(string.IsNullOrEmpty(attribute.Title), $"{type.Name} has no title.");
+                Assert.IsFalse(string.IsNullOrEmpty(attribute.CategoryPath), $"{type.Name} has no category.");
+            }
+        }
+
+        private static List<System.Type> EditorNodeTypes() => typeof(Editor.PlacementGraphNode).Assembly.GetTypes()
+            .Where(t => typeof(Editor.PlacementGraphNode).IsAssignableFrom(t) && !t.IsAbstract).ToList();
+
+        [Test]
         public void EditorNodes_PortsMatchRuntimeNodes()
         {
             const string path = "Assets/__PlacementNodeTests.placegraph";
             _assets.Add(path);
             var graph = GraphDatabase.CreateGraph<Editor.PlacementGraphDefinition>(path);
-            var types = typeof(Editor.PlacementGraphNode).Assembly.GetTypes()
-                .Where(t => typeof(Editor.PlacementGraphNode).IsAssignableFrom(t) && !t.IsAbstract).ToList();
+            var types = EditorNodeTypes();
             Assert.Greater(types.Count, 10);
             foreach (System.Type type in types)
             {

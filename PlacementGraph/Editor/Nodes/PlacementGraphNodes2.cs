@@ -6,6 +6,7 @@ namespace UnityTools.Placement.Editor
     // Graph Toolkit nodes for the second set of runtime nodes. Same rules as PlacementGraphNodes.cs: point ports in
     // the runtime node's order, option defaults from a fresh runtime node.
 
+    [Node("Filters", null, "Height Filter")]
     [Serializable]
     internal class HeightFilterNode : PlacementGraphNode
     {
@@ -31,6 +32,7 @@ namespace UnityTools.Placement.Editor
         };
     }
 
+    [Node("Filters", null, "Self Pruning")]
     [Serializable]
     internal class SelfPruningNode : PlacementGraphNode
     {
@@ -54,6 +56,7 @@ namespace UnityTools.Placement.Editor
         };
     }
 
+    [Node("Filters", null, "Difference")]
     [Serializable]
     internal class DifferenceNode : PlacementGraphNode
     {
@@ -79,6 +82,7 @@ namespace UnityTools.Placement.Editor
         };
     }
 
+    [Node("Points", null, "Merge")]
     [Serializable]
     internal class MergeNode : PlacementGraphNode
     {
@@ -92,6 +96,7 @@ namespace UnityTools.Placement.Editor
         public override PlacementNode CreateRuntimeNode() => new Placement.MergeNode();
     }
 
+    [Node("Points", null, "Copy Points")]
     [Serializable]
     internal class CopyPointsNode : PlacementGraphNode
     {
@@ -105,6 +110,7 @@ namespace UnityTools.Placement.Editor
         public override PlacementNode CreateRuntimeNode() => new Placement.CopyPointsNode();
     }
 
+    [Node("Density", null, "Distance Density")]
     [Serializable]
     internal class DistanceDensityNode : PlacementGraphNode
     {
@@ -132,6 +138,7 @@ namespace UnityTools.Placement.Editor
         };
     }
 
+    [Node("Sources", null, "Child Markers")]
     [Serializable]
     internal class ChildMarkersNode : PlacementGraphNode
     {
@@ -140,6 +147,7 @@ namespace UnityTools.Placement.Editor
         public override PlacementNode CreateRuntimeNode() => new Placement.ChildMarkersNode();
     }
 
+    [Node("Sources", null, "Terrain Sampler")]
     [Serializable]
     internal class TerrainSamplerNode : PlacementGraphNode
     {
@@ -166,6 +174,7 @@ namespace UnityTools.Placement.Editor
     }
 
 #if UNITYTOOLS_SPLINES
+    [Node("Sources", null, "Spline Sampler")]
     [Serializable]
     internal class SplineSamplerNode : PlacementGraphNode
     {

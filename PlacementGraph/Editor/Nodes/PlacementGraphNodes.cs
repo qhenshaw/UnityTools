@@ -8,6 +8,7 @@ namespace UnityTools.Placement.Editor
     // The Graph Toolkit nodes. Each one mirrors a runtime node: same point ports in the same order, and one option per
     // runtime setting. Option defaults come from a fresh runtime node so the two can't drift apart.
 
+    [Node("Sources", null, "Volume Sampler")]
     [Serializable]
     internal class VolumeSamplerNode : PlacementGraphNode
     {
@@ -28,6 +29,7 @@ namespace UnityTools.Placement.Editor
         };
     }
 
+    [Node("Sources", null, "Surface Sampler")]
     [Serializable]
     internal class SurfaceSamplerNode : PlacementGraphNode
     {
@@ -54,6 +56,7 @@ namespace UnityTools.Placement.Editor
         };
     }
 
+    [Node("Density", null, "Noise Density")]
     [Serializable]
     internal class NoiseDensityNode : PlacementGraphNode
     {
@@ -80,6 +83,7 @@ namespace UnityTools.Placement.Editor
         };
     }
 
+    [Node("Filters", null, "Density Filter")]
     [Serializable]
     internal class DensityFilterNode : PlacementGraphNode
     {
@@ -105,6 +109,7 @@ namespace UnityTools.Placement.Editor
         };
     }
 
+    [Node("Filters", null, "Slope Filter")]
     [Serializable]
     internal class SlopeFilterNode : PlacementGraphNode
     {
@@ -130,6 +135,7 @@ namespace UnityTools.Placement.Editor
         };
     }
 
+    [Node("Points", null, "Transform Points")]
     [Serializable]
     internal class TransformPointsNode : PlacementGraphNode
     {
@@ -164,6 +170,7 @@ namespace UnityTools.Placement.Editor
         };
     }
 
+    [Node("Spawners", null, "Spawn Prefabs")]
     [Serializable]
     internal class SpawnPrefabsNode : PlacementGraphNode
     {
