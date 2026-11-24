@@ -141,6 +141,22 @@ namespace UnityTools.Placement.Tests
         }
 
         [Test]
+        public void Inspector_DescribesAttributesOfTheShownNode()
+        {
+            PointData data = Tagged(5);
+            GameObject prefab = Track(new GameObject("Rock"));
+            data.GetOrAddAttribute<Object>("Prefab").Set(0, prefab);
+            List<string> lines = Editor.PlacementGraphEditor.DescribeAttributes(data, 3);
+            CollectionAssert.AreEqual(new[] { "Id (Int): 0, 1, 2, ...", "Prefab (Object): Rock, none, none, ..." }, lines);
+            CollectionAssert.AreEqual(new[] { "No attributes" }, Editor.PlacementGraphEditor.DescribeAttributes(new PointData(), 3));
+
+            string nodeTypes = Editor.PlacementGraphAuthoring.DescribeNodeTypes();
+            StringAssert.Contains("Select Prefab (Attributes)", nodeTypes);
+            StringAssert.Contains("Filter By Attribute (Attributes)", nodeTypes);
+            StringAssert.Contains("Set Attribute (Attributes)", nodeTypes);
+        }
+
+        [Test]
         public void Executor_MergesAttributesOfSeveralWires_AndLeavesInputsAlone()
         {
             PointData input = Tagged(4);

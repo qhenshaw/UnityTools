@@ -19,6 +19,7 @@ All notable changes to Unity Tools. Versions are git tags: install one with `htt
 - Placement Graph: per-point attributes (Float, Int, Vector3, object) that every node carries with its points; merging keeps all of them.
 - Placement Graph: Select Prefab picks a prefab per point into attributes (Prefab, Palette, PaletteEntry, and the entry's sampled offset, rotation, scale and custom attributes); Spawn Prefabs spawns a point's Prefab attribute when it has one, so its Palette is optional then. Filter By Attribute (Prefab Is, Equal, Not Equal, Less, Greater, In Range) and Set Attribute (constant or seeded random) work with attributes, and Transform Points can add or multiply in Offset, Rotation and Scale attributes.
 - Prefab Palette: entries can adjust their prefab's placement with Position Offset, Rotation Offset, a Rotation Random range and the existing Random Scale, applied by Spawn Prefabs (Apply Entry Adjustments, on), and can list custom attributes for Select Prefab to write. Existing palettes place the same.
+- Placement Graph: the component's Show view lists the shown node's attributes, with the values of the first few points.
 
 ## 7.0.0 - 2026-11-15
 - **Breaking** Every tool now uses a `UnityTools.*` namespace, and every assembly is named after its namespace. Scripts need their `using` lines updated, and your own assembly definitions that reference these assemblies by name need the new names (references by GUID, Unity's default, keep working). Scene, prefab and asset references are unaffected.

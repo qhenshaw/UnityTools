@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
@@ -67,9 +68,51 @@ namespace UnityTools.Placement.Editor
                             SceneView.RepaintAll();
                         }
                     }
+                    if (graph.DebugNode == i) DrawAttributes(graph, i);
                 }
             }
         }
+
+        /// <summary>Under the shown node: the attributes on its first output, with the values of the first few points.</summary>
+        private static void DrawAttributes(PlacementGraph graph, int node)
+        {
+            if (node >= graph.LastOutputs.Count || graph.LastOutputs[node] == null || graph.LastOutputs[node].Length == 0) return;
+            using (new EditorGUI.IndentLevelScope())
+            {
+                foreach (string line in DescribeAttributes(graph.LastOutputs[node][0], 3))
+                    EditorGUILayout.LabelField(line, EditorStyles.miniLabel);
+            }
+        }
+
+        /// <summary>One line per attribute: its name, type and the values of the first <paramref name="points"/> points.</summary>
+        internal static List<string> DescribeAttributes(PointData data, int points)
+        {
+            var lines = new List<string>();
+            if (data == null) return lines;
+            if (data.Attributes.Count == 0)
+            {
+                lines.Add("No attributes");
+                return lines;
+            }
+            int shown = Mathf.Min(points, data.Count);
+            foreach (PointAttribute attribute in data.Attributes)
+            {
+                var values = new List<string>(shown);
+                for (int i = 0; i < shown; i++) values.Add(Format(attribute.GetBoxed(i)));
+                string more = data.Count > shown ? ", ..." : "";
+                lines.Add($"{attribute.Name} ({attribute.Type}): {string.Join(", ", values)}{more}");
+            }
+            return lines;
+        }
+
+        private static string Format(object value) => value switch
+        {
+            null => "none",
+            Object obj => obj != null ? obj.name : "none",
+            float f => f.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture),
+            Vector3 v => $"({v.x:0.##}, {v.y:0.##}, {v.z:0.##})",
+            _ => value.ToString()
+        };
 
         private static bool NeedsSync(PlacementGraph graph)
         {
