@@ -7,6 +7,7 @@ using Object = UnityEngine.Object;
 namespace UnityTools.Placement.Tests
 {
     /// <summary>Runtime generation, simulated in edit mode: Near Player cells, the frame budget, pooling and determinism.</summary>
+    [SceneIsolation]
     public class PlacementRuntimeTests
     {
         private static readonly Vector3 Origin = new Vector3(-30000f, 0f, 0f);

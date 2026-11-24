@@ -7,6 +7,7 @@ using Object = UnityEngine.Object;
 namespace UnityTools.Placement.Tests
 {
     /// <summary>Choosing prefabs into attributes, filtering and transforming per prefab, and palette entry adjustments.</summary>
+    [SceneIsolation]
     public class PlacementPrefabAttributeTests
     {
         private readonly List<Object> _created = new();

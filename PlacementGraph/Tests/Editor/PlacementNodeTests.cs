@@ -13,6 +13,7 @@ using UnityEngine.Splines;
 namespace UnityTools.Placement.Tests
 {
     /// <summary>Tests for the second set of nodes (filters, set operations, marker, terrain and spline sources).</summary>
+    [SceneIsolation]
     public class PlacementNodeTests
     {
         private readonly List<Object> _created = new();

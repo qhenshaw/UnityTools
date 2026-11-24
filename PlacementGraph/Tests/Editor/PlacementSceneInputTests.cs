@@ -7,6 +7,7 @@ using Object = UnityEngine.Object;
 namespace UnityTools.Placement.Tests
 {
     /// <summary>Scene Input and Placement Zones: reading authored objects and carving them out with Difference.</summary>
+    [SceneIsolation]
     public class PlacementSceneInputTests
     {
         // Far from anything in the open scene, so only the test's objects overlap the volumes.

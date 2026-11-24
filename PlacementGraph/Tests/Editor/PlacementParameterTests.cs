@@ -10,6 +10,7 @@ using Object = UnityEngine.Object;
 namespace UnityTools.Placement.Tests
 {
     /// <summary>Graph parameters: Input variables compiled into the asset, and overrides on the component.</summary>
+    [SceneIsolation]
     public class PlacementParameterTests
     {
         private const string GraphPath = "Assets/__PlacementParameterTests.placegraph";

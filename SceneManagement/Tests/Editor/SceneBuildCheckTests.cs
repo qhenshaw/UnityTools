@@ -5,6 +5,7 @@ using UnityEngine;
 
 namespace UnityTools.Scenes.Tests
 {
+    [SceneIsolation]
     public class SceneBuildCheckTests
     {
         private static readonly EditorBuildSettingsScene[] Build =

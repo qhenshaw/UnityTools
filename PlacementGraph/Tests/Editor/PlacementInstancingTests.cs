@@ -8,6 +8,7 @@ using Object = UnityEngine.Object;
 namespace UnityTools.Placement.Tests
 {
     /// <summary>Spawn Instanced: GPU-instanced batches instead of GameObjects.</summary>
+    [SceneIsolation]
     public class PlacementInstancingTests
     {
         private readonly List<Object> _created = new();

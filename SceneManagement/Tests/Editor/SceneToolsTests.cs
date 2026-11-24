@@ -12,6 +12,7 @@ using UnityEngine.TestTools;
 namespace UnityTools.Scenes.Tests
 {
     /// <summary>EditMode tests for PrefabSpawner, MeshPreview, HideChildren and AdditiveSceneManager.</summary>
+    [SceneIsolation]
     public class SceneToolsTests
     {
         private const string Folder = "Assets/UnityToolsSceneToolsTests";
@@ -295,12 +296,15 @@ namespace UnityTools.Scenes.Tests
 
             PrefabSpawner.AskAboutOverrides = _ => 2;
             List<GameObject> skipped = PrefabSpawner.ReplaceWithSpawners(new[] { plain, changed });
+            _created.AddRange(skipped);
             Assert.AreEqual(1, skipped.Count);
             Assert.IsTrue(plain == null);
             Assert.IsTrue(changed != null, "the instance with overrides is skipped");
 
             PrefabSpawner.AskAboutOverrides = _ => 0;
-            Assert.AreEqual(1, PrefabSpawner.ReplaceWithSpawners(new[] { changed }).Count);
+            List<GameObject> replaced = PrefabSpawner.ReplaceWithSpawners(new[] { changed });
+            _created.AddRange(replaced);
+            Assert.AreEqual(1, replaced.Count);
             Assert.IsTrue(changed == null);
         }
 
@@ -313,7 +317,9 @@ namespace UnityTools.Scenes.Tests
 
             bool asked = false;
             PrefabSpawner.AskAboutOverrides = _ => { asked = true; return 1; };
-            Assert.AreEqual(1, PrefabSpawner.ReplaceWithSpawners(new[] { instance }).Count);
+            List<GameObject> spawners = PrefabSpawner.ReplaceWithSpawners(new[] { instance });
+            _created.AddRange(spawners);
+            Assert.AreEqual(1, spawners.Count);
             Assert.IsFalse(asked);
         }
 
@@ -331,6 +337,7 @@ namespace UnityTools.Scenes.Tests
             Undo.PerformUndo();
 
             GameObject[] roots = _scene.GetRootGameObjects();
+            _created.AddRange(roots.Where(r => r.name == "A" || r.name == "B"));
             Assert.IsTrue(roots.Any(r => r.name == "A") && roots.Any(r => r.name == "B"), "one undo brings both back");
             Assert.IsFalse(roots.Any(r => r.GetComponent<PrefabSpawner>() != null));
         }

@@ -5,6 +5,7 @@ using Object = UnityEngine.Object;
 
 namespace UnityTools.Placement.Tests
 {
+    [SceneIsolation]
     public class PlacementGraphTests
     {
         private readonly List<Object> _created = new();

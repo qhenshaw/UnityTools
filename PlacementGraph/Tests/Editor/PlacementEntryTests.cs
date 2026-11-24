@@ -10,6 +10,7 @@ using Object = UnityEngine.Object;
 namespace UnityTools.Placement.Tests
 {
     /// <summary>Prefab Entry nodes, parameters bound into entries and the authoring helpers.</summary>
+    [SceneIsolation]
     public class PlacementEntryTests
     {
         private const string Folder = "Assets/__PlacementEntryTests";

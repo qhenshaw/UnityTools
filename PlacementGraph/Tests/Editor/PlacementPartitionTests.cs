@@ -7,6 +7,7 @@ using Object = UnityEngine.Object;
 namespace UnityTools.Placement.Tests
 {
     /// <summary>Partitioning: cells that run separately and regenerate only when their inputs change.</summary>
+    [SceneIsolation]
     public class PlacementPartitionTests
     {
         private readonly List<Object> _created = new();

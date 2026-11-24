@@ -10,6 +10,7 @@ using Object = UnityEngine.Object;
 namespace UnityTools.Placement.Tests
 {
     /// <summary>Subgraphs: inlined at compile time, with Input and Output variables standing for the subgraph node's ports.</summary>
+    [SceneIsolation]
     public class PlacementSubgraphTests
     {
         private const string SubPath = "Assets/__PlacementSubgraphTests_Sub.placegraph";

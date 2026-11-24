@@ -7,6 +7,7 @@ using Object = UnityEngine.Object;
 namespace UnityTools.Placement.Tests
 {
     /// <summary>Per-point attributes: storage, and every node carrying them along with its points.</summary>
+    [SceneIsolation]
     public class PlacementAttributeTests
     {
         private readonly List<Object> _created = new();

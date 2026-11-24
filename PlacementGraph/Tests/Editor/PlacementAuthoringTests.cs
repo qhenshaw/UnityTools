@@ -10,6 +10,7 @@ using Object = UnityEngine.Object;
 namespace UnityTools.Placement.Tests
 {
     /// <summary>The authoring API: graphs built from code are ordinary .placegraph assets.</summary>
+    [SceneIsolation]
     public class PlacementAuthoringTests
     {
         private const string Folder = "Assets/__PlacementAuthoringTests";

@@ -7,6 +7,7 @@ using Object = UnityEngine.Object;
 namespace UnityTools.Placement.Tests
 {
     /// <summary>Modular building: the grammar, fitting modules to segments, corners and grids.</summary>
+    [SceneIsolation]
     public class PlacementModularTests
     {
         private readonly List<Object> _created = new();

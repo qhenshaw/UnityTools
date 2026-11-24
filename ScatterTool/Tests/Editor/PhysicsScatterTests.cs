@@ -9,6 +9,7 @@ using Object = UnityEngine.Object;
 
 namespace UnityTools.Scatter.Tests
 {
+    [SceneIsolation]
     public class PhysicsScatterTests
     {
         private const string Folder = "Assets/UnityToolsScatterTests";

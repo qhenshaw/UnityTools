@@ -7,6 +7,7 @@ using Object = UnityEngine.Object;
 namespace UnityTools.Placement.Tests
 {
     /// <summary>Rotation and scale control: Transform Points modes and Spawn Prefabs' prefab rotation and scale.</summary>
+    [SceneIsolation]
     public class PlacementTransformTests
     {
         private readonly List<Object> _created = new();

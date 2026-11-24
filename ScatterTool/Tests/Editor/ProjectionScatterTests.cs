@@ -10,6 +10,7 @@ using Object = UnityEngine.Object;
 
 namespace UnityTools.Scatter.Tests
 {
+    [SceneIsolation]
     public class ProjectionScatterTests
     {
         private const string Folder = "Assets/UnityToolsProjectionScatterTests";
