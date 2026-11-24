@@ -146,7 +146,7 @@ namespace UnityTools.Placement.Editor
 
         /// <summary>
         /// Converts <paramref name="value"/> to <paramref name="type"/> where the meaning is clear: numbers between
-        /// numeric types, enum names or numbers to enums, an int to a LayerMask, three numbers to a Vector3, and an asset
+        /// numeric types, enum names or numbers to enums, an int to a LayerMask, three numbers (or one, for all axes) to a Vector3, and an asset
         /// path to a Prefab Palette. Throws otherwise.
         /// </summary>
         internal static object Convert(object value, Type type, string what)
@@ -170,6 +170,11 @@ namespace UnityTools.Placement.Editor
                     return System.Convert.ChangeType(value, type, System.Globalization.CultureInfo.InvariantCulture);
                 }
                 if (type == typeof(LayerMask) && (value is int || value is long)) return (LayerMask)System.Convert.ToInt32(value);
+                if (type == typeof(Vector3) && (value is float || value is int || value is double))
+                {
+                    float uniform = System.Convert.ToSingle(value);
+                    return new Vector3(uniform, uniform, uniform);
+                }
                 if (type == typeof(Vector3) && value is System.Collections.IList list && list.Count == 3)
                     return new Vector3(System.Convert.ToSingle(list[0]), System.Convert.ToSingle(list[1]), System.Convert.ToSingle(list[2]));
                 if (typeof(UnityEngine.Object).IsAssignableFrom(type) && value is string path)

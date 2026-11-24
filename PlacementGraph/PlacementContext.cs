@@ -7,6 +7,7 @@ namespace UnityTools.Placement
     /// <summary>Receives what spawner nodes place. The scene component instantiates prefabs; tests can record.</summary>
     public interface IPlacementOutput
     {
+        /// <summary>Places <paramref name="prefab"/> with this world position and rotation and this local scale (already final).</summary>
         void Spawn(GameObject prefab, Vector3 position, Quaternion rotation, Vector3 scale);
     }
 

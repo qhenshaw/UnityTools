@@ -201,7 +201,7 @@ namespace UnityTools.Placement
                 instance = Instantiate(prefab, transform);
             }
             instance.transform.SetPositionAndRotation(position, rotation);
-            instance.transform.localScale = Vector3.Scale(prefab.transform.localScale, scale);
+            instance.transform.localScale = scale;
             InstanceCount++;
         }
 

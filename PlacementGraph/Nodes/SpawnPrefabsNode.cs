@@ -11,6 +11,10 @@ namespace UnityTools.Placement
     public class SpawnPrefabsNode : PlacementNode
     {
         public PrefabPalette Palette;
+        [Tooltip("Apply the prefab's own root rotation after the point's.")]
+        public bool KeepPrefabRotation;
+        [Tooltip("Multiply the point's scale by the prefab's own root scale. Off: the point's scale is used as is.")]
+        public bool KeepPrefabScale = true;
 
         public override int InputCount => 1;
         public override int OutputCount => 1;
@@ -29,7 +33,11 @@ namespace UnityTools.Placement
             foreach (PlacementPoint point in inputs[0].Points)
             {
                 GameObject prefab = Palette.Pick(PlacementRandom.Value(PlacementRandom.Hash(point.Seed, seed)));
-                if (prefab != null) context.Output.Spawn(prefab, point.Position, point.Rotation, point.Scale);
+                if (prefab == null) continue;
+                Transform root = prefab.transform;
+                Quaternion rotation = KeepPrefabRotation ? point.Rotation * root.localRotation : point.Rotation;
+                Vector3 scale = KeepPrefabScale ? Vector3.Scale(root.localScale, point.Scale) : point.Scale;
+                context.Output.Spawn(prefab, point.Position, rotation, scale);
             }
         }
     }

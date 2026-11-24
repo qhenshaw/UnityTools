@@ -619,8 +619,8 @@ Places prefabs procedurally with a node graph, in the spirit of Unreal's PCG: no
 | Noise Density | Multiplies density by world-space Perlin noise (Scale in metres, Contrast, Invert). |
 | Density Filter | Keeps points by density: at or above a Threshold, or at random with density as the chance. Rejected points come out of the Rejected port. |
 | Slope Filter | Keeps points whose surface is between Min Angle and Max Angle from flat. Rejected points come out of the Rejected port. |
-| Transform Points | Random offset, rotation (Euler ranges) and uniform scale per point, optionally aligned to the surface normal. |
-| Spawn Prefabs | Spawns a prefab from its Palette at every point, picked by weight, and passes the points on. |
+| Transform Points | Random offset, rotation (Euler ranges) and scale per point. **Rotation Mode** Add puts the rotation on top of the point's, Replace uses it instead; **Align To Normal** starts from the surface normal. **Uniform Scale** on uses Scale Min to Max for all axes, off uses Axis Scale Min to Max per axis; **Scale Mode** Multiply multiplies the point's scale, Replace replaces it. |
+| Spawn Prefabs | Spawns a prefab from its Palette at every point, picked by weight, with the point's rotation and scale, and passes the points on. **Keep Prefab Rotation** adds the prefab's own root rotation after the point's (off by default); **Keep Prefab Scale** multiplies by the prefab's own root scale (on by default). |
 | Terrain Sampler | A jittered grid (Spacing, Jitter) dropped onto the active terrains, with their height and normal. Set Layer Index (-1 is off) and Min Weight to keep only points where that terrain layer is painted. |
 | Child Markers | One point per active child of the component's **Markers** Transform, at its position, rotation and scale. Use it to place things by hand-placed markers. |
 | Spline Sampler | Needs the Splines package. Reads the component's **Spline** (a Spline Container). Along: a point every Spacing metres along each spline, facing along it. Inside: a grid (Spacing, Jitter) over the volume, kept inside each closed spline seen from above. |
@@ -661,7 +661,7 @@ PlacementGraphAsset compiled = graph.Save();      // writes the file and reimpor
 - `PlacementGraphAuthoring.ListNodeTypes()` returns every node type with its category, point ports and settings (name, type, default); `DescribeNodeTypes()` gives the same as text, which is handy for an agent.
 - `Open(path)` edits an existing graph: `Nodes`, `FindNode(title)`, `Get(setting)`, `Disconnect`, `RemoveNode`. `Validate()` lists what the graph window would warn about, and `Compile()` compiles in memory without saving.
 - Subgraphs: in the subgraph, `AddPointInput(name)` and `AddPointOutput(name)` add the point ports and `AddParameter` the value ports; in the graph using it, `AddSubgraph(path)` adds the node, whose ports are named after those variables.
-- Values convert where it's clear: numbers between numeric types, enum names (`"Threshold"`), an int for a LayerMask, three numbers for a Vector3 and an asset path for a Prefab Palette. Unknown nodes, ports or settings and mismatched types throw an exception that lists what's available.
+- Values convert where it's clear: numbers between numeric types, enum names (`"Threshold"`), an int for a LayerMask, three numbers (or one, for all axes) for a Vector3 and an asset path for a Prefab Palette. Unknown nodes, ports or settings and mismatched types throw an exception that lists what's available.
 
 ## Snap to Floor
 Press **End** (Tools > LD Shortcuts > Snap to Floor) to drop every selected object onto the first solid surface below it, as one Undo step.

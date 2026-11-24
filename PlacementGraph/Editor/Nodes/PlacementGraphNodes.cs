@@ -123,9 +123,14 @@ namespace UnityTools.Placement.Editor
             AddSetting<Vector3>(context, "Offset Max");
             AddSetting<Vector3>(context, "Rotation Min", "Euler angle range in degrees, applied after alignment.");
             AddSetting<Vector3>(context, "Rotation Max");
-            AddSetting<float>(context, "Scale Min", "Uniform scale range, multiplied into the point's scale.");
+            AddSetting<float>(context, "Scale Min", "Uniform scale range (Uniform Scale on), multiplied into or replacing the point's scale.");
             AddSetting<float>(context, "Scale Max");
-            AddSetting<bool>(context, "Align To Normal", "Rotate each point so its up axis follows the surface normal.");
+            AddSetting<bool>(context, "Align To Normal", "Rotate each point so its up axis follows the surface normal, before the random rotation.");
+            AddSetting<Placement.TransformPointsNode.RotationModes>(context, "Rotation Mode", "Add: on top of the point's rotation. Replace: instead of it.");
+            AddSetting<bool>(context, "Uniform Scale", "On: Scale Min and Scale Max for all axes. Off: Axis Scale Min and Axis Scale Max per axis.");
+            AddSetting<Vector3>(context, "Axis Scale Min", "Per-axis scale range, used with Uniform Scale off.");
+            AddSetting<Vector3>(context, "Axis Scale Max");
+            AddSetting<Placement.TransformPointsNode.ScaleModes>(context, "Scale Mode", "Multiply: times the point's scale. Replace: instead of it.");
         }
     }
 
@@ -146,6 +151,8 @@ namespace UnityTools.Placement.Editor
         protected override void DefineSettings(IPortDefinitionContext context)
         {
             AddSetting<PrefabPalette>(context, PalettePort, "The weighted prefabs to pick from.");
+            AddSetting<bool>(context, "Keep Prefab Rotation", "Apply the prefab's own root rotation after the point's.");
+            AddSetting<bool>(context, "Keep Prefab Scale", "Multiply the point's scale by the prefab's own root scale.");
         }
 
         public override void Validate(List<string> problems)

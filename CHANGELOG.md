@@ -13,6 +13,7 @@ All notable changes to Unity Tools. Versions are git tags: install one with `htt
 - Placement Graph: subgraphs (asset and local). Input and Output variables become the subgraph node's ports, points included; the importer inlines each use with its own random streams and reimports when a subgraph asset changes.
 - Placement Graph: authoring API for editor scripts and AI agents (`PlacementGraphAuthoring`): create or open a .placegraph, add nodes by title, set settings, connect ports, add and bind parameters, build subgraphs, validate, compile and save. `ListNodeTypes()` and `DescribeNodeTypes()` list every node's ports and settings with types and defaults.
 - Placement Graph: new Blackboard variables are made Input (Graph Toolkit creates them Local), so they become subgraph ports; existing variables keep their kind.
+- Placement Graph: more rotation and scale control. Transform Points has Rotation Mode (Add or Replace), Uniform Scale with per-axis Axis Scale Min and Max, and Scale Mode (Multiply or Replace); Spawn Prefabs has Keep Prefab Rotation (off) and Keep Prefab Scale (on). The defaults match the earlier behaviour, so existing graphs place the same.
 
 ## 7.0.0 - 2026-11-15
 - **Breaking** Every tool now uses a `UnityTools.*` namespace, and every assembly is named after its namespace. Scripts need their `using` lines updated, and your own assembly definitions that reference these assemblies by name need the new names (references by GUID, Unity's default, keep working). Scene, prefab and asset references are unaffected.
