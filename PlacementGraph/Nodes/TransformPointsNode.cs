@@ -47,6 +47,12 @@ namespace UnityTools.Placement
         public bool UniformScale = true;
         [Tooltip("Multiply: the random scale multiplies the point's scale. Replace: it replaces it.")]
         public ScaleModes ScaleMode = ScaleModes.Multiply;
+        [Tooltip("Optional. A Vector3 attribute added to each point's random offset (e.g. EntryOffset).")]
+        public string OffsetAttribute = "";
+        [Tooltip("Optional. A Vector3 attribute of Euler degrees added to each point's random rotation (e.g. EntryRotation).")]
+        public string RotationAttribute = "";
+        [Tooltip("Optional. A Float or Vector3 attribute multiplied into each point's random scale (e.g. EntryScale).")]
+        public string ScaleAttribute = "";
 
         public override int InputCount => 1;
         public override int OutputCount => 1;
@@ -56,6 +62,10 @@ namespace UnityTools.Placement
             uint seed = PlacementRandom.Hash(context.SeedHash, NodeSeed);
             PointData input = inputs[0];
             var result = PointData.Derive(input, input.Count);
+            PointAttribute<Vector3> offsetAttribute = Named<Vector3>(input, OffsetAttribute);
+            PointAttribute<Vector3> rotationAttribute = Named<Vector3>(input, RotationAttribute);
+            PointAttribute<float> scaleFloat = Named<float>(input, ScaleAttribute);
+            PointAttribute<Vector3> scaleVector = Named<Vector3>(input, ScaleAttribute);
             for (int i = 0; i < input.Count; i++)
             {
                 PlacementPoint point = input.Points[i];
@@ -88,6 +98,10 @@ namespace UnityTools.Placement
                 else baseRotation = RotationMode == RotationModes.Add ? point.Rotation : Quaternion.identity;
 
                 PlacementPoint changed = point;
+                if (offsetAttribute != null) offset += offsetAttribute.Get(i);
+                if (rotationAttribute != null) euler += rotationAttribute.Get(i);
+                if (scaleFloat != null) scale *= scaleFloat.Get(i);
+                if (scaleVector != null) scale = Vector3.Scale(scale, scaleVector.Get(i));
                 changed.Position += offset;
                 changed.Rotation = baseRotation * Quaternion.Euler(euler);
                 changed.Scale = ScaleMode == ScaleModes.Multiply ? Vector3.Scale(point.Scale, scale) : scale;
@@ -95,5 +109,8 @@ namespace UnityTools.Placement
             }
             outputs[0] = result;
         }
+
+        private static PointAttribute<T> Named<T>(PointData data, string name) =>
+            string.IsNullOrEmpty(name) ? null : data.GetAttribute<T>(name);
     }
 }

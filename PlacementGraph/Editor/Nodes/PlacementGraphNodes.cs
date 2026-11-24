@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Unity.GraphToolkit.Editor;
 using UnityEngine;
 
@@ -131,6 +132,9 @@ namespace UnityTools.Placement.Editor
             AddSetting<Vector3>(context, "Axis Scale Min", "Per-axis scale range, used with Uniform Scale off.");
             AddSetting<Vector3>(context, "Axis Scale Max");
             AddSetting<Placement.TransformPointsNode.ScaleModes>(context, "Scale Mode", "Multiply: times the point's scale. Replace: instead of it.");
+            AddSetting<string>(context, "Offset Attribute", "Optional. A Vector3 attribute added to the random offset, in world space.");
+            AddSetting<string>(context, "Rotation Attribute", "Optional. A Vector3 attribute of Euler degrees added to the random rotation.");
+            AddSetting<string>(context, "Scale Attribute", "Optional. A Float or Vector3 attribute multiplied into the random scale.");
         }
     }
 
@@ -153,12 +157,15 @@ namespace UnityTools.Placement.Editor
             AddSetting<PrefabPalette>(context, PalettePort, "The weighted prefabs to pick from.");
             AddSetting<bool>(context, "Keep Prefab Rotation", "Apply the prefab's own root rotation after the point's.");
             AddSetting<bool>(context, "Keep Prefab Scale", "Multiply the point's scale by the prefab's own root scale.");
+            AddSetting<bool>(context, "Apply Entry Adjustments", "Apply the palette entry's position offset, rotation and scale.");
         }
 
         public override void Validate(List<string> problems)
         {
             IPort port = GetInputPortByName(PalettePort);
             if (port == null || port.IsConnected) return;
+            // Points can bring their own prefab from Select Prefab, which makes the palette optional.
+            if (Graph != null && Graph.GetNodes().Any(n => n is SelectPrefabNode)) return;
             if (!port.TryGetValue(out PrefabPalette palette) || palette == null)
                 problems.Add("Spawn Prefabs has no Palette. Create one with Assets > Create > UnityTools > Prefab Palette.");
         }
