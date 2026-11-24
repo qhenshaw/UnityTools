@@ -10,7 +10,7 @@ namespace UnityTools.Placement.Editor
     /// Imports a .placegraph file: loads the Graph Toolkit graph and compiles it into a <see cref="PlacementGraphAsset"/>,
     /// the main object, which is what a Placement Graph component references.
     /// </summary>
-    [ScriptedImporter(1, PlacementGraphDefinition.AssetExtension)]
+    [ScriptedImporter(2, PlacementGraphDefinition.AssetExtension)]
     internal class PlacementGraphImporter : ScriptedImporter
     {
         public override void OnImportAsset(AssetImportContext ctx)
@@ -25,9 +25,12 @@ namespace UnityTools.Placement.Editor
             {
                 var errors = new List<string>();
                 var warnings = new List<string>();
-                PlacementGraphCompiler.TryCompile(graph, asset, errors, warnings);
+                var dependencies = new List<string>();
+                PlacementGraphCompiler.TryCompile(graph, asset, errors, warnings, dependencies);
                 foreach (string error in errors) ctx.LogImportError(error);
                 foreach (string warning in warnings) ctx.LogImportWarning(warning);
+                // Editing a subgraph reimports every graph that uses it.
+                foreach (string dependency in dependencies) ctx.DependsOnSourceAsset(dependency);
             }
             ctx.AddObjectToAsset("PlacementGraph", asset);
             ctx.SetMainObject(asset);

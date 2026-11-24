@@ -9,7 +9,7 @@ namespace UnityTools.Placement.Editor
     /// The authoring graph, edited in Graph Toolkit's window and saved as a .placegraph file. On import it is
     /// compiled into a <see cref="PlacementGraphAsset"/> (see <see cref="PlacementGraphImporter"/>).
     /// </summary>
-    [Graph(AssetExtension)]
+    [Graph(AssetExtension, GraphOptions.SupportsSubgraphs)]
     [Serializable]
     internal class PlacementGraphDefinition : Graph
     {
