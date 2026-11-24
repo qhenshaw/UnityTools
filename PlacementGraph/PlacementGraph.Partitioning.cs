@@ -154,12 +154,11 @@ namespace UnityTools.Placement
                 ClearCell(cell, record);
                 cell.Container = new GameObject($"Cell {index.x},{index.y}");
                 cell.Container.transform.SetParent(transform, false);
-#if UNITY_EDITOR
-                if (record && !Application.isPlaying) Undo.RegisterCreatedObjectUndo(cell.Container, "Generate Placement Graph");
-#endif
                 _spawnParent = cell.Container.transform;
                 _currentCell = CellId(index);
-                _record = record;
+                // Objects are spawned without their own Undo entries: registering the container afterwards covers
+                // them all, which is far cheaper than one entry per object. Instances still record the component.
+                _record = false;
                 try
                 {
                     EvaluateRegion(this, run, owned);
@@ -168,8 +167,10 @@ namespace UnityTools.Placement
                 {
                     _spawnParent = null;
                     _currentCell = 0;
-                    _record = false;
                 }
+#if UNITY_EDITOR
+                if (record && !Application.isPlaying) Undo.RegisterCreatedObjectUndo(cell.Container, "Generate Placement Graph");
+#endif
                 cell.Signature = signature;
                 _lastRegenerated.Add(index);
                 for (int n = 0; n < _lastCounts.Count; n++)

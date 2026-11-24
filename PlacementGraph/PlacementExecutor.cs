@@ -119,6 +119,8 @@ namespace UnityTools.Placement
             }
 
             context.NodeOutputCounts.Clear();
+            context.NodeMilliseconds.Clear();
+            var stopwatch = new System.Diagnostics.Stopwatch();
             var gathered = new List<PointData>();
             for (int n = 0; n < nodes.Count; n++)
             {
@@ -127,6 +129,7 @@ namespace UnityTools.Placement
                 {
                     outputs[n] = Array.Empty<PointData>();
                     context.NodeOutputCounts.Add(0);
+                    context.NodeMilliseconds.Add(0);
                     continue;
                 }
 
@@ -151,7 +154,9 @@ namespace UnityTools.Placement
 
                 var nodeOutputs = new PointData[node.OutputCount];
                 context.InputConnected = connected;
+                stopwatch.Restart();
                 node.Execute(context, inputs, nodeOutputs);
+                context.NodeMilliseconds.Add(stopwatch.Elapsed.TotalMilliseconds);
                 for (int port = 0; port < nodeOutputs.Length; port++) nodeOutputs[port] ??= PointData.Empty;
 
                 outputs[n] = nodeOutputs;

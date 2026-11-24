@@ -46,6 +46,10 @@ namespace UnityTools.Placement
 
         private readonly List<PointData[]> _lastOutputs = new List<PointData[]>();
         private readonly List<int> _lastCounts = new List<int>();
+        private readonly List<double> _lastMilliseconds = new List<double>();
+
+        /// <summary>How long each node took on the last run, in milliseconds, by node index (the last cell, when partitioned).</summary>
+        public IReadOnlyList<double> LastNodeMilliseconds => _lastMilliseconds;
         private readonly List<string> _lastWarnings = new List<string>();
         private bool _record;
 
@@ -190,6 +194,8 @@ namespace UnityTools.Placement
             PointData[][] outputs = PlacementExecutor.Run(_graph, context);
             _lastCounts.Clear();
             _lastCounts.AddRange(context.NodeOutputCounts);
+            _lastMilliseconds.Clear();
+            _lastMilliseconds.AddRange(context.NodeMilliseconds);
             _lastWarnings.Clear();
             _lastWarnings.AddRange(context.Warnings);
             return outputs;

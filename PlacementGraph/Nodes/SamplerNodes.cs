@@ -1,4 +1,5 @@
 using System;
+using Unity.Collections;
 using UnityEngine;
 
 namespace UnityTools.Placement
@@ -131,21 +132,39 @@ namespace UnityTools.Placement
             down.Normalize();
 
             var result = PointData.Derive(source, source.Count);
-            for (int i = 0; i < source.Count; i++)
-            {
-                PlacementPoint point = source.Points[i];
-                // Start every ray at the top face, above the point, so wired-in points project the same way.
-                Vector3 local = worldToLocal.MultiplyPoint3x4(point.Position);
-                local.y = bounds.max.y;
-                Vector3 origin = context.LocalToWorldPoint(local);
-                if (!Physics.Raycast(origin, down, out RaycastHit hit, distance, LayerMask, QueryTriggerInteraction.Ignore)) continue;
-
-                PlacementPoint projected = point;
-                projected.Position = hit.point;
-                projected.Normal = hit.normal;
-                result.AddFrom(source, i, projected);
-            }
             outputs[0] = result;
+            if (source.Count == 0) return;
+
+            // All rays go out as one batch (RaycastCommand), which runs them on worker threads. The hits are the
+            // same as Physics.Raycast's.
+            var commands = new NativeArray<RaycastCommand>(source.Count, Allocator.TempJob);
+            var hits = new NativeArray<RaycastHit>(source.Count, Allocator.TempJob);
+            try
+            {
+                var query = new QueryParameters(LayerMask, false, QueryTriggerInteraction.Ignore, Physics.queriesHitBackfaces);
+                for (int i = 0; i < source.Count; i++)
+                {
+                    // Start every ray at the top face, above the point, so wired-in points project the same way.
+                    Vector3 local = worldToLocal.MultiplyPoint3x4(source.Points[i].Position);
+                    local.y = bounds.max.y;
+                    commands[i] = new RaycastCommand(context.LocalToWorldPoint(local), down, query, distance);
+                }
+                RaycastCommand.ScheduleBatch(commands, hits, 64, 1).Complete();
+                for (int i = 0; i < source.Count; i++)
+                {
+                    RaycastHit hit = hits[i];
+                    if (hit.collider == null) continue;
+                    PlacementPoint projected = source.Points[i];
+                    projected.Position = hit.point;
+                    projected.Normal = hit.normal;
+                    result.AddFrom(source, i, projected);
+                }
+            }
+            finally
+            {
+                commands.Dispose();
+                hits.Dispose();
+            }
         }
     }
 }

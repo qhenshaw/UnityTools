@@ -60,6 +60,7 @@ namespace UnityTools.Placement.Editor
                     using (new EditorGUILayout.HorizontalScope())
                     {
                         string count = i < graph.LastNodeCounts.Count ? graph.LastNodeCounts[i].ToString() : "-";
+                        if (i < graph.LastNodeMilliseconds.Count) count += $"   {graph.LastNodeMilliseconds[i]:0.0} ms";
                         EditorGUILayout.LabelField(nodes[i]?.Name ?? $"{i}: (missing)", count);
                         bool debugging = graph.DebugNode == i;
                         bool toggled = GUILayout.Toggle(debugging, "Show", EditorStyles.miniButton, GUILayout.Width(48));

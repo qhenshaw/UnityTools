@@ -79,6 +79,9 @@ namespace UnityTools.Placement
         /// <summary>Points each node produced on its first output, by node index. Filled by the executor.</summary>
         public readonly List<int> NodeOutputCounts = new List<int>();
 
+        /// <summary>How long each node took to run, in milliseconds, by node index (spawning included). Filled by the executor.</summary>
+        public readonly List<double> NodeMilliseconds = new List<double>();
+
         /// <summary>When set, the executor keeps every node's outputs here, by node index, for the debug view.</summary>
         public List<PointData[]> NodeOutputs;
 
