@@ -22,7 +22,6 @@ namespace UnityTools.Placement
         /// <summary>The cell size Near Player uses when Cell Size is 0.</summary>
         public const float DefaultRuntimeCellSize = 32f;
 
-        [Header("Runtime")]
         [Tooltip("Editor Only: generated in the editor and saved with the scene. On Load: also generated when the scene " +
                  "loads (if nothing was saved) and when a parameter changes. Near Player: cells around Generation Sources " +
                  "(or the main camera) are generated as they come near and unloaded when far.")]
