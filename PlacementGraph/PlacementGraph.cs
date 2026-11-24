@@ -167,6 +167,7 @@ namespace UnityTools.Placement
                 LocalBounds = bounds,
                 OwnedBounds = owned,
                 AnchorGridToOrigin = owned.HasValue,
+                Scene = gameObject.scene,
                 Seed = _seed,
                 Output = output,
                 Instances = output != null ? this : null,
@@ -468,6 +469,7 @@ namespace UnityTools.Placement
                     }
                 }
 #endif
+                hash = hash * 31 + SceneInputSignature(Matrix4x4.TRS(transform.position, transform.rotation, Vector3.one).inverse, LocalBounds);
                 return hash;
             }
         }

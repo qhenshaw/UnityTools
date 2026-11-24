@@ -296,8 +296,36 @@ namespace UnityTools.Placement
             }
         }
 
-        /// <summary>Extra per-cell inputs (scene objects read by the graph). Extended by Scene Input.</summary>
-        private int SceneInputSignature(Matrix4x4 worldToLocal, Bounds run) => 0;
+        /// <summary>
+        /// A hash of the scene objects the graph's Scene Input nodes read inside <paramref name="region"/> (local
+        /// space): which ones match, and where and how big they are. A zone moving into, out of or within a region
+        /// changes it.
+        /// </summary>
+        private int SceneInputSignature(Matrix4x4 worldToLocal, Bounds region)
+        {
+            if (_graph == null) return 0;
+            unchecked
+            {
+                int hash = 0;
+                PlacementContext context = null;
+                foreach (PlacementNode node in _graph.Nodes)
+                {
+                    if (node is not SceneInputNode sceneInput) continue;
+                    context ??= new PlacementContext
+                    {
+                        LocalToWorld = worldToLocal.inverse,
+                        LocalBounds = region,
+                        Scene = gameObject.scene
+                    };
+                    foreach (SceneInputNode.Match match in sceneInput.FindMatches(context))
+                    {
+                        hash = hash * 31 + match.Key.GetHashCode();
+                        hash = hash * 31 + (match.Zone != null ? match.Zone.StateHash : match.GameObject.transform.localToWorldMatrix.GetHashCode());
+                    }
+                }
+                return hash;
+            }
+        }
 
 #if UNITYTOOLS_SPLINES
         private bool SplineTouches(Matrix4x4 worldToLocal, Bounds run)

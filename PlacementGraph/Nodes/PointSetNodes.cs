@@ -83,34 +83,71 @@ namespace UnityTools.Placement
         }
     }
 
-    /// <summary>Filter: drops the In points that are within Radius of any Exclude point.</summary>
+    /// <summary>
+    /// Filter: drops the In points that are within Radius of any Exclude point, or inside (or within Radius of) any
+    /// Placement Zone the Exclude points came from (Scene Input). With Falloff, kept points near the excluded area get
+    /// their density scaled down.
+    /// </summary>
     [Serializable]
     public class DifferenceNode : PlacementNode
     {
-        [Tooltip("Points closer than this to an Exclude point are dropped, in metres.")]
+        [Tooltip("Points closer than this to an Exclude point, or to the surface of an Exclude zone, are dropped, in metres. Points inside a zone are always dropped.")]
         [Min(0f)] public float Radius = 1f;
+        [Tooltip("Beyond Radius, kept points within this many metres more get their density scaled down towards the excluded area (0 = off).")]
+        [Min(0f)] public float Falloff = 0f;
 
-        /// <summary>Input 0: the points to filter. Input 1: the points to keep away from.</summary>
+        /// <summary>Input 0: the points to filter. Input 1: the points (or zones, from Scene Input) to keep away from.</summary>
         public override int InputCount => 2;
         /// <summary>Output 0: kept. Output 1: rejected.</summary>
         public override int OutputCount => 2;
 
         public override void Execute(PlacementContext context, PointData[] inputs, PointData[] outputs)
         {
-            if (Radius <= 0f || inputs[1].Count == 0)
+            PointData exclude = inputs[1];
+            // Exclude points that came from a Placement Zone stand for the zone's whole shape.
+            var zones = new List<PlacementZone>();
+            var plain = new PointData();
+            PointAttribute<UnityEngine.Object> zoneColumn = exclude.GetAttribute<UnityEngine.Object>(SceneInputNode.ZoneAttribute);
+            for (int i = 0; i < exclude.Count; i++)
+            {
+                if (zoneColumn?.Get(i) is PlacementZone zone && zone != null)
+                {
+                    if (!zones.Contains(zone)) zones.Add(zone);
+                }
+                else plain.Points.Add(exclude.Points[i]);
+            }
+
+            float reach = Radius + Falloff;
+            if (zones.Count == 0 && (reach <= 0f || plain.Count == 0))
             {
                 outputs[0] = inputs[0];
                 outputs[1] = PointData.Empty;
                 return;
             }
 
-            var grid = new PointGrid(Radius, inputs[1]);
+            PointGrid grid = plain.Count > 0 && reach > 0f ? new PointGrid(reach, plain) : null;
             PointData input = inputs[0];
             var kept = PointData.Derive(input, input.Count);
             var rejected = PointData.Derive(input);
             for (int i = 0; i < input.Count; i++)
             {
-                (grid.AnyWithin(input.Points[i].Position, Radius) ? rejected : kept).AddFrom(input, i);
+                PlacementPoint point = input.Points[i];
+                float pointDistance = grid?.NearestDistance(point.Position, reach) ?? float.PositiveInfinity;
+                float zoneDistance = float.PositiveInfinity;
+                foreach (PlacementZone zone in zones) zoneDistance = Mathf.Min(zoneDistance, zone.SignedDistance(point.Position));
+
+                if (pointDistance < Radius || zoneDistance <= Radius)
+                {
+                    rejected.AddFrom(input, i);
+                    continue;
+                }
+                float distance = Mathf.Min(pointDistance, zoneDistance);
+                if (Falloff > 0f && distance < reach)
+                {
+                    point.Density *= Mathf.Clamp01((distance - Radius) / Falloff);
+                    kept.AddFrom(input, i, point);
+                }
+                else kept.AddFrom(input, i);
             }
             outputs[0] = kept;
             outputs[1] = rejected;

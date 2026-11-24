@@ -56,6 +56,9 @@ namespace UnityTools.Placement
         /// <summary>Where spawner nodes send objects. Null skips spawning (points are still computed).</summary>
         public IPlacementOutput Output;
 
+        /// <summary>The scene the generating component is in; Scene Input only reads objects from it. Invalid means any scene.</summary>
+        public UnityEngine.SceneManagement.Scene Scene;
+
         /// <summary>Where Spawn Instanced sends instances. Null skips them.</summary>
         public IInstanceOutput Instances;
 

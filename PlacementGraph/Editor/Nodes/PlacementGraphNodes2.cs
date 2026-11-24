@@ -63,7 +63,8 @@ namespace UnityTools.Placement.Editor
 
         protected override void DefineSettings(IPortDefinitionContext context)
         {
-            AddSetting<float>(context, "Radius", "In points closer than this to an Exclude point are dropped, in metres.");
+            AddSetting<float>(context, "Radius", "In points closer than this to an Exclude point (or a zone's surface) are dropped, in metres. Points inside a zone are always dropped.");
+            AddSetting<float>(context, "Falloff", "Beyond Radius, kept points within this many metres more get their density scaled down (0 = off).");
         }
     }
 
@@ -113,6 +114,25 @@ namespace UnityTools.Placement.Editor
             AddSetting<float>(context, "Inner Radius", "Density is unchanged within this distance of a Target point.");
             AddSetting<float>(context, "Outer Radius", "Density reaches 0 at this distance.");
             AddSetting<bool>(context, "Invert");
+        }
+    }
+
+    [Node("Sources", null, "Scene Input")]
+    [Serializable]
+    internal class SceneInputNode : PlacementGraphNode
+    {
+        protected override PlacementNode CreateRuntimeInstance() => new Placement.SceneInputNode();
+
+        protected override void DefinePointPorts(IPortDefinitionContext context) => AddPointOutput(context, OutPort);
+
+        protected override void DefineSettings(IPortDefinitionContext context)
+        {
+            AddSetting<Placement.SceneInputNode.SourceMode>(context, "Source", "Placement Zones by label, or GameObjects by tag, in the graph's scene.");
+            AddSetting<string>(context, "Label", "Zones By Label: the Placement Zone label to match.");
+            AddSetting<string>(context, "Tag", "Tagged Objects: the Unity tag to match.");
+            AddSetting<Placement.SceneInputNode.OutputMode>(context, "Output", "One point per object, or a grid of points inside each zone.");
+            AddSetting<float>(context, "Spacing", "Points Inside Zones: grid spacing in metres.");
+            AddSetting<bool>(context, "Only Overlapping", "Only objects whose bounds overlap the generation volume.");
         }
     }
 
