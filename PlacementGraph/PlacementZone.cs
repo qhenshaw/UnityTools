@@ -80,7 +80,22 @@ namespace UnityTools.Placement
         }
 
         /// <summary>Whether <paramref name="world"/> is inside the zone.</summary>
-        public bool Contains(Vector3 world) => SignedDistance(world) <= 0f;
+        public bool Contains(Vector3 world)
+        {
+#if UNITYTOOLS_SPLINES
+            // Inside-or-not needs no distance: a point-in-polygon test on the cached outline is much cheaper.
+            if (_shape == ZoneShape.Spline)
+            {
+                var flat = new Vector2(world.x, world.z);
+                foreach (Vector2[] outline in Outlines())
+                {
+                    if (SplineSamplerNode.Contains(outline, flat)) return true;
+                }
+                return false;
+            }
+#endif
+            return SignedDistance(world) <= 0f;
+        }
 
         /// <summary>The zone's world-space bounds.</summary>
         public Bounds WorldBounds
@@ -142,25 +157,71 @@ namespace UnityTools.Placement
             }
         }
 
+        // Set between BeginQueries and EndQueries: the cached shape is used without checking it.
+        private bool _trustOutline;
+
+        /// <summary>
+        /// Starts a batch of many Contains and SignedDistance queries (as a node makes): the zone's shape is checked
+        /// once here instead of on every query. End it with <see cref="EndQueries"/>.
+        /// </summary>
+        public void BeginQueries()
+        {
+            _trustOutline = false;
 #if UNITYTOOLS_SPLINES
+            if (_shape == ZoneShape.Spline) Outlines();
+#endif
+            _trustOutline = true;
+        }
+
+        /// <summary>Ends a batch started with <see cref="BeginQueries"/>.</summary>
+        public void EndQueries() => _trustOutline = false;
+
+#if UNITYTOOLS_SPLINES
+        // The spline's outline seen from above, rebuilt only when the zone changes: evaluating the spline is far too slow
+        // to do for every point a node tests.
+        private readonly List<Vector2[]> _outlines = new List<Vector2[]>();
+        private int _outlineHash;
+        private bool _outlineValid;
+
+        private const int OutlineSegments = 64;
+
+        private List<Vector2[]> Outlines()
+        {
+            // Inside a node's batch of queries the zone can't change, so the outline is reused without checking.
+            if (_outlineValid && _trustOutline) return _outlines;
+            int hash = StateHash;
+            if (_outlineValid && hash == _outlineHash) return _outlines;
+            _outlines.Clear();
+            var container = GetComponent<UnityEngine.Splines.SplineContainer>();
+            if (container != null)
+            {
+                for (int s = 0; s < container.Splines.Count; s++)
+                {
+                    if (!container.Splines[s].Closed) continue;
+                    var outline = new Vector2[OutlineSegments];
+                    for (int i = 0; i < OutlineSegments; i++)
+                    {
+                        Vector3 p = container.EvaluatePosition(s, i / (float)OutlineSegments);
+                        outline[i] = new Vector2(p.x, p.z);
+                    }
+                    _outlines.Add(outline);
+                }
+            }
+            _outlineHash = hash;
+            _outlineValid = true;
+            return _outlines;
+        }
+
         private float SplineDistance(Vector3 world)
         {
-            var container = GetComponent<UnityEngine.Splines.SplineContainer>();
-            if (container == null) return float.PositiveInfinity;
+            List<Vector2[]> outlines = Outlines();
+            if (outlines.Count == 0) return float.PositiveInfinity;
             float best = float.PositiveInfinity;
             var flat = new Vector2(world.x, world.z);
-            const int segments = 64;
-            for (int s = 0; s < container.Splines.Count; s++)
+            foreach (Vector2[] outline in outlines)
             {
-                if (!container.Splines[s].Closed) continue;
-                var outline = new Vector2[segments];
-                for (int i = 0; i < segments; i++)
-                {
-                    Vector3 p = container.EvaluatePosition(s, i / (float)segments);
-                    outline[i] = new Vector2(p.x, p.z);
-                }
                 float edge = float.PositiveInfinity;
-                for (int i = 0, j = segments - 1; i < segments; j = i++)
+                for (int i = 0, j = outline.Length - 1; i < outline.Length; j = i++)
                     edge = Mathf.Min(edge, DistanceToSegment(flat, outline[j], outline[i]));
                 float signed = SplineSamplerNode.Contains(outline, flat) ? -edge : edge;
                 best = Mathf.Min(best, signed);

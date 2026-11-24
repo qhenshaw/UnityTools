@@ -40,7 +40,7 @@ namespace UnityTools.Placement
         [Tooltip("Zones by Label: the label to match.")]
         public string Label = "";
         [Tooltip("Tagged Objects: the Unity tag to match.")]
-        public string Tag = "Untagged";
+        public string Tag = "";
         public OutputMode Output = OutputMode.OnePointPerObject;
         [Tooltip("Points Inside Zones: grid spacing in metres.")]
         [Min(0.01f)] public float Spacing = 1f;
@@ -78,122 +78,138 @@ namespace UnityTools.Placement
                 {
                     if (zone == null || (zone.Label ?? "") != (Label ?? "")) continue;
                     if (!InScene(context, zone.gameObject)) continue;
+                    if (PlacementGraph.IsGenerated(zone.transform)) continue;
                     if (OnlyOverlapping && !Overlaps(context, zone.WorldBounds)) continue;
                     matches.Add(new Match(zone.gameObject, zone, KeyOf(zone.transform)));
                 }
             }
             else
             {
+                if (string.IsNullOrEmpty(Tag) || Tag == "Untagged")
+                {
+                    context.Warn(this, "Tagged Objects: set a Tag to match (Untagged objects can't be searched for).");
+                    return matches;
+                }
                 GameObject[] tagged;
                 try
                 {
-                    tagged = GameObject.FindGameObjectsWithTag(string.IsNullOrEmpty(Tag) ? "Untagged" : Tag);
+                        tagged = GameObject.FindGameObjectsWithTag(Tag);
+                    }
+                    catch (UnityException)
+                    {
+                        context.Warn(this, $"There's no tag called '{Tag}'.");
+                        return matches;
+                    }
+                    foreach (GameObject gameObject in tagged)
+                    {
+                        if (!InScene(context, gameObject)) continue;
+                        // A graph's own output (or another graph's) is never input: reading it back would feed on itself.
+                        if (PlacementGraph.IsGenerated(gameObject.transform)) continue;
+                        if (OnlyOverlapping && !Overlaps(context, new Bounds(gameObject.transform.position, Vector3.zero))) continue;
+                        matches.Add(new Match(gameObject, gameObject.GetComponent<PlacementZone>(), KeyOf(gameObject.transform)));
+                    }
                 }
-                catch (UnityException)
+                matches.Sort((a, b) => string.CompareOrdinal(a.Key, b.Key));
+                return matches;
+            }
+
+            private static bool InScene(PlacementContext context, GameObject gameObject) =>
+                !context.Scene.IsValid() || gameObject.scene == context.Scene;
+
+            /// <summary>Whether world <paramref name="bounds"/> overlap the context's volume (compared in its local space).</summary>
+            private static bool Overlaps(PlacementContext context, Bounds bounds)
+            {
+                Matrix4x4 worldToLocal = context.LocalToWorld.inverse;
+                Vector3 min = bounds.min, max = bounds.max;
+                Bounds local = new Bounds(worldToLocal.MultiplyPoint3x4(min), Vector3.zero);
+                for (int corner = 1; corner < 8; corner++)
                 {
-                    context.Warn(this, $"There's no tag called '{Tag}'.");
-                    return matches;
+                    var point = new Vector3((corner & 1) == 0 ? min.x : max.x, (corner & 2) == 0 ? min.y : max.y, (corner & 4) == 0 ? min.z : max.z);
+                    local.Encapsulate(worldToLocal.MultiplyPoint3x4(point));
                 }
-                foreach (GameObject gameObject in tagged)
+                Bounds volume = context.LocalBounds;
+                return local.min.x <= volume.max.x && local.max.x >= volume.min.x &&
+                       local.min.y <= volume.max.y && local.max.y >= volume.min.y &&
+                       local.min.z <= volume.max.z && local.max.z >= volume.min.z;
+            }
+
+            /// <summary>The object's hierarchy path with sibling indices, e.g. "0:Rocks/2:Cluster": stable between runs.</summary>
+            public static string KeyOf(Transform transform)
+            {
+                var builder = new StringBuilder();
+                var chain = new List<Transform>();
+                for (Transform t = transform; t != null; t = t.parent) chain.Add(t);
+                for (int i = chain.Count - 1; i >= 0; i--)
                 {
-                    if (!InScene(context, gameObject)) continue;
-                    if (OnlyOverlapping && !Overlaps(context, new Bounds(gameObject.transform.position, Vector3.zero))) continue;
-                    matches.Add(new Match(gameObject, gameObject.GetComponent<PlacementZone>(), KeyOf(gameObject.transform)));
+                    if (builder.Length > 0) builder.Append('/');
+                    builder.Append(chain[i].GetSiblingIndex().ToString("D5")).Append(':').Append(chain[i].name);
+                }
+                return builder.ToString();
+            }
+
+            /// <summary>FNV-1a of a string, stable across runs.</summary>
+            internal static uint StableHash(string text)
+            {
+                unchecked
+                {
+                    uint hash = 2166136261;
+                    foreach (char c in text)
+                    {
+                        hash ^= c;
+                        hash *= 16777619;
+                    }
+                    return hash;
                 }
             }
-            matches.Sort((a, b) => string.CompareOrdinal(a.Key, b.Key));
-            return matches;
-        }
 
-        private static bool InScene(PlacementContext context, GameObject gameObject) =>
-            !context.Scene.IsValid() || gameObject.scene == context.Scene;
-
-        /// <summary>Whether world <paramref name="bounds"/> overlap the context's volume (compared in its local space).</summary>
-        private static bool Overlaps(PlacementContext context, Bounds bounds)
-        {
-            Matrix4x4 worldToLocal = context.LocalToWorld.inverse;
-            Vector3 min = bounds.min, max = bounds.max;
-            Bounds local = new Bounds(worldToLocal.MultiplyPoint3x4(min), Vector3.zero);
-            for (int corner = 1; corner < 8; corner++)
+            public override void Execute(PlacementContext context, PointData[] inputs, PointData[] outputs)
             {
-                var point = new Vector3((corner & 1) == 0 ? min.x : max.x, (corner & 2) == 0 ? min.y : max.y, (corner & 4) == 0 ? min.z : max.z);
-                local.Encapsulate(worldToLocal.MultiplyPoint3x4(point));
-            }
-            Bounds volume = context.LocalBounds;
-            return local.min.x <= volume.max.x && local.max.x >= volume.min.x &&
-                   local.min.y <= volume.max.y && local.max.y >= volume.min.y &&
-                   local.min.z <= volume.max.z && local.max.z >= volume.min.z;
-        }
+                var result = new PointData();
+                outputs[0] = result;
+                List<Match> matches = FindMatches(context);
+                PointAttribute<UnityEngine.Object> objects = result.GetOrAddAttribute<UnityEngine.Object>(ObjectAttribute);
+                PointAttribute<UnityEngine.Object> zones = result.GetOrAddAttribute<UnityEngine.Object>(ZoneAttribute);
+                uint nodeSeed = PlacementRandom.Hash(context.SeedHash, NodeSeed);
+                float spacing = Mathf.Max(0.01f, Spacing);
 
-        /// <summary>The object's hierarchy path with sibling indices, e.g. "0:Rocks/2:Cluster": stable between runs.</summary>
-        public static string KeyOf(Transform transform)
-        {
-            var builder = new StringBuilder();
-            var chain = new List<Transform>();
-            for (Transform t = transform; t != null; t = t.parent) chain.Add(t);
-            for (int i = chain.Count - 1; i >= 0; i--)
-            {
-                if (builder.Length > 0) builder.Append('/');
-                builder.Append(chain[i].GetSiblingIndex().ToString("D5")).Append(':').Append(chain[i].name);
-            }
-            return builder.ToString();
-        }
-
-        /// <summary>FNV-1a of a string, stable across runs.</summary>
-        internal static uint StableHash(string text)
-        {
-            unchecked
-            {
-                uint hash = 2166136261;
-                foreach (char c in text)
+                foreach (Match match in matches)
                 {
-                    hash ^= c;
-                    hash *= 16777619;
+                    uint objectSeed = PlacementRandom.Hash(nodeSeed, StableHash(match.Key));
+                    if (Output == OutputMode.OnePointPerObject || match.Zone == null)
+                    {
+                        Transform t = match.GameObject.transform;
+                        PlacementPoint point = PlacementPoint.At(t.position, objectSeed);
+                        point.Rotation = t.rotation;
+                        point.Scale = t.lossyScale;
+                        point.Normal = t.up;
+                        Add(result, objects, zones, point, match);
+                        continue;
+                    }
+
+                    // Points inside the zone, on a world-anchored grid so they don't move when the zone does.
+                    match.Zone.BeginQueries();
+                    try
+                    {
+                    Bounds bounds = match.Zone.WorldBounds;
+                    int x0 = Mathf.FloorToInt(bounds.min.x / spacing), x1 = Mathf.CeilToInt(bounds.max.x / spacing);
+                    int z0 = Mathf.FloorToInt(bounds.min.z / spacing), z1 = Mathf.CeilToInt(bounds.max.z / spacing);
+                    if ((long)(x1 - x0) * (z1 - z0) > GridSampling.MaxPoints)
+                    {
+                        context.Warn(this, $"Spacing {spacing} would make too many points in {match.GameObject.name}. Increase Spacing.");
+                        continue;
+                    }
+                    for (int z = z0; z < z1; z++)
+                    for (int x = x0; x < x1; x++)
+                    {
+                        var position = new Vector3((x + 0.5f) * spacing, bounds.center.y, (z + 0.5f) * spacing);
+                        if (!match.Zone.Contains(position)) continue;
+                        PlacementPoint point = PlacementPoint.At(position, PlacementRandom.Hash(objectSeed, unchecked((uint)x), unchecked((uint)z)));
+                        Add(result, objects, zones, point, match);
+                    }
                 }
-                return hash;
-            }
-        }
-
-        public override void Execute(PlacementContext context, PointData[] inputs, PointData[] outputs)
-        {
-            var result = new PointData();
-            outputs[0] = result;
-            List<Match> matches = FindMatches(context);
-            PointAttribute<UnityEngine.Object> objects = result.GetOrAddAttribute<UnityEngine.Object>(ObjectAttribute);
-            PointAttribute<UnityEngine.Object> zones = result.GetOrAddAttribute<UnityEngine.Object>(ZoneAttribute);
-            uint nodeSeed = PlacementRandom.Hash(context.SeedHash, NodeSeed);
-            float spacing = Mathf.Max(0.01f, Spacing);
-
-            foreach (Match match in matches)
-            {
-                uint objectSeed = PlacementRandom.Hash(nodeSeed, StableHash(match.Key));
-                if (Output == OutputMode.OnePointPerObject || match.Zone == null)
+                finally
                 {
-                    Transform t = match.GameObject.transform;
-                    PlacementPoint point = PlacementPoint.At(t.position, objectSeed);
-                    point.Rotation = t.rotation;
-                    point.Scale = t.lossyScale;
-                    point.Normal = t.up;
-                    Add(result, objects, zones, point, match);
-                    continue;
-                }
-
-                // Points inside the zone, on a world-anchored grid so they don't move when the zone does.
-                Bounds bounds = match.Zone.WorldBounds;
-                int x0 = Mathf.FloorToInt(bounds.min.x / spacing), x1 = Mathf.CeilToInt(bounds.max.x / spacing);
-                int z0 = Mathf.FloorToInt(bounds.min.z / spacing), z1 = Mathf.CeilToInt(bounds.max.z / spacing);
-                if ((long)(x1 - x0) * (z1 - z0) > GridSampling.MaxPoints)
-                {
-                    context.Warn(this, $"Spacing {spacing} would make too many points in {match.GameObject.name}. Increase Spacing.");
-                    continue;
-                }
-                for (int z = z0; z < z1; z++)
-                for (int x = x0; x < x1; x++)
-                {
-                    var position = new Vector3((x + 0.5f) * spacing, bounds.center.y, (z + 0.5f) * spacing);
-                    if (!match.Zone.Contains(position)) continue;
-                    PlacementPoint point = PlacementPoint.At(position, PlacementRandom.Hash(objectSeed, unchecked((uint)x), unchecked((uint)z)));
-                    Add(result, objects, zones, point, match);
+                    match.Zone.EndQueries();
                 }
             }
         }

@@ -92,6 +92,82 @@ namespace UnityTools.Placement.Tests
         }
 
         [Test]
+        public void GeneratedObjects_AreNeverMatched_SoAGraphDoesNotReadItsOwnOutput()
+        {
+            GameObject prop = Track(new GameObject("Tagged Prop"));
+            prop.tag = "Respawn";
+            var nodes = new List<PlacementNode>
+            {
+                new VolumeSamplerNode { Spacing = 2f, Jitter = 0f },
+                new SceneInputNode { Source = SceneInputNode.SourceMode.TaggedObjects, Tag = "Respawn" },
+                new DifferenceNode { Radius = 0.5f },
+                new SpawnPrefabsNode { Entries = new List<PrefabEntry> { new PrefabEntry { Prefab = prop } } }
+            };
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                nodes[i].Name = i.ToString();
+                nodes[i].NodeSeed = (uint)(i + 7) * 13u;
+            }
+            var graph = Track(ScriptableObject.CreateInstance<PlacementGraphAsset>());
+            Assert.IsTrue(PlacementGraphAsset.TrySortTopologically(nodes,
+                new List<PlacementEdge> { new(0, 0, 2, 0), new(1, 0, 2, 1), new(2, 0, 3, 0) }, out var sorted, out var edges));
+            graph.SetContents(sorted, edges);
+            var component = Track(new GameObject("Placement Graph")).AddComponent<PlacementGraph>();
+            component.transform.position = Origin + new Vector3(0f, 0f, 100f);
+            component.Size = new Vector3(10f, 4f, 10f);
+            component.Graph = graph;
+
+            component.RegenerateChanged();
+            int first = component.InstanceCount;
+            Assert.AreEqual(25, first);
+            // The spawned copies carry the tag too; reading them back would carve the next run's points away.
+            component.RegenerateChanged();
+            Assert.AreEqual(first, component.InstanceCount, "Regenerating gives the same result.");
+            Assert.IsTrue(PlacementGraph.IsGenerated(component.transform.GetChild(0)));
+            Assert.IsFalse(PlacementGraph.IsGenerated(prop.transform));
+        }
+
+        [Test]
+        public void EmptyTag_MatchesNothing_AndWarns()
+        {
+            var context = Context(new Vector3(20f, 10f, 20f));
+            PointData points = Run(new SceneInputNode { Source = SceneInputNode.SourceMode.TaggedObjects }, context)[0];
+            Assert.AreEqual(0, points.Count);
+            StringAssert.Contains("set a Tag", context.Warnings.Single());
+        }
+
+#if UNITYTOOLS_SPLINES
+        [Test]
+        public void SplineZone_PointsInside_AreFast_AndFollowTheZoneWhenItMoves()
+        {
+            var zone = Zone("field", PlacementZone.ZoneShape.Box, Vector3.zero);
+            zone.Shape = PlacementZone.ZoneShape.Spline;
+            var container = zone.gameObject.AddComponent<UnityEngine.Splines.SplineContainer>();
+            UnityEngine.Splines.Spline spline = container.Spline;
+            foreach (Vector3 knot in new[] { new Vector3(-8f, 0f, -6f), new Vector3(8f, 0f, -6f), new Vector3(8f, 0f, 6f), new Vector3(-8f, 0f, 6f) })
+                spline.Add(new UnityEngine.Splines.BezierKnot(new Unity.Mathematics.float3(knot.x, knot.y, knot.z)));
+            spline.Closed = true;
+
+            var node = new SceneInputNode { Label = "field", Output = SceneInputNode.OutputMode.PointsInsideZones, Spacing = 0.1f };
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            PointData points = Run(node, Context(new Vector3(40f, 10f, 40f)))[0];
+            watch.Stop();
+            // About 160 x 120 points; a few on the edge go either way (the test runs far from the world origin).
+            Assert.That(points.Count, Is.InRange(160 * 120 - 200, 160 * 120), "A 16 x 12 m field at 0.1 m.");
+            // Each point used to evaluate the spline 64 times (about 3 s for this zone).
+            Assert.Less(watch.Elapsed.TotalMilliseconds, 500.0, "Inside tests use the cached outline.");
+
+            // Moving the zone (in the same frame) moves the points: the outline is checked at the start of each run.
+            zone.transform.position += new Vector3(4f, 0f, 0f);
+            PointData moved = Run(node, Context(new Vector3(40f, 10f, 40f)))[0];
+            Assert.That(moved.Count, Is.InRange(points.Count - 200, points.Count + 200));
+            Assert.AreEqual(points.Points.Min(p => p.Position.x) + 4f, moved.Points.Min(p => p.Position.x), 1e-3f);
+            Assert.IsTrue(zone.Contains(zone.transform.position));
+            Assert.Less(zone.SignedDistance(zone.transform.position), 0f);
+        }
+#endif
+
+        [Test]
         public void Difference_CarvesBoxAndSphereZones()
         {
             Zone("carve", PlacementZone.ZoneShape.Box, new Vector3(-5f, 0f, 0f), size: 4f);

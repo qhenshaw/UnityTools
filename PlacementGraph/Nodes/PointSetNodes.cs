@@ -179,25 +179,33 @@ namespace UnityTools.Placement
             PointData input = inputs[0];
             var kept = PointData.Derive(input, input.Count);
             var rejected = PointData.Derive(input);
-            for (int i = 0; i < input.Count; i++)
+            foreach (PlacementZone zone in zones) zone.BeginQueries();
+            try
             {
-                PlacementPoint point = input.Points[i];
-                float pointDistance = grid?.NearestDistance(point.Position, reach) ?? float.PositiveInfinity;
-                float zoneDistance = float.PositiveInfinity;
-                foreach (PlacementZone zone in zones) zoneDistance = Mathf.Min(zoneDistance, zone.SignedDistance(point.Position));
+                for (int i = 0; i < input.Count; i++)
+                {
+                    PlacementPoint point = input.Points[i];
+                    float pointDistance = grid?.NearestDistance(point.Position, reach) ?? float.PositiveInfinity;
+                    float zoneDistance = float.PositiveInfinity;
+                    foreach (PlacementZone zone in zones) zoneDistance = Mathf.Min(zoneDistance, zone.SignedDistance(point.Position));
 
-                if (pointDistance < Radius || zoneDistance <= Radius)
-                {
-                    rejected.AddFrom(input, i);
-                    continue;
+                    if (pointDistance < Radius || zoneDistance <= Radius)
+                    {
+                        rejected.AddFrom(input, i);
+                        continue;
+                    }
+                    float distance = Mathf.Min(pointDistance, zoneDistance);
+                    if (Falloff > 0f && distance < reach)
+                    {
+                        point.Density *= Mathf.Clamp01((distance - Radius) / Falloff);
+                        kept.AddFrom(input, i, point);
+                    }
+                    else kept.AddFrom(input, i);
                 }
-                float distance = Mathf.Min(pointDistance, zoneDistance);
-                if (Falloff > 0f && distance < reach)
-                {
-                    point.Density *= Mathf.Clamp01((distance - Radius) / Falloff);
-                    kept.AddFrom(input, i, point);
-                }
-                else kept.AddFrom(input, i);
+            }
+            finally
+            {
+                foreach (PlacementZone zone in zones) zone.EndQueries();
             }
             outputs[0] = kept;
             outputs[1] = rejected;
