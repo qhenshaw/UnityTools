@@ -66,6 +66,9 @@ namespace UnityTools.Placement.Editor
         {
             AddSetting<float>(context, "Radius", "In points closer than this to an Exclude point (or a zone's surface) are dropped, in metres. Points inside a zone are always dropped.");
             AddSetting<float>(context, "Falloff", "Beyond Radius, kept points within this many metres more get their density scaled down (0 = off).");
+            AddSetting<FalloffCurve>(context, "Falloff Curve", "With Falloff: how the Falloff Attribute rises from Radius to Radius + Falloff.");
+            AddSetting<float>(context, "Falloff Min", "With Falloff: the Falloff Attribute's factor at Radius. Above 0 keeps a minimum, e.g. for scale.");
+            AddSetting<string>(context, "Falloff Attribute", "With Falloff: a Float attribute (e.g. EdgeFalloff) multiplied by the falloff, so the carved edge scales down too. Empty: density only.");
         }
     }
 

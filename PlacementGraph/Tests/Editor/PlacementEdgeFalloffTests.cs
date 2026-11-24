@@ -155,6 +155,53 @@ namespace UnityTools.Placement.Tests
         }
 
         [Test]
+        public void Difference_FalloffAttribute_FallsOffAtTheCarvedEdge_TimesTheOuterFalloff()
+        {
+            // A 2 m box zone at Origin carved out of a row of points along X; each point already has an outer falloff.
+            var zone = Track(new GameObject("Hole")).AddComponent<PlacementZone>();
+            zone.transform.position = Origin;
+            zone.Size = Vector3.one * 2f;
+            PointData exclude = Run(new SceneInputNode(), Context(Origin, new Vector3(20f, 10f, 20f)))[0];
+
+            PointData Row(bool withOuter)
+            {
+                var data = new PointData();
+                PointAttribute<float> outer = withOuter ? data.GetOrAddAttribute<float>(EdgeFalloff.DefaultAttribute) : null;
+                for (int i = 0; i < 8; i++)
+                {
+                    data.Points.Add(PlacementPoint.At(Origin + new Vector3(1.5f + i * 0.5f, 0f, 0f), (uint)i + 1u));
+                    outer?.Set(i, 0.5f);
+                }
+                return data;
+            }
+            PlacementContext context = Context(Origin, new Vector3(20f, 10f, 20f));
+            var node = new DifferenceNode { Radius = 0f, Falloff = 2f, FalloffAttribute = EdgeFalloff.DefaultAttribute };
+
+            // Distances outside the box's side (x = 1): 0.5, 1, 1.5, 2, ... -> factors 0.25, 0.5, 0.75, then 1.
+            PointData kept = Run(node, context, Row(true), exclude)[0];
+            Assert.AreEqual(8, kept.Count);
+            float[] values = Values(kept);
+            float[] expected = { 0.125f, 0.25f, 0.375f, 0.5f, 0.5f, 0.5f, 0.5f, 0.5f };
+            for (int i = 0; i < 8; i++) Assert.AreEqual(expected[i], values[i], 1e-3f, $"point {i}: outer 0.5 times the carved edge's factor");
+
+            // Without an outer falloff the attribute is made, starting from 1; Min and the curve apply as for areas.
+            var smooth = new DifferenceNode { Radius = 0f, Falloff = 2f, FalloffAttribute = "Carved", FalloffMin = 0.2f, FalloffCurve = FalloffCurve.EaseIn };
+            float[] carved = Values(Run(smooth, context, Row(false), exclude)[0], "Carved");
+            Assert.AreEqual(EdgeFalloff.Evaluate(0.5f, 2f, FalloffCurve.EaseIn, 0.2f), carved[0], 1e-3f);
+            Assert.AreEqual(1f, carved[7], 1e-6f, "beyond the falloff: 1");
+            CollectionAssert.AreEqual(carved, Values(Run(smooth, context, Row(false), exclude)[0], "Carved"), "deterministic");
+
+            // No attribute named, or no Falloff: the attribute is left as it was, density as before.
+            var densityOnly = new DifferenceNode { Radius = 0f, Falloff = 2f };
+            PointData plain = Run(densityOnly, context, Row(true), exclude)[0];
+            Assert.IsTrue(Values(plain).All(v => v == 0.5f));
+            CollectionAssert.AreEqual(plain.Points.Select(p => p.Density), kept.Points.Select(p => p.Density), "density is the same either way");
+            Assert.AreEqual(0.25f, plain.Points[0].Density, 1e-3f);
+            Assert.IsNull(Run(new DifferenceNode { Radius = 0f, FalloffAttribute = "Carved" }, context, Row(false), exclude)[0]
+                .GetAttribute<float>("Carved"), "Falloff 0 writes nothing");
+        }
+
+        [Test]
         public void SceneInput_OnePointPerObject_GetsNoFalloff()
         {
             var zone = Track(new GameObject("Zone")).AddComponent<PlacementZone>();

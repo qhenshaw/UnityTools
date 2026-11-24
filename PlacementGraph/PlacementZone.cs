@@ -280,20 +280,11 @@ namespace UnityTools.Placement
             var flat = new Vector2(world.x, world.z);
             foreach (Vector2[] outline in outlines)
             {
-                float edge = float.PositiveInfinity;
-                for (int i = 0, j = outline.Length - 1; i < outline.Length; j = i++)
-                    edge = Mathf.Min(edge, DistanceToSegment(flat, outline[j], outline[i]));
+                float edge = EdgeFalloff.DistanceToOutline(outline, flat);
                 float signed = SplineSamplerNode.Contains(outline, flat) ? -edge : edge;
                 best = Mathf.Min(best, signed);
             }
             return best;
-        }
-
-        private static float DistanceToSegment(Vector2 p, Vector2 a, Vector2 b)
-        {
-            Vector2 ab = b - a;
-            float t = ab.sqrMagnitude > 0f ? Mathf.Clamp01(Vector2.Dot(p - a, ab) / ab.sqrMagnitude) : 0f;
-            return Vector2.Distance(p, a + ab * t);
         }
 #endif
 

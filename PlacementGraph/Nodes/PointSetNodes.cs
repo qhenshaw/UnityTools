@@ -145,6 +145,12 @@ namespace UnityTools.Placement
         [Min(0f)] public float Radius = 1f;
         [Tooltip("Beyond Radius, kept points within this many metres more get their density scaled down towards the excluded area (0 = off).")]
         [Min(0f)] public float Falloff = 0f;
+        [Tooltip("With Falloff: how the Falloff Attribute rises from Radius to Radius + Falloff.")]
+        public FalloffCurve FalloffCurve = FalloffCurve.Linear;
+        [Tooltip("With Falloff: the Falloff Attribute's factor at Radius. Above 0 keeps a minimum, e.g. for scale.")]
+        [Range(0f, 1f)] public float FalloffMin = 0f;
+        [Tooltip("With Falloff: a Float attribute multiplied by the falloff (created at 1 if missing), so a carved edge scales down like an area's outer edge. Empty: density only.")]
+        public string FalloffAttribute = "";
 
         /// <summary>Input 0: the points to filter. Input 1: the points (or zones, from Scene Input) to keep away from.</summary>
         public override int InputCount => 2;
@@ -179,6 +185,8 @@ namespace UnityTools.Placement
             PointData input = inputs[0];
             var kept = PointData.Derive(input, input.Count);
             var rejected = PointData.Derive(input);
+            // The falloff factor of each kept point, for the Falloff Attribute; null when that's off.
+            List<float> factors = Falloff > 0f && !string.IsNullOrEmpty(FalloffAttribute) ? new List<float>(input.Count) : null;
             foreach (PlacementZone zone in zones) zone.BeginQueries();
             try
             {
@@ -199,13 +207,26 @@ namespace UnityTools.Placement
                     {
                         point.Density *= Mathf.Clamp01((distance - Radius) / Falloff);
                         kept.AddFrom(input, i, point);
+                        factors?.Add(EdgeFalloff.Evaluate(distance - Radius, Falloff, FalloffCurve, FalloffMin));
                     }
-                    else kept.AddFrom(input, i);
+                    else
+                    {
+                        kept.AddFrom(input, i);
+                        factors?.Add(1f);
+                    }
                 }
             }
             finally
             {
                 foreach (PlacementZone zone in zones) zone.EndQueries();
+            }
+            if (factors != null)
+            {
+                // Multiplied into what's there, so a point near both an area's outer edge and this carved edge gets both.
+                PointAttribute<float> existing = kept.GetAttribute<float>(FalloffAttribute);
+                PointAttribute<float> column = existing ?? kept.GetOrAddAttribute<float>(FalloffAttribute);
+                for (int k = 0; k < kept.Count; k++)
+                    column.Set(k, (existing != null ? existing.Get(k) : 1f) * factors[k]);
             }
             outputs[0] = kept;
             outputs[1] = rejected;
