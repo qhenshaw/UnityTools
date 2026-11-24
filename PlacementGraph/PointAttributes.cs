@@ -119,10 +119,8 @@ namespace UnityTools.Placement
     {
         /// <summary>The prefab chosen for the point (Object). Spawn Prefabs spawns it.</summary>
         public const string Prefab = "Prefab";
-        /// <summary>The palette the prefab was chosen from (Object).</summary>
-        public const string Palette = "Palette";
-        /// <summary>Index of the chosen palette entry (Int).</summary>
-        public const string PaletteEntry = "PaletteEntry";
+        /// <summary>Index of the chosen entry in the Select Prefab node's Entries (Int).</summary>
+        public const string EntryIndex = "EntryIndex";
         /// <summary>The chosen entry's position offset, in the point's local space (Vector3).</summary>
         public const string EntryOffset = "EntryOffset";
         /// <summary>The chosen entry's rotation: its offset plus its random range, in Euler degrees (Vector3).</summary>

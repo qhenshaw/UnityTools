@@ -15,7 +15,7 @@ namespace UnityTools.Placement.Tests
         private const string Folder = "Assets/__PlacementAuthoringTests";
         private const string GraphPath = Folder + "/Graph.placegraph";
         private const string SubPath = Folder + "/Sub.placegraph";
-        private const string PalettePath = Folder + "/Palette.asset";
+        private const string PrefabPath = Folder + "/Prop.prefab";
         private readonly List<Object> _created = new();
 
         private sealed class RecordingOutput : IPlacementOutput
@@ -41,14 +41,13 @@ namespace UnityTools.Placement.Tests
             AssetDatabase.DeleteAsset(Folder);
         }
 
-        private PrefabPalette SavedPalette(out GameObject prefab)
+        /// <summary>A prefab asset (a saved graph can only reference assets).</summary>
+        private GameObject SavedPrefab()
         {
-            prefab = new GameObject("Prop");
-            _created.Add(prefab);
-            var palette = ScriptableObject.CreateInstance<PrefabPalette>();
-            palette.Entries.Add(new PrefabPalette.Entry { Prefab = prefab, Weight = 1f });
-            AssetDatabase.CreateAsset(palette, PalettePath);
-            return palette;
+            var source = new GameObject("Prop");
+            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(source, PrefabPath);
+            Object.DestroyImmediate(source);
+            return prefab;
         }
 
         private static List<(GameObject prefab, Vector3 scale)> Run(PlacementGraphAsset asset, params PlacementParameter[] overrides)
@@ -82,12 +81,13 @@ namespace UnityTools.Placement.Tests
         [Test]
         public void BuildSaveReimportAndRun()
         {
-            PrefabPalette palette = SavedPalette(out GameObject prefab);
+            GameObject prefab = SavedPrefab();
             PlacementGraphHandle graph = PlacementGraphAuthoring.Create(GraphPath);
             PlacementNodeHandle sampler = graph.AddNode("Volume Sampler").Set("Spacing", 2).Set("Jitter", 0f);
             PlacementNodeHandle filter = graph.AddNode<DensityFilterNode>().Set("Mode", "Threshold").Set("Threshold", 0.5f);
             PlacementNodeHandle transform = graph.AddNode("transform points");
-            PlacementNodeHandle spawn = graph.AddNode("Spawn Prefabs").Set("Palette", PalettePath);
+            PlacementNodeHandle spawn = graph.AddNode("Spawn Prefabs");
+            graph.AddEntry(spawn, PrefabPath);
             graph.Connect(sampler, "Out", filter, "In");
             graph.Connect(filter, "Out", transform, "In");
             graph.Connect(transform, "Out", spawn, "In");
@@ -102,7 +102,7 @@ namespace UnityTools.Placement.Tests
             Assert.IsInstanceOf<VolumeSamplerNode>(asset.Nodes[0]);
             Assert.AreEqual(2f, ((VolumeSamplerNode)asset.Nodes[0]).Spacing);
             Assert.AreEqual(DensityFilterNode.FilterMode.Threshold, ((DensityFilterNode)asset.Nodes[1]).Mode);
-            Assert.AreEqual(palette, ((SpawnPrefabsNode)asset.Nodes[3]).Palette);
+            Assert.AreEqual(prefab, ((SpawnPrefabsNode)asset.Nodes[3]).Entries.Single().Prefab, "The Prefab Entry compiles into the node's entries.");
             CollectionAssert.AreEqual(new[] { new PlacementEdge(0, 0, 1, 0), new PlacementEdge(1, 0, 2, 0), new PlacementEdge(2, 0, 3, 0) },
                 asset.Edges.OrderBy(e => e.ToNode));
             Assert.AreEqual("Size", asset.Parameters.Single().Name);
@@ -114,7 +114,7 @@ namespace UnityTools.Placement.Tests
 
             // The file is a normal graph: Graph Toolkit loads it with its nodes and wires.
             var loaded = GraphDatabase.LoadGraph<PlacementGraphDefinition>(GraphPath);
-            Assert.AreEqual(4, loaded.GetNodes().OfType<PlacementGraphNode>().Count());
+            Assert.AreEqual(5, loaded.GetNodes().OfType<PlacementGraphNode>().Count(), "Four nodes and the Prefab Entry.");
             PlacementGraphHandle reopened = PlacementGraphAuthoring.Open(GraphPath);
             Assert.AreEqual(2f, reopened.FindNode("Volume Sampler").Get("Spacing"));
             Assert.IsTrue(reopened.FindNode("Spawn Prefabs").Node.GetInputPortByName("In").IsConnected);
@@ -123,7 +123,7 @@ namespace UnityTools.Placement.Tests
         [Test]
         public void Subgraph_BuiltThroughTheApi()
         {
-            SavedPalette(out _);
+            GameObject prefab = SavedPrefab();
             PlacementGraphHandle sub = PlacementGraphAuthoring.Create(SubPath);
             PlacementNodeHandle points = sub.AddPointInput("Points");
             PlacementNodeHandle result = sub.AddPointOutput("Result");
@@ -137,7 +137,8 @@ namespace UnityTools.Placement.Tests
             PlacementGraphHandle graph = PlacementGraphAuthoring.Create(GraphPath);
             PlacementNodeHandle sampler = graph.AddNode("Volume Sampler").Set("Jitter", 0f);
             PlacementNodeHandle subgraph = graph.AddSubgraph(sub).Set("Radius", 2.5f);
-            PlacementNodeHandle spawn = graph.AddNode("Spawn Prefabs").Set("Palette", PalettePath);
+            PlacementNodeHandle spawn = graph.AddNode("Spawn Prefabs");
+            graph.AddEntry(spawn, prefab);
             CollectionAssert.AreEqual(new[] { "Points", "Radius" }, subgraph.InputPorts);
             graph.Connect(sampler, "Out", subgraph, "Points");
             graph.Connect(subgraph, "Result", spawn, "In");
@@ -190,7 +191,7 @@ namespace UnityTools.Placement.Tests
             StringAssert.Contains("Volume Sampler", unknownNode.Message);
             var unknownPort = Assert.Throws<System.ArgumentException>(() => graph.Connect(sampler, "Points", spawn, "In"));
             StringAssert.Contains("Out", unknownPort.Message);
-            Assert.Throws<System.InvalidOperationException>(() => graph.Connect(sampler, "Out", spawn, "Palette"));
+            Assert.Throws<System.InvalidOperationException>(() => graph.Connect(sampler, "Out", spawn, "Entries"));
             var badValue = Assert.Throws<System.ArgumentException>(() => sampler.Set("Spacing", "wide"));
             StringAssert.Contains("Single", badValue.Message);
             Assert.Throws<System.ArgumentException>(() => sampler.Set("Height", 1f));

@@ -16,20 +16,23 @@ namespace UnityTools.Placement.Editor
         protected override void DefinePointPorts(IPortDefinitionContext context)
         {
             AddPointInput(context, InPort);
+            AddLinkInput<PrefabEntryLink>(context, EntriesPort, "Prefab Entry nodes: the prefabs to pick from, by weight.");
             AddPointOutput(context, OutPort);
         }
 
         protected override void DefineSettings(IPortDefinitionContext context)
         {
-            AddSetting<PrefabPalette>(context, "Palette", "The weighted prefabs to pick from.");
+            AddSetting<PrefabPalette>(context, "Palette", "Obsolete: convert with Tools > UnityTools > Convert Placement Graph Palettes.");
             AddSetting<bool>(context, "Write Entry Values", "Also write the entry's offset, rotation, scale and custom attributes.");
         }
 
         public override void Validate(List<string> problems)
         {
-            IPort port = GetInputPortByName("Palette");
-            if (port == null || port.IsConnected) return;
-            if (!port.TryGetValue(out PrefabPalette palette) || palette == null) problems.Add("Select Prefab has no Palette.");
+            IPort entries = GetInputPortByName(EntriesPort);
+            IPort palette = GetInputPortByName("Palette");
+            bool hasPalette = palette != null && (palette.IsConnected || (palette.TryGetValue(out PrefabPalette value) && value != null));
+            if (entries != null && !entries.IsConnected && !hasPalette) problems.Add("Select Prefab has no entries. Wire Prefab Entry nodes into Entries.");
+            if (hasPalette) problems.Add("Select Prefab uses a Prefab Palette, which is obsolete. Run Tools > UnityTools > Convert Placement Graph Palettes.");
         }
     }
 

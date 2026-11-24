@@ -46,10 +46,10 @@ namespace UnityTools.Placement.Tests
             return graph;
         }
 
-        private PrefabPalette CreatePalette(params GameObject[] prefabs)
+        private List<PrefabEntry> CreatePalette(params GameObject[] prefabs)
         {
-            var palette = Track(ScriptableObject.CreateInstance<PrefabPalette>());
-            foreach (GameObject prefab in prefabs) palette.Entries.Add(new PrefabPalette.Entry { Prefab = prefab, Weight = 1f });
+            var palette = new List<PrefabEntry>();
+            foreach (GameObject prefab in prefabs) palette.Add(new PrefabEntry { Prefab = prefab, Weight = 1f });
             return palette;
         }
 
@@ -106,7 +106,7 @@ namespace UnityTools.Placement.Tests
                 new NoiseDensityNode { Scale = 3f },
                 new DensityFilterNode { Mode = DensityFilterNode.FilterMode.Random },
                 new TransformPointsNode { ScaleMin = 0.5f, ScaleMax = 2f },
-                new SpawnPrefabsNode { Palette = CreatePalette(prefab) }
+                new SpawnPrefabsNode { Entries = CreatePalette(prefab) }
             };
             var edges = new List<PlacementEdge> { new(0, 0, 1, 0), new(1, 0, 2, 0), new(2, 0, 3, 0), new(3, 0, 4, 0) };
 
@@ -232,19 +232,22 @@ namespace UnityTools.Placement.Tests
         }
 
         [Test]
-        public void Palette_PicksByWeight()
+        public void Entries_PickByWeight()
         {
             var a = Track(new GameObject("A"));
             var b = Track(new GameObject("B"));
-            var palette = Track(ScriptableObject.CreateInstance<PrefabPalette>());
-            palette.Entries.Add(new PrefabPalette.Entry { Prefab = a, Weight = 3f });
-            palette.Entries.Add(new PrefabPalette.Entry { Prefab = b, Weight = 1f });
-            palette.Entries.Add(new PrefabPalette.Entry { Prefab = null, Weight = 5f });
-            Assert.AreEqual(4f, palette.TotalWeight);
-            Assert.AreEqual(a, palette.Pick(0f));
-            Assert.AreEqual(a, palette.Pick(0.74f));
-            Assert.AreEqual(b, palette.Pick(0.76f));
-            Assert.AreEqual(b, palette.Pick(0.9999f));
+            var entries = new List<PrefabEntry>
+            {
+                new PrefabEntry { Prefab = a, Weight = 3f },
+                new PrefabEntry { Prefab = b, Weight = 1f },
+                new PrefabEntry { Prefab = null, Weight = 5f }
+            };
+            Assert.AreEqual(4f, PrefabEntry.TotalWeight(entries));
+            Assert.AreEqual(0, PrefabEntry.PickIndex(entries, 0f));
+            Assert.AreEqual(0, PrefabEntry.PickIndex(entries, 0.74f));
+            Assert.AreEqual(1, PrefabEntry.PickIndex(entries, 0.76f));
+            Assert.AreEqual(1, PrefabEntry.PickIndex(entries, 0.9999f));
+            Assert.AreEqual(-1, PrefabEntry.PickIndex(new List<PrefabEntry>(), 0.5f));
         }
 
         [Test]
@@ -259,7 +262,7 @@ namespace UnityTools.Placement.Tests
             var graph = CreateGraph(new List<PlacementNode>
             {
                 new SurfaceSamplerNode { Spacing = 2f, Jitter = 0f },
-                new SpawnPrefabsNode { Palette = CreatePalette(prefab) }
+                new SpawnPrefabsNode { Entries = CreatePalette(prefab) }
             }, new List<PlacementEdge> { new(0, 0, 1, 0) });
 
             var go = Track(new GameObject("Placement Graph"));

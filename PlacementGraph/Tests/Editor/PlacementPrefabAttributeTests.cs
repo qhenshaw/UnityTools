@@ -33,13 +33,13 @@ namespace UnityTools.Placement.Tests
             return obj;
         }
 
-        private (PrefabPalette palette, GameObject a, GameObject b) TwoPrefabPalette()
+        private (List<PrefabEntry> palette, GameObject a, GameObject b) TwoPrefabPalette()
         {
             GameObject a = Track(new GameObject("A"));
             GameObject b = Track(new GameObject("B"));
-            var palette = Track(ScriptableObject.CreateInstance<PrefabPalette>());
-            palette.Entries.Add(new PrefabPalette.Entry { Prefab = a, Weight = 1f });
-            palette.Entries.Add(new PrefabPalette.Entry { Prefab = b, Weight = 1f });
+            var palette = new List<PrefabEntry>();
+            palette.Add(new PrefabEntry { Prefab = a, Weight = 1f });
+            palette.Add(new PrefabEntry { Prefab = b, Weight = 1f });
             return (palette, a, b);
         }
 
@@ -56,15 +56,14 @@ namespace UnityTools.Placement.Tests
         [Test]
         public void SelectPrefab_WritesAttributes_SpawnUsesThem()
         {
-            (PrefabPalette palette, GameObject a, GameObject b) = TwoPrefabPalette();
+            (List<PrefabEntry> palette, GameObject a, GameObject b) = TwoPrefabPalette();
             PointData input = Grid(100);
-            PointData selected = Run(new SelectPrefabNode { Palette = palette }, new PlacementContext(), input)[0];
+            PointData selected = Run(new SelectPrefabNode { Entries = palette }, new PlacementContext(), input)[0];
             Assert.AreEqual(0, input.Attributes.Count, "The input isn't changed.");
 
             PointAttribute<Object> prefabs = selected.GetAttribute<Object>(PointAttributeNames.Prefab);
-            PointAttribute<int> entries = selected.GetAttribute<int>(PointAttributeNames.PaletteEntry);
-            Assert.AreEqual(palette, selected.GetAttribute<Object>(PointAttributeNames.Palette).Get(0));
-            for (int i = 0; i < selected.Count; i++) Assert.AreEqual(palette.Entries[entries.Get(i)].Prefab, prefabs.Get(i));
+            PointAttribute<int> entries = selected.GetAttribute<int>(PointAttributeNames.EntryIndex);
+            for (int i = 0; i < selected.Count; i++) Assert.AreEqual(palette[entries.Get(i)].Prefab, prefabs.Get(i));
             int aCount = Enumerable.Range(0, 100).Count(i => prefabs.Get(i) == a);
             Assert.That(aCount, Is.InRange(30, 70), "Picked by weight.");
 
@@ -77,11 +76,11 @@ namespace UnityTools.Placement.Tests
         [Test]
         public void FilterByPrefab_ThenTransformOneBranch()
         {
-            (PrefabPalette palette, GameObject a, GameObject b) = TwoPrefabPalette();
+            (List<PrefabEntry> palette, GameObject a, GameObject b) = TwoPrefabPalette();
             var nodes = new List<PlacementNode>
             {
                 new VolumeSamplerNode { Spacing = 1f },
-                new SelectPrefabNode { Palette = palette },
+                new SelectPrefabNode { Entries = palette },
                 new FilterByAttributeNode { Compare = FilterByAttributeNode.Comparison.PrefabIs, Object = a },
                 new TransformPointsNode { RotationMax = Vector3.zero, ScaleMin = 2f, ScaleMax = 2f },
                 new SpawnPrefabsNode(),
@@ -111,8 +110,8 @@ namespace UnityTools.Placement.Tests
         public void EntryAdjustments_AppliedBySpawnPrefabs_UnlessTurnedOff()
         {
             GameObject prefab = Track(new GameObject("Lamp"));
-            var palette = Track(ScriptableObject.CreateInstance<PrefabPalette>());
-            palette.Entries.Add(new PrefabPalette.Entry
+            var palette = new List<PrefabEntry>();
+            palette.Add(new PrefabEntry
             {
                 Prefab = prefab,
                 PositionOffset = new Vector3(0f, 0f, 1f),
@@ -125,14 +124,14 @@ namespace UnityTools.Placement.Tests
             input.Points[0] = point;
 
             var adjusted = new RecordingOutput();
-            Run(new SpawnPrefabsNode { Palette = palette }, new PlacementContext { Output = adjusted }, input);
+            Run(new SpawnPrefabsNode { Entries = palette }, new PlacementContext { Output = adjusted }, input);
             // The offset is in the point's space: forward turned 90 degrees is +X.
             Assert.That(Vector3.Distance(new Vector3(1f, 0f, 0f), adjusted.Spawned[0].position), Is.LessThan(1e-4f));
             Assert.That(Quaternion.Angle(Quaternion.Euler(0f, 180f, 0f), adjusted.Spawned[0].rotation), Is.LessThan(0.01f));
             Assert.AreEqual(Vector3.one * 3f, adjusted.Spawned[0].scale);
 
             var plain = new RecordingOutput();
-            Run(new SpawnPrefabsNode { Palette = palette, ApplyEntryAdjustments = false }, new PlacementContext { Output = plain }, input);
+            Run(new SpawnPrefabsNode { Entries = palette, ApplyEntryAdjustments = false }, new PlacementContext { Output = plain }, input);
             Assert.AreEqual(Vector3.zero, plain.Spawned[0].position);
             Assert.AreEqual(Vector3.one, plain.Spawned[0].scale);
         }
@@ -140,13 +139,13 @@ namespace UnityTools.Placement.Tests
         [Test]
         public void SelectPrefab_EntryValuesAndCustomAttributes_UsedDownstream()
         {
-            (PrefabPalette palette, GameObject a, GameObject b) = TwoPrefabPalette();
-            palette.Entries[0].RotationRandomMin = new Vector3(0f, -45f, 0f);
-            palette.Entries[0].RotationRandomMax = new Vector3(0f, 45f, 0f);
-            palette.Entries[0].Attributes.Add(new PrefabPalette.EntryAttribute { Name = "Height", Type = PointAttributeType.Float, FloatValue = 5f });
-            palette.Entries[1].Attributes.Add(new PrefabPalette.EntryAttribute { Name = "Height", Type = PointAttributeType.Float, FloatValue = 1f });
+            (List<PrefabEntry> palette, GameObject a, GameObject b) = TwoPrefabPalette();
+            palette[0].RotationRandomMin = new Vector3(0f, -45f, 0f);
+            palette[0].RotationRandomMax = new Vector3(0f, 45f, 0f);
+            palette[0].Attributes.Add(new EntryAttribute { Name = "Height", Type = PointAttributeType.Float, FloatValue = 5f });
+            palette[1].Attributes.Add(new EntryAttribute { Name = "Height", Type = PointAttributeType.Float, FloatValue = 1f });
 
-            PointData selected = Run(new SelectPrefabNode { Palette = palette }, new PlacementContext(), Grid(60))[0];
+            PointData selected = Run(new SelectPrefabNode { Entries = palette }, new PlacementContext(), Grid(60))[0];
             PointAttribute<float> height = selected.GetAttribute<float>("Height");
             PointAttribute<Object> prefabs = selected.GetAttribute<Object>(PointAttributeNames.Prefab);
             PointAttribute<Vector3> rotations = selected.GetAttribute<Vector3>(PointAttributeNames.EntryRotation);
@@ -171,8 +170,8 @@ namespace UnityTools.Placement.Tests
         [Test]
         public void TransformPoints_ApplyToPrefab_TransformsOnlyThose_InPlace()
         {
-            (PrefabPalette palette, GameObject a, GameObject b) = TwoPrefabPalette();
-            PointData selected = Run(new SelectPrefabNode { Palette = palette }, new PlacementContext(), Grid(50))[0];
+            (List<PrefabEntry> palette, GameObject a, GameObject b) = TwoPrefabPalette();
+            PointData selected = Run(new SelectPrefabNode { Entries = palette }, new PlacementContext(), Grid(50))[0];
             PointAttribute<Object> prefabs = selected.GetAttribute<Object>(PointAttributeNames.Prefab);
             TransformPointsNode Make(TransformPointsNode.ApplyModes mode) => new TransformPointsNode
             {

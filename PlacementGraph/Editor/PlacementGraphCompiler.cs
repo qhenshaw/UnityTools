@@ -127,6 +127,9 @@ namespace UnityTools.Placement.Editor
             {
                 switch (node)
                 {
+                    case PlacementGraphNode { IsRuntimeNode: false }:
+                        // Value nodes (Prefab Entry, Entry Attribute) are read by the nodes they're wired into.
+                        break;
                     case PlacementGraphNode placementNode:
                         scope.Units[node] = units.Count;
                         units.Add(new Unit { Node = placementNode, Scope = scope });

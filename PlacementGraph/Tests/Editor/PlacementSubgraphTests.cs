@@ -66,12 +66,7 @@ namespace UnityTools.Placement.Tests
             return sub;
         }
 
-        private PrefabPalette Palette()
-        {
-            var palette = Track(ScriptableObject.CreateInstance<PrefabPalette>());
-            palette.Entries.Add(new PrefabPalette.Entry { Prefab = Track(new GameObject("Prop")), Weight = 1f });
-            return palette;
-        }
+        private GameObject Prop() => Track(new GameObject("Prop"));
 
         /// <summary>Main graph: Volume Sampler (4 points) > subgraph > Spawn Prefabs.</summary>
         private (Graph main, ISubgraphNode subgraphNode) CreateMain(Graph sub)
@@ -81,7 +76,9 @@ namespace UnityTools.Placement.Tests
             Assert.IsTrue(sampler.GetInputPortByName("Spacing").TrySetValue(5f));
             ISubgraphNode subgraphNode = main.AddSubgraphNode(sub, Vector2.zero);
             var spawn = Add<Editor.SpawnPrefabsNode>(main);
-            Assert.IsTrue(spawn.GetInputPortByName("Palette").TrySetValue(Palette()));
+            var entry = Add<Editor.PrefabEntryNode>(main);
+            Assert.IsTrue(entry.GetInputPortByName("Prefab").TrySetValue(Prop()));
+            Assert.IsTrue(main.Connect(entry.GetOutputPortByName("Entry"), spawn.GetInputPortByName("Entries")));
             Assert.IsTrue(main.Connect(sampler.GetOutputPortByName("Out"), PlacementGraphCompiler.SubgraphPort(subgraphNode.GetInputPorts(), "Points")));
             Assert.IsTrue(main.Connect(PlacementGraphCompiler.SubgraphPort(subgraphNode.GetOutputPorts(), "Result"), spawn.GetInputPortByName("In")));
             return (main, subgraphNode);

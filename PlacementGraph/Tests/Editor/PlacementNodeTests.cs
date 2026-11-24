@@ -199,9 +199,9 @@ namespace UnityTools.Placement.Tests
         public void Component_KeepsMarkersChild_AndSpawnsAtMarkers()
         {
             var prefab = Track(new GameObject("Prop"));
-            var palette = Track(ScriptableObject.CreateInstance<PrefabPalette>());
-            palette.Entries.Add(new PrefabPalette.Entry { Prefab = prefab, Weight = 1f });
-            var nodes = new List<PlacementNode> { new ChildMarkersNode(), new SpawnPrefabsNode { Palette = palette } };
+            var palette = new List<PrefabEntry>();
+            palette.Add(new PrefabEntry { Prefab = prefab, Weight = 1f });
+            var nodes = new List<PlacementNode> { new ChildMarkersNode(), new SpawnPrefabsNode { Entries = palette } };
             for (int i = 0; i < nodes.Count; i++) nodes[i].Name = i.ToString();
             var graph = Track(ScriptableObject.CreateInstance<PlacementGraphAsset>());
             graph.SetContents(nodes, new List<PlacementEdge> { new(0, 0, 1, 0) });
@@ -344,6 +344,7 @@ namespace UnityTools.Placement.Tests
                 var node = (Editor.PlacementGraphNode)System.Activator.CreateInstance(type);
                 graph.AddNode(node);
                 INode added = graph.GetNodes().Last();
+                if (!node.IsRuntimeNode) continue;
                 PlacementNode runtime = ((Editor.PlacementGraphNode)added).CreateRuntimeNode();
                 Assert.AreEqual(runtime.InputCount, Editor.PlacementGraphCompiler.PointInputs(added).Count, $"{type.Name} point inputs");
                 Assert.AreEqual(runtime.OutputCount, Editor.PlacementGraphCompiler.PointOutputs(added).Count, $"{type.Name} point outputs");

@@ -112,38 +112,38 @@ namespace UnityTools.Placement.Tests
             var prefab = Track(new GameObject("Prefab"));
             prefab.transform.localRotation = Quaternion.Euler(0f, 0f, 45f);
             prefab.transform.localScale = new Vector3(1f, 3f, 1f);
-            var palette = Track(ScriptableObject.CreateInstance<PrefabPalette>());
-            palette.Entries.Add(new PrefabPalette.Entry { Prefab = prefab, Weight = 1f });
+            var palette = new List<PrefabEntry>();
+            palette.Add(new PrefabEntry { Prefab = prefab, Weight = 1f });
             PointData input = RotatedScaledPoints(1);
             Quaternion pointRotation = input.Points[0].Rotation;
 
             var defaults = new RecordingOutput();
-            Run(new SpawnPrefabsNode { Palette = palette }, new PlacementContext { Output = defaults }, input);
+            Run(new SpawnPrefabsNode { Entries = palette }, new PlacementContext { Output = defaults }, input);
             AssertSameRotation(pointRotation, defaults.Spawned[0].rotation);
             Assert.AreEqual(new Vector3(2f, 6f, 2f), defaults.Spawned[0].scale, "Keep Prefab Scale is on by default.");
 
             var kept = new RecordingOutput();
-            Run(new SpawnPrefabsNode { Palette = palette, KeepPrefabRotation = true, KeepPrefabScale = false },
+            Run(new SpawnPrefabsNode { Entries = palette, KeepPrefabRotation = true, KeepPrefabScale = false },
                 new PlacementContext { Output = kept }, input);
             AssertSameRotation(pointRotation * prefab.transform.localRotation, kept.Spawned[0].rotation);
             Assert.AreEqual(Vector3.one * 2f, kept.Spawned[0].scale);
         }
 
         [Test]
-        public void PaletteEntry_RandomScale_OnlyForThatEntry()
+        public void Entry_RandomScale_OnlyForThatEntry()
         {
             var plain = Track(new GameObject("Plain"));
             var varied = Track(new GameObject("Varied"));
-            var palette = Track(ScriptableObject.CreateInstance<PrefabPalette>());
-            palette.Entries.Add(new PrefabPalette.Entry { Prefab = plain, Weight = 1f });
-            palette.Entries.Add(new PrefabPalette.Entry { Prefab = varied, Weight = 1f, RandomScale = true, ScaleMin = 0.5f, ScaleMax = 2f });
+            var palette = new List<PrefabEntry>();
+            palette.Add(new PrefabEntry { Prefab = plain, Weight = 1f });
+            palette.Add(new PrefabEntry { Prefab = varied, Weight = 1f, RandomScale = true, ScaleMin = 0.5f, ScaleMax = 2f });
 
             var input = new PointData();
             for (uint i = 0; i < 200; i++) input.Points.Add(PlacementPoint.At(Vector3.zero, i + 1));
 
             var spawned = new List<(GameObject prefab, Vector3 scale)>();
             var output = new PrefabRecorder(spawned);
-            Run(new SpawnPrefabsNode { Palette = palette }, new PlacementContext { Output = output }, input);
+            Run(new SpawnPrefabsNode { Entries = palette }, new PlacementContext { Output = output }, input);
 
             Assert.IsTrue(spawned.Where(s => s.prefab == plain).All(s => s.scale == Vector3.one));
             List<Vector3> variedScales = spawned.Where(s => s.prefab == varied).Select(s => s.scale).ToList();
@@ -152,9 +152,9 @@ namespace UnityTools.Placement.Tests
             Assert.Greater(variedScales.Select(s => s.x).Distinct().Count(), 20);
 
             // Turning variation off again doesn't change which prefab each point gets.
-            palette.Entries[1].RandomScale = false;
+            palette[1].RandomScale = false;
             var again = new List<(GameObject prefab, Vector3 scale)>();
-            Run(new SpawnPrefabsNode { Palette = palette }, new PlacementContext { Output = new PrefabRecorder(again) }, input);
+            Run(new SpawnPrefabsNode { Entries = palette }, new PlacementContext { Output = new PrefabRecorder(again) }, input);
             CollectionAssert.AreEqual(spawned.Select(s => s.prefab), again.Select(s => s.prefab));
         }
 
@@ -175,13 +175,13 @@ namespace UnityTools.Placement.Tests
 
             var prefab = Track(new GameObject("Prop"));
             prefab.transform.localScale = Vector3.one * 2f;
-            var palette = Track(ScriptableObject.CreateInstance<PrefabPalette>());
-            palette.Entries.Add(new PrefabPalette.Entry { Prefab = prefab, Weight = 1f });
+            var palette = new List<PrefabEntry>();
+            palette.Add(new PrefabEntry { Prefab = prefab, Weight = 1f });
             var nodes = new List<PlacementNode>
             {
                 new SurfaceSamplerNode { Spacing = 2f, Jitter = 0f },
                 new TransformPointsNode { RotationMax = new Vector3(0f, 360f, 0f), ScaleMin = 0.5f, ScaleMax = 1.5f },
-                new SpawnPrefabsNode { Palette = palette }
+                new SpawnPrefabsNode { Entries = palette }
             };
             for (int i = 0; i < nodes.Count; i++)
             {

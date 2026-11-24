@@ -11,7 +11,8 @@ namespace UnityTools.Placement
         Bool,
         Vector3,
         Palette,
-        LayerMask
+        LayerMask,
+        Prefab
     }
 
     /// <summary>
@@ -29,6 +30,7 @@ namespace UnityTools.Placement
         public Vector3 Vector3Value;
         public PrefabPalette PaletteValue;
         public LayerMask LayerMaskValue;
+        public GameObject PrefabValue;
 
         public PlacementParameter() { }
 
@@ -50,6 +52,7 @@ namespace UnityTools.Placement
                 PlacementParameterType.Vector3 => Vector3Value,
                 PlacementParameterType.Palette => PaletteValue,
                 PlacementParameterType.LayerMask => LayerMaskValue,
+                PlacementParameterType.Prefab => PrefabValue,
                 _ => null
             };
             set
@@ -64,6 +67,7 @@ namespace UnityTools.Placement
                     case PlacementParameterType.LayerMask:
                         LayerMaskValue = value is LayerMask mask ? mask : (LayerMask)Convert.ToInt32(value);
                         break;
+                    case PlacementParameterType.Prefab: PrefabValue = value as GameObject; break;
                 }
             }
         }
@@ -77,6 +81,7 @@ namespace UnityTools.Placement
             PlacementParameterType.Vector3 => typeof(Vector3),
             PlacementParameterType.Palette => typeof(PrefabPalette),
             PlacementParameterType.LayerMask => typeof(LayerMask),
+            PlacementParameterType.Prefab => typeof(GameObject),
             _ => null
         };
 

@@ -13,7 +13,7 @@ namespace UnityTools.Placement.Tests
     public class PlacementParameterTests
     {
         private const string GraphPath = "Assets/__PlacementParameterTests.placegraph";
-        private const string PalettePath = "Assets/__PlacementParameterTests_Palette.asset";
+        private const string PrefabPath = "Assets/__PlacementParameterTests_Prop.prefab";
         private readonly List<Object> _created = new();
 
         [TearDown]
@@ -25,7 +25,7 @@ namespace UnityTools.Placement.Tests
             }
             _created.Clear();
             AssetDatabase.DeleteAsset(GraphPath);
-            AssetDatabase.DeleteAsset(PalettePath);
+            AssetDatabase.DeleteAsset(PrefabPath);
         }
 
         private T Track<T>(T obj) where T : Object
@@ -40,21 +40,25 @@ namespace UnityTools.Placement.Tests
             return (T)graph.GetNodes().Last();
         }
 
-        private PrefabPalette Palette()
+        private GameObject Prop() => Track(new GameObject("Prop"));
+
+        /// <summary>A Prefab Entry for <paramref name="prefab"/> wired into <paramref name="spawn"/>'s Entries.</summary>
+        private static Editor.PrefabEntryNode AddEntry(Graph graph, PlacementGraphNode spawn, GameObject prefab)
         {
-            var palette = Track(ScriptableObject.CreateInstance<PrefabPalette>());
-            palette.Entries.Add(new PrefabPalette.Entry { Prefab = Track(new GameObject("Prop")), Weight = 1f });
-            return palette;
+            var entry = Add<Editor.PrefabEntryNode>(graph);
+            if (prefab != null) Assert.IsTrue(entry.GetInputPortByName("Prefab").TrySetValue(prefab));
+            Assert.IsTrue(graph.Connect(entry.GetOutputPortByName("Entry"), spawn.GetInputPortByName("Entries")));
+            return entry;
         }
 
         /// <summary>Volume Sampler > Spawn Prefabs, with the sampler's Spacing wired to a variable of <paramref name="kind"/>.</summary>
-        private (Graph graph, PlacementGraphAsset asset) SpacingGraph(VariableKind kind, float spacing, PrefabPalette palette)
+        private (Graph graph, PlacementGraphAsset asset) SpacingGraph(VariableKind kind, float spacing, GameObject prefab)
         {
             var graph = GraphDatabase.CreateGraph<PlacementGraphDefinition>(GraphPath);
             var sampler = Add<Editor.VolumeSamplerNode>(graph);
             var spawn = Add<Editor.SpawnPrefabsNode>(graph);
             Assert.IsTrue(graph.Connect(sampler.GetOutputPortByName("Out"), spawn.GetInputPortByName("In")));
-            Assert.IsTrue(spawn.GetInputPortByName("Palette").TrySetValue(palette));
+            AddEntry(graph, spawn, prefab);
 
             IVariable variable = graph.CreateVariable("Spacing", spacing, kind);
             IVariableNode variableNode = graph.AddVariableNode(variable, Vector2.zero);
@@ -69,8 +73,8 @@ namespace UnityTools.Placement.Tests
         [Test]
         public void InputVariable_CompilesToParameterAndBinding()
         {
-            PrefabPalette palette = Palette();
-            (_, PlacementGraphAsset asset) = SpacingGraph(VariableKind.Input, 2f, palette);
+            GameObject prefab = Prop();
+            (_, PlacementGraphAsset asset) = SpacingGraph(VariableKind.Input, 2f, prefab);
 
             Assert.AreEqual(1, asset.Parameters.Count);
             Assert.AreEqual("Spacing", asset.Parameters[0].Name);
@@ -82,14 +86,14 @@ namespace UnityTools.Placement.Tests
             Assert.IsInstanceOf<Placement.VolumeSamplerNode>(asset.Nodes[binding.Node]);
             Assert.AreEqual("Spacing", binding.Field);
             Assert.AreEqual(2f, ((Placement.VolumeSamplerNode)asset.Nodes[binding.Node]).Spacing, "The node holds the default.");
-            Assert.AreEqual(palette, ((Placement.SpawnPrefabsNode)asset.Nodes[1]).Palette, "Inline port values compile.");
+            Assert.AreEqual(prefab, ((Placement.SpawnPrefabsNode)asset.Nodes[1]).Entries.Single().Prefab, "Prefab Entry values compile.");
         }
 
         [Test]
         public void LocalVariable_SetsValueButIsNotAParameter()
         {
             // Graph Toolkit makes new Blackboard variables Local, so those are parameters too.
-            (_, PlacementGraphAsset asset) = SpacingGraph(VariableKind.Local, 4f, Palette());
+            (_, PlacementGraphAsset asset) = SpacingGraph(VariableKind.Local, 4f, Prop());
             Assert.AreEqual("Spacing", asset.Parameters.Single().Name);
             Assert.AreEqual(4f, asset.Parameters[0].FloatValue);
             Assert.AreEqual(1, asset.Bindings.Count);
@@ -128,29 +132,31 @@ namespace UnityTools.Placement.Tests
         public void SavedGraphWithLocalVariables_ShowsParametersOnTheComponent()
         {
             // The usual way a graph is made in the window: variables are left Local, the graph is saved and imported.
-            // The palette is saved as an asset, since a saved graph can only reference assets.
-            PrefabPalette palette = Palette();
-            _created.Remove(palette);
-            AssetDatabase.CreateAsset(palette, PalettePath);
+            // The prefab is saved as an asset, since a saved graph can only reference assets.
+            GameObject source = new GameObject("Prop");
+            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(source, PrefabPath);
+            Object.DestroyImmediate(source);
             var graph = GraphDatabase.CreateGraph<PlacementGraphDefinition>(GraphPath);
             var sampler = Add<Editor.SurfaceSamplerNode>(graph);
             var spawn = Add<Editor.SpawnPrefabsNode>(graph);
             Assert.IsTrue(graph.Connect(sampler.GetOutputPortByName("Out"), spawn.GetInputPortByName("In")));
             IVariable spacing = graph.CreateVariable("Spacing", 3f, VariableKind.Local);
             Assert.IsTrue(graph.Connect(graph.AddVariableNode(spacing, Vector2.zero).GetOutputPort(0), sampler.GetInputPortByName("Spacing")));
-            IVariable paletteVariable = graph.CreateVariable("Palette", palette, VariableKind.Local);
-            Assert.IsTrue(graph.Connect(graph.AddVariableNode(paletteVariable, Vector2.zero).GetOutputPort(0), spawn.GetInputPortByName("Palette")));
+            var entry = AddEntry(graph, spawn, null);
+            IVariable prefabVariable = graph.CreateVariable("Prop", prefab, VariableKind.Local);
+            Assert.IsTrue(graph.Connect(graph.AddVariableNode(prefabVariable, Vector2.zero).GetOutputPort(0), entry.GetInputPortByName("Prefab")));
             GraphDatabase.SaveGraph(graph);
             AssetDatabase.ImportAsset(GraphPath, ImportAssetOptions.ForceUpdate);
 
             var asset = AssetDatabase.LoadAssetAtPath<PlacementGraphAsset>(GraphPath);
-            CollectionAssert.AreEqual(new[] { "Spacing", "Palette" }, asset.Parameters.Select(p => p.Name).ToArray());
+            CollectionAssert.AreEqual(new[] { "Spacing", "Prop" }, asset.Parameters.Select(p => p.Name).ToArray());
             var component = Track(new GameObject("Placement Graph")).AddComponent<PlacementGraph>();
             component.Graph = asset;
             component.SyncParameters();
-            CollectionAssert.AreEqual(new[] { "Spacing", "Palette" }, component.ParameterOverrides.Select(p => p.Value.Name).ToArray());
-            Assert.AreEqual(PlacementParameterType.Palette, component.ParameterOverrides[1].Value.Type);
-            Assert.AreEqual(palette, component.ParameterOverrides[1].Value.PaletteValue, "Shows the graph's default.");
+            CollectionAssert.AreEqual(new[] { "Spacing", "Prop" }, component.ParameterOverrides.Select(p => p.Value.Name).ToArray());
+            Assert.AreEqual(PlacementParameterType.Prefab, component.ParameterOverrides[1].Value.Type);
+            Assert.AreEqual(prefab, component.ParameterOverrides[1].Value.PrefabValue, "Shows the graph's default.");
+            Assert.AreEqual("Entries[0].Prefab", asset.Bindings.Single(b => b.Parameter == "Prop").Field, "Binds into the entry.");
         }
 
         [Test]
@@ -167,7 +173,7 @@ namespace UnityTools.Placement.Tests
         [Test]
         public void Component_OverrideChangesResult_DefaultOtherwise()
         {
-            (_, PlacementGraphAsset asset) = SpacingGraph(VariableKind.Input, 2f, Palette());
+            (_, PlacementGraphAsset asset) = SpacingGraph(VariableKind.Input, 2f, Prop());
             var go = Track(new GameObject("Placement Graph"));
             var component = go.AddComponent<PlacementGraph>();
             component.Size = new Vector3(10f, 4f, 10f);
@@ -195,7 +201,7 @@ namespace UnityTools.Placement.Tests
         [Test]
         public void Executor_IgnoresOverridesOfTheWrongType()
         {
-            (_, PlacementGraphAsset asset) = SpacingGraph(VariableKind.Input, 2f, Palette());
+            (_, PlacementGraphAsset asset) = SpacingGraph(VariableKind.Input, 2f, Prop());
             var context = new PlacementContext { LocalBounds = new Bounds(Vector3.zero, new Vector3(10f, 4f, 10f)) };
             context.ParameterOverrides.Add(new PlacementParameter("Spacing", PlacementParameterType.Int, 5));
             PointData[][] outputs = PlacementExecutor.Run(asset, context);

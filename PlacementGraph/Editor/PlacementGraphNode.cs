@@ -29,7 +29,7 @@ namespace UnityTools.Placement.Editor
         // A stable id, so a node keeps its random stream when other nodes are added or removed.
         [SerializeField] private string _id;
 
-        [NonSerialized] private PlacementNode _defaults;
+        [NonSerialized] private object _defaults;
 
         /// <summary>The node's stable id, created the first time its ports are defined.</summary>
         public string Id => _id;
@@ -40,8 +40,20 @@ namespace UnityTools.Placement.Editor
         /// <summary>Name shown in logs and the component's node list: the title from <see cref="NodeAttribute"/>, as in the graph window.</summary>
         public virtual string DisplayName => TitleOf(GetType());
 
-        /// <summary>A fresh runtime node, which holds every setting's default.</summary>
-        protected PlacementNode Defaults => _defaults ??= CreateRuntimeInstance();
+        /// <summary>A fresh settings object (the runtime node, or a <see cref="PrefabEntry"/>), which holds every setting's default.</summary>
+        protected object Defaults => _defaults ??= CreateSettingsTarget();
+
+        /// <summary>
+        /// False for nodes that don't run, such as Prefab Entry: they describe values that another node reads when the
+        /// graph is compiled.
+        /// </summary>
+        internal virtual bool IsRuntimeNode => true;
+
+        /// <summary>The object setting ports write to: the runtime node, or for value nodes their value object.</summary>
+        protected virtual object CreateSettingsTarget() => CreateRuntimeInstance();
+
+        /// <summary>The input that Prefab Entry nodes are wired into, on nodes that pick prefabs.</summary>
+        public const string EntriesPort = "Entries";
 
         /// <summary>
         /// The title a node type shows in the graph window: its <see cref="NodeAttribute"/> title, or the class name
@@ -72,7 +84,7 @@ namespace UnityTools.Placement.Editor
         /// <summary>Declare setting ports with <see cref="AddSetting{T}"/>.</summary>
         protected virtual void DefineSettings(IPortDefinitionContext context) { }
 
-        /// <summary>Creates the runtime node with its default settings.</summary>
+        /// <summary>Creates the runtime node with its default settings (null for nodes that don't run).</summary>
         protected abstract PlacementNode CreateRuntimeInstance();
 
         /// <summary>A port as declared by a node type, for <see cref="Describe"/>.</summary>
@@ -104,8 +116,24 @@ namespace UnityTools.Placement.Editor
             }
         }
 
-        /// <summary>The runtime node type this node builds.</summary>
+        /// <summary>The runtime node type this node builds (or the value type, for nodes that don't run).</summary>
         internal Type RuntimeType => Defaults.GetType();
+
+        /// <summary>An input for links from value nodes (such as Prefab Entry), declared with the point ports.</summary>
+        protected void AddLinkInput<T>(IPortDefinitionContext context, string name, string tooltip = null)
+        {
+            if (_describing != null) { _describing.Add(new PortDescription { Name = name, DataType = typeof(T), IsInput = true, Tooltip = tooltip }); return; }
+            IInputPortBuilder<T> builder = context.AddInputPort<T>(name);
+            if (!string.IsNullOrEmpty(tooltip)) builder = builder.WithTooltip(tooltip);
+            builder.Build();
+        }
+
+        /// <summary>An output for a value node's link (such as a Prefab Entry's Entry).</summary>
+        protected void AddLinkOutput<T>(IPortDefinitionContext context, string name)
+        {
+            if (_describing != null) { _describing.Add(new PortDescription { Name = name, DataType = typeof(T), IsInput = false }); return; }
+            context.AddOutputPort<T>(name).Build();
+        }
 
         protected void AddPointInput(IPortDefinitionContext context, string name)
         {
@@ -139,8 +167,14 @@ namespace UnityTools.Placement.Editor
         /// <summary>True for a port that carries points rather than a setting.</summary>
         public static bool IsPointPort(IPort port) => port.DataType == typeof(PointData);
 
+        /// <summary>True for a port that links value nodes (Prefab Entry, Entry Attribute) rather than holding a setting.</summary>
+        public static bool IsLinkPort(IPort port) => port.DataType == typeof(PrefabEntryLink) || port.DataType == typeof(EntryAttributeLink);
+
+        /// <summary>True for a type that is a link rather than a setting value.</summary>
+        internal static bool IsLinkType(Type type) => type == typeof(PrefabEntryLink) || type == typeof(EntryAttributeLink);
+
         /// <summary>The setting ports, in order.</summary>
-        public IEnumerable<IPort> GetSettingPorts() => GetInputPorts().Where(port => !IsPointPort(port));
+        public IEnumerable<IPort> GetSettingPorts() => GetInputPorts().Where(port => !IsPointPort(port) && !IsLinkPort(port));
 
         /// <summary>
         /// Builds the runtime node: defaults, then every setting port's value, resolved by
@@ -151,17 +185,35 @@ namespace UnityTools.Placement.Editor
         {
             resolver ??= SettingResolver.Default;
             PlacementNode runtime = CreateRuntimeInstance();
+            ApplySettings(runtime, resolver, bindings, "");
+            FieldInfo entriesField = PlacementExecutor.FindField(runtime.GetType(), EntriesPort);
+            IPort entriesPort = GetInputPortByName(EntriesPort);
+            if (entriesField != null && entriesPort != null && entriesField.GetValue(runtime) is List<PrefabEntry> entries)
+            {
+                entries.Clear();
+                foreach (PrefabEntryNode entryNode in PrefabEntryNode.Chain<PrefabEntryNode>(entriesPort, EntriesPort))
+                    entries.Add(entryNode.BuildEntry(resolver, bindings, $"{EntriesPort}[{entries.Count}]."));
+            }
+            return runtime;
+        }
+
+        /// <summary>
+        /// Writes every setting port's value into <paramref name="target"/>'s fields. Settings that read a graph
+        /// parameter are added to <paramref name="bindings"/> with <paramref name="prefix"/> before the field name.
+        /// </summary>
+        internal void ApplySettings(object target, SettingResolver resolver, List<(string field, string parameter)> bindings, string prefix)
+        {
+            resolver ??= SettingResolver.Default;
             foreach (IPort port in GetSettingPorts())
             {
-                FieldInfo field = PlacementExecutor.FindField(runtime.GetType(), FieldNameOf(port.Name));
+                FieldInfo field = PlacementExecutor.FindField(target.GetType(), FieldNameOf(port.Name));
                 if (field == null) continue;
                 if (!resolver.TryResolve(port, out object value, out string parameter)) continue;
                 if (value != null && !field.FieldType.IsInstanceOfType(value)) continue;
                 if (value == null && field.FieldType.IsValueType) continue;
-                field.SetValue(runtime, value);
-                if (parameter != null) bindings?.Add((field.Name, parameter));
+                field.SetValue(target, value);
+                if (parameter != null) bindings?.Add((prefix + field.Name, parameter));
             }
-            return runtime;
         }
 
 

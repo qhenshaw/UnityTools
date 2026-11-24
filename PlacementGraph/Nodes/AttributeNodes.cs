@@ -1,17 +1,21 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace UnityTools.Placement
 {
     /// <summary>
-    /// Picks a prefab for every point from a palette, by weight, and records it as point attributes: Prefab, Palette
-    /// and PaletteEntry. With Write Entry Values on it also writes the entry's adjustments (EntryOffset, EntryRotation,
+    /// Picks a prefab for every point from its Entries, by weight, and records it as point attributes: Prefab and
+    /// EntryIndex. With Write Entry Values on it also writes the entry's adjustments (EntryOffset, EntryRotation,
     /// EntryScale) and its custom attributes. Spawn Prefabs then spawns the chosen prefab, so the points can be
     /// filtered or transformed per prefab in between.
     /// </summary>
     [Serializable]
     public class SelectPrefabNode : PlacementNode
     {
+        [Tooltip("The prefabs to pick from, by weight. In a graph: the Prefab Entry nodes wired into Entries.")]
+        public List<PrefabEntry> Entries = new List<PrefabEntry>();
+        [Tooltip("Obsolete: used only when Entries is empty, until the palette is converted to Prefab Entry nodes.")]
         public PrefabPalette Palette;
         [Tooltip("Also write the entry's offset, rotation and scale (sampled per point) and its custom attributes.")]
         public bool WriteEntryValues = true;
@@ -23,16 +27,16 @@ namespace UnityTools.Placement
         {
             PointData result = PointData.Copy(inputs[0]);
             outputs[0] = result;
-            if (Palette == null || Palette.TotalWeight <= 0f)
+            IReadOnlyList<PrefabEntry> entries = Entries.Count > 0 || Palette == null ? Entries : Palette.Entries;
+            if (PrefabEntry.TotalWeight(entries) <= 0f)
             {
-                context.Warn(this, "No Prefab Palette, or the palette has no prefabs with a weight above 0.");
+                context.Warn(this, "No entries with a prefab and a weight above 0. Wire Prefab Entry nodes into Entries.");
                 return;
             }
 
             uint seed = PlacementRandom.Hash(context.SeedHash, NodeSeed);
             PointAttribute<UnityEngine.Object> prefabs = result.GetOrAddAttribute<UnityEngine.Object>(PointAttributeNames.Prefab);
-            PointAttribute<UnityEngine.Object> palettes = result.GetOrAddAttribute<UnityEngine.Object>(PointAttributeNames.Palette);
-            PointAttribute<int> indices = result.GetOrAddAttribute(PointAttributeNames.PaletteEntry, -1);
+            PointAttribute<int> indices = result.GetOrAddAttribute(PointAttributeNames.EntryIndex, -1);
             PointAttribute<Vector3> offsets = null, rotations = null;
             PointAttribute<float> scales = null;
             if (WriteEntryValues)
@@ -45,10 +49,9 @@ namespace UnityTools.Placement
             for (int i = 0; i < result.Count; i++)
             {
                 PlacementPoint point = result.Points[i];
-                int index = Palette.PickIndex(PlacementRandom.Value(PlacementRandom.Hash(point.Seed, seed)));
-                PrefabPalette.Entry entry = Palette.EntryAt(index);
+                int index = PrefabEntry.PickIndex(entries, PlacementRandom.Value(PlacementRandom.Hash(point.Seed, seed)));
+                PrefabEntry entry = entries[index];
                 prefabs.Set(i, entry.Prefab);
-                palettes.Set(i, Palette);
                 indices.Set(i, index);
                 if (!WriteEntryValues) continue;
 
@@ -56,7 +59,7 @@ namespace UnityTools.Placement
                 offsets.Set(i, offset);
                 rotations.Set(i, rotation);
                 scales.Set(i, scale);
-                foreach (PrefabPalette.EntryAttribute attribute in entry.Attributes)
+                foreach (EntryAttribute attribute in entry.Attributes)
                 {
                     if (attribute == null || string.IsNullOrEmpty(attribute.Name)) continue;
                     WriteValue(result, attribute.Name, attribute.Type, attribute.Value, i);

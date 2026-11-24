@@ -88,9 +88,11 @@ namespace UnityTools.Placement.Editor
                     attribute?.CategoryPath ?? "",
                     node.RuntimeType,
                     ports.Where(p => p.IsInput && p.DataType == typeof(PointData)).Select(p => p.Name).ToArray(),
-                    ports.Where(p => !p.IsInput).Select(p => p.Name).ToArray(),
-                    ports.Where(p => p.IsInput && p.DataType != typeof(PointData))
-                        .Select(p => new PlacementSettingInfo(p.Name, p.DataType, p.DefaultValue, p.Tooltip)).ToArray());
+                    ports.Where(p => !p.IsInput && p.DataType == typeof(PointData)).Select(p => p.Name).ToArray(),
+                    ports.Where(p => p.IsInput && p.DataType != typeof(PointData) && !PlacementGraphNode.IsLinkType(p.DataType))
+                        .Select(p => new PlacementSettingInfo(p.Name, p.DataType, p.DefaultValue, p.Tooltip)).ToArray(),
+                    ports.Where(p => PlacementGraphNode.IsLinkType(p.DataType)).Select(p => (p.IsInput ? "in " : "out ") + p.Name).ToArray(),
+                    node.IsRuntimeNode);
                 _nodeTypes.Add(info);
                 foreach (string key in new[] { info.Title, Key(info.Title), type.Name, info.RuntimeType.Name, info.RuntimeType.FullName })
                     _typesByKey[Key(key)] = type;
@@ -108,6 +110,8 @@ namespace UnityTools.Placement.Editor
                 text.AppendLine($"{info.Title} ({info.Category})");
                 text.AppendLine($"  point inputs: {(info.PointInputs.Length > 0 ? string.Join(", ", info.PointInputs) : "none")}");
                 text.AppendLine($"  point outputs: {(info.PointOutputs.Length > 0 ? string.Join(", ", info.PointOutputs) : "none")}");
+                if (info.Links.Length > 0) text.AppendLine($"  links: {string.Join(", ", info.Links)}");
+                if (!info.Runs) text.AppendLine("  doesn't run: wire it into another node (see links)");
                 foreach (PlacementSettingInfo setting in info.Settings)
                 {
                     string choices = setting.Type.IsEnum ? $" [{string.Join(", ", Enum.GetNames(setting.Type))}]" : "";
@@ -115,7 +119,8 @@ namespace UnityTools.Placement.Editor
                     text.AppendLine($"  setting {setting.Name}: {setting.Type.Name}{choices} = {Format(setting.DefaultValue)}{tooltip}");
                 }
             }
-            text.AppendLine("Parameter types: float, int, bool, Vector3, PrefabPalette, LayerMask.");
+            text.AppendLine("Prefab Entry nodes connect from their Entry output to the Entries input of Select Prefab or Spawn Prefabs (AddEntry does this); Entry Attribute nodes to a Prefab Entry's Attributes.");
+            text.AppendLine("Parameter types: float, int, bool, Vector3, GameObject (prefab), LayerMask.");
             return text.ToString();
         }
 
@@ -208,9 +213,16 @@ namespace UnityTools.Placement.Editor
         public string[] PointOutputs { get; }
         /// <summary>Setting ports, in order.</summary>
         public PlacementSettingInfo[] Settings { get; }
+        /// <summary>Ports that link value nodes, e.g. "in Entries" or "out Entry".</summary>
+        public string[] Links { get; }
+        /// <summary>False for value nodes (Prefab Entry, Entry Attribute), which are read by the node they're wired into.</summary>
+        public bool Runs { get; }
 
-        public PlacementNodeTypeInfo(string title, string category, Type runtimeType, string[] pointInputs, string[] pointOutputs, PlacementSettingInfo[] settings)
+        public PlacementNodeTypeInfo(string title, string category, Type runtimeType, string[] pointInputs, string[] pointOutputs,
+            PlacementSettingInfo[] settings, string[] links = null, bool runs = true)
         {
+            Links = links ?? Array.Empty<string>();
+            Runs = runs;
             Title = title;
             Category = category;
             RuntimeType = runtimeType;
@@ -375,6 +387,115 @@ namespace UnityTools.Placement.Editor
             if (Graph.GetVariables().Any(v => v.Name == name))
                 throw new ArgumentException($"There's already a variable called '{name}'.", nameof(name));
             return Graph.CreateVariable(name, type, defaultValue, kind);
+        }
+
+        /// <summary>
+        /// Adds a Prefab Entry node for <paramref name="prefab"/> (a GameObject or an asset path) at the end of the entry
+        /// chain of <paramref name="target"/> (Select Prefab or Spawn Prefabs). Returns the entry, so its other settings
+        /// can be set: <c>graph.AddEntry(spawn, tree).Set("Random Scale", true).Set("Scale Max", 1.5f)</c>.
+        /// </summary>
+        public PlacementNodeHandle AddEntry(PlacementNodeHandle target, object prefab, float weight = 1f)
+        {
+            Check(target, nameof(target));
+            IPort entries = target.FindPort(PlacementGraphNode.EntriesPort, PortDirection.Input);
+            int count = EntriesOf(target).Count;
+            Vector2 at = NodePosition(target) + new Vector2(-ColumnWidth * (count + 1), 220f);
+            PlacementNodeHandle entry = AddNode(typeof(PrefabEntryNode), at);
+            entry.Set("Prefab", prefab).Set("Weight", weight);
+            AppendToChain(entries, entry, PlacementGraphNode.EntriesPort, PrefabEntryNode.EntryPort);
+            return entry;
+        }
+
+        /// <summary>Puts <paramref name="node"/> at the end of the chain wired into <paramref name="input"/>.</summary>
+        private void AppendToChain(IPort input, PlacementNodeHandle node, string chainPort, string outputPort)
+        {
+            IPort output = node.FindPort(outputPort, PortDirection.Output);
+            if (input.IsConnected)
+            {
+                IPort last = input.FirstConnectedPort;
+                Graph.Disconnect(last, input);
+                if (!Graph.Connect(last, node.FindPort(chainPort, PortDirection.Input)))
+                    throw new InvalidOperationException($"Couldn't chain {node.Title} after the previous one.");
+            }
+            if (!Graph.Connect(output, input))
+                throw new InvalidOperationException($"Couldn't wire {node.Title} in.");
+        }
+
+        /// <summary>Adds one Prefab Entry per item of <paramref name="entries"/>, with all its values and attributes.</summary>
+        public List<PlacementNodeHandle> AddEntries(PlacementNodeHandle target, IEnumerable<PrefabEntry> entries)
+        {
+            var added = new List<PlacementNodeHandle>();
+            foreach (PrefabEntry entry in entries)
+            {
+                if (entry == null) continue;
+                PlacementNodeHandle node = AddEntry(target, entry.Prefab, entry.Weight)
+                    .Set("Position Offset", entry.PositionOffset)
+                    .Set("Rotation Offset", entry.RotationOffset)
+                    .Set("Rotation Random Min", entry.RotationRandomMin)
+                    .Set("Rotation Random Max", entry.RotationRandomMax)
+                    .Set("Random Scale", entry.RandomScale)
+                    .Set("Scale Min", entry.ScaleMin)
+                    .Set("Scale Max", entry.ScaleMax);
+                foreach (EntryAttribute attribute in entry.Attributes)
+                {
+                    if (attribute != null) AddEntryAttribute(node, attribute.Name, attribute.Value, attribute.Type);
+                }
+                added.Add(node);
+            }
+            return added;
+        }
+
+        /// <summary>Removes the Prefab Entry nodes wired into <paramref name="target"/> and adds <paramref name="entries"/> instead.</summary>
+        public List<PlacementNodeHandle> SetEntries(PlacementNodeHandle target, IEnumerable<PrefabEntry> entries)
+        {
+            foreach (PlacementNodeHandle entry in EntriesOf(target))
+            {
+                foreach (PlacementNodeHandle attribute in AttributesOf(entry)) Graph.RemoveNode(attribute.Node);
+                Graph.RemoveNode(entry.Node);
+            }
+            return AddEntries(target, entries);
+        }
+
+        /// <summary>The Prefab Entry nodes chained into <paramref name="target"/>'s Entries, first to last.</summary>
+        public List<PlacementNodeHandle> EntriesOf(PlacementNodeHandle target) =>
+            PrefabEntryNode.Chain<PrefabEntryNode>(target.FindPort(PlacementGraphNode.EntriesPort, PortDirection.Input), PlacementGraphNode.EntriesPort)
+                .Select(n => new PlacementNodeHandle(this, n)).ToList();
+
+        /// <summary>The Entry Attribute nodes chained into a Prefab Entry, first to last.</summary>
+        public List<PlacementNodeHandle> AttributesOf(PlacementNodeHandle entry) =>
+            PrefabEntryNode.Chain<EntryAttributeNode>(entry.FindPort(PrefabEntryNode.AttributesPort, PortDirection.Input), PrefabEntryNode.AttributesPort)
+                .Select(n => new PlacementNodeHandle(this, n)).ToList();
+
+        /// <summary>
+        /// Adds an Entry Attribute node to a Prefab Entry: the entry writes <paramref name="name"/> =
+        /// <paramref name="value"/> onto the points it is picked for. The type comes from the value (float, int,
+        /// Vector3 or an object) unless given.
+        /// </summary>
+        public PlacementNodeHandle AddEntryAttribute(PlacementNodeHandle entry, string name, object value, PointAttributeType? type = null)
+        {
+            Check(entry, nameof(entry));
+            if (entry.Node is not PrefabEntryNode) throw new ArgumentException($"{entry.Title} isn't a Prefab Entry.", nameof(entry));
+            PointAttributeType kind = type ?? value switch
+            {
+                int => PointAttributeType.Int,
+                Vector3 => PointAttributeType.Vector3,
+                UnityEngine.Object => PointAttributeType.Object,
+                null => PointAttributeType.Object,
+                _ => PointAttributeType.Float
+            };
+            int count = AttributesOf(entry).Count;
+            PlacementNodeHandle attribute = AddNode(typeof(EntryAttributeNode), NodePosition(entry) + new Vector2(-ColumnWidth * (count + 1), 300f));
+            attribute.Set("Name", name).Set("Type", kind.ToString());
+            string setting = kind switch
+            {
+                PointAttributeType.Float => "Float Value",
+                PointAttributeType.Int => "Int Value",
+                PointAttributeType.Vector3 => "Vector3 Value",
+                _ => "Object Value"
+            };
+            attribute.Set(setting, value);
+            AppendToChain(entry.FindPort(PrefabEntryNode.AttributesPort, PortDirection.Input), attribute, PrefabEntryNode.AttributesPort, "Attribute");
+            return attribute;
         }
 
         /// <summary>Adds a subgraph node using the graph asset at <paramref name="subgraphPath"/>. Its ports are named after the subgraph's variables.</summary>

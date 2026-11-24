@@ -18,14 +18,14 @@ namespace UnityTools.Placement
 
             // Overrides are written into the asset's nodes for the run and put back afterwards, so the asset never
             // keeps an instance's values.
-            List<(PlacementNode node, FieldInfo field, object previous)> applied = ApplyOverrides(graph, context);
+            List<(object owner, FieldInfo field, object previous)> applied = ApplyOverrides(graph, context);
             try
             {
                 return RunNodes(graph, context);
             }
             finally
             {
-                for (int i = applied.Count - 1; i >= 0; i--) applied[i].field.SetValue(applied[i].node, applied[i].previous);
+                for (int i = applied.Count - 1; i >= 0; i--) applied[i].field.SetValue(applied[i].owner, applied[i].previous);
             }
         }
 
@@ -40,9 +40,45 @@ namespace UnityTools.Placement
             return field;
         }
 
-        private static List<(PlacementNode, FieldInfo, object)> ApplyOverrides(PlacementGraphAsset graph, PlacementContext context)
+        /// <summary>
+        /// Finds the field a binding path names, from <paramref name=root/>: a field name, or a path through lists
+        /// such as "Entries[2].Weight". Returns the object holding the field and the field.
+        /// </summary>
+        internal static bool TryResolvePath(object root, string path, out object owner, out FieldInfo field)
         {
-            var applied = new List<(PlacementNode, FieldInfo, object)>();
+            owner = root;
+            field = null;
+            if (root == null || string.IsNullOrEmpty(path)) return false;
+            string[] parts = path.Split('.');
+            for (int p = 0; p < parts.Length; p++)
+            {
+                string part = parts[p];
+                int index = -1;
+                int bracket = part.IndexOf('[');
+                if (bracket >= 0)
+                {
+                    if (!int.TryParse(part.Substring(bracket + 1, part.Length - bracket - 2), out index)) return false;
+                    part = part.Substring(0, bracket);
+                }
+                field = FindField(owner.GetType(), part);
+                if (field == null) return false;
+                if (p == parts.Length - 1) return index < 0;
+                object next = field.GetValue(owner);
+                if (index >= 0)
+                {
+                    if (next is not System.Collections.IList list || index >= list.Count) return false;
+                    next = list[index];
+                }
+                // Only reference types can be walked through and written back into.
+                if (next == null || next.GetType().IsValueType) return false;
+                owner = next;
+            }
+            return false;
+        }
+
+        private static List<(object, FieldInfo, object)> ApplyOverrides(PlacementGraphAsset graph, PlacementContext context)
+        {
+            var applied = new List<(object, FieldInfo, object)>();
             if (context.ParameterOverrides.Count == 0 || graph.Bindings.Count == 0) return applied;
 
             foreach (PlacementParameterBinding binding in graph.Bindings)
@@ -58,11 +94,11 @@ namespace UnityTools.Placement
                 if (value == null) continue;
 
                 PlacementNode node = graph.Nodes[binding.Node];
-                FieldInfo field = FindField(node.GetType(), binding.Field);
+                if (!TryResolvePath(node, binding.Field, out object owner, out FieldInfo field)) continue;
                 Type valueType = PlacementParameter.SystemTypeOf(value.Type);
-                if (field == null || !field.FieldType.IsAssignableFrom(valueType)) continue;
-                applied.Add((node, field, field.GetValue(node)));
-                field.SetValue(node, value.Value);
+                if (!field.FieldType.IsAssignableFrom(valueType)) continue;
+                applied.Add((owner, field, field.GetValue(owner)));
+                field.SetValue(owner, value.Value);
             }
             return applied;
         }
