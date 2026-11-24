@@ -40,15 +40,34 @@ namespace UnityTools.Placement
     {
         [Tooltip("Minimum distance between kept points, in metres.")]
         [Min(0f)] public float Radius = 1f;
+        [Tooltip("Points with BoundsMin and BoundsMax attributes (from Subdivide) also keep their bounds apart: the gap between them must be at least Radius.")]
+        public bool UsePointBounds;
 
         public override int InputCount => 1;
         /// <summary>Output 0: kept. Output 1: rejected.</summary>
         public override int OutputCount => 2;
 
+        /// <summary>A point's horizontal extent: the largest distance from its position to its bounds' edge in X or Z, scaled.</summary>
+        internal static float HorizontalExtent(Vector3 min, Vector3 max, Vector3 scale) =>
+            Mathf.Max(Mathf.Max(Mathf.Abs(min.x), Mathf.Abs(max.x)) * Mathf.Abs(scale.x), Mathf.Max(Mathf.Abs(min.z), Mathf.Abs(max.z)) * Mathf.Abs(scale.z));
+
         public override void Execute(PlacementContext context, PointData[] inputs, PointData[] outputs)
         {
             List<PlacementPoint> points = inputs[0].Points;
-            if (Radius <= 0f)
+            PointAttribute<Vector3> boundsMin = UsePointBounds ? inputs[0].GetAttribute<Vector3>(SubdivideNode.BoundsMinAttribute) : null;
+            PointAttribute<Vector3> boundsMax = UsePointBounds ? inputs[0].GetAttribute<Vector3>(SubdivideNode.BoundsMaxAttribute) : null;
+            float[] extents = null;
+            float maxExtent = 0f;
+            if (boundsMin != null && boundsMax != null)
+            {
+                extents = new float[points.Count];
+                for (int i = 0; i < points.Count; i++)
+                {
+                    extents[i] = HorizontalExtent(boundsMin.Get(i), boundsMax.Get(i), points[i].Scale);
+                    maxExtent = Mathf.Max(maxExtent, extents[i]);
+                }
+            }
+            if (Radius <= 0f && maxExtent <= 0f)
             {
                 outputs[0] = inputs[0];
                 outputs[1] = PointData.Empty;
@@ -65,14 +84,45 @@ namespace UnityTools.Placement
                 return bySeed != 0 ? bySeed : a.CompareTo(b);
             });
 
-            var grid = new PointGrid(Radius);
             var keep = new bool[points.Count];
-            foreach (int index in order)
+            if (extents == null)
             {
-                Vector3 position = points[index].Position;
-                if (grid.AnyWithin(position, Radius)) continue;
-                grid.Add(position);
-                keep[index] = true;
+                var grid = new PointGrid(Radius);
+                foreach (int index in order)
+                {
+                    Vector3 position = points[index].Position;
+                    if (grid.AnyWithin(position, Radius)) continue;
+                    grid.Add(position);
+                    keep[index] = true;
+                }
+            }
+            else
+            {
+                // With bounds, two points clash when their centres are closer than Radius plus both extents.
+                float cell = Mathf.Max(0.0001f, Radius + 2f * maxExtent);
+                var cells = new Dictionary<Vector3Int, List<int>>();
+                Vector3Int CellOf(Vector3 p) => new Vector3Int(Mathf.FloorToInt(p.x / cell), Mathf.FloorToInt(p.y / cell), Mathf.FloorToInt(p.z / cell));
+                foreach (int index in order)
+                {
+                    Vector3 position = points[index].Position;
+                    Vector3Int centre = CellOf(position);
+                    bool clash = false;
+                    for (int z = -1; z <= 1 && !clash; z++)
+                    for (int y = -1; y <= 1 && !clash; y++)
+                    for (int x = -1; x <= 1 && !clash; x++)
+                    {
+                        if (!cells.TryGetValue(centre + new Vector3Int(x, y, z), out List<int> list)) continue;
+                        foreach (int other in list)
+                        {
+                            float minimum = Radius + extents[index] + extents[other];
+                            if ((points[other].Position - position).sqrMagnitude < minimum * minimum) { clash = true; break; }
+                        }
+                    }
+                    if (clash) continue;
+                    if (!cells.TryGetValue(centre, out List<int> own)) cells[centre] = own = new List<int>();
+                    own.Add(index);
+                    keep[index] = true;
+                }
             }
 
             var kept = PointData.Derive(inputs[0]);

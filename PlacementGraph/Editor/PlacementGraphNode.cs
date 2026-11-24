@@ -55,6 +55,9 @@ namespace UnityTools.Placement.Editor
         /// <summary>The input that Prefab Entry nodes are wired into, on nodes that pick prefabs.</summary>
         public const string EntriesPort = "Entries";
 
+        /// <summary>The input that Module nodes are wired into, on Subdivide.</summary>
+        public const string ModulesPort = "Modules";
+
         /// <summary>
         /// The title a node type shows in the graph window: its <see cref="NodeAttribute"/> title, or the class name
         /// without "Node", split into words.
@@ -168,10 +171,10 @@ namespace UnityTools.Placement.Editor
         public static bool IsPointPort(IPort port) => port.DataType == typeof(PointData);
 
         /// <summary>True for a port that links value nodes (Prefab Entry, Entry Attribute) rather than holding a setting.</summary>
-        public static bool IsLinkPort(IPort port) => port.DataType == typeof(PrefabEntryLink) || port.DataType == typeof(EntryAttributeLink);
+        public static bool IsLinkPort(IPort port) => IsLinkType(port.DataType);
 
         /// <summary>True for a type that is a link rather than a setting value.</summary>
-        internal static bool IsLinkType(Type type) => type == typeof(PrefabEntryLink) || type == typeof(EntryAttributeLink);
+        internal static bool IsLinkType(Type type) => type == typeof(PrefabEntryLink) || type == typeof(EntryAttributeLink) || type == typeof(ModuleLink);
 
         /// <summary>The setting ports, in order.</summary>
         public IEnumerable<IPort> GetSettingPorts() => GetInputPorts().Where(port => !IsPointPort(port) && !IsLinkPort(port));
@@ -193,6 +196,18 @@ namespace UnityTools.Placement.Editor
                 entries.Clear();
                 foreach (PrefabEntryNode entryNode in PrefabEntryNode.Chain<PrefabEntryNode>(entriesPort, EntriesPort))
                     entries.Add(entryNode.BuildEntry(resolver, bindings, $"{EntriesPort}[{entries.Count}]."));
+            }
+            FieldInfo modulesField = PlacementExecutor.FindField(runtime.GetType(), ModulesPort);
+            IPort modulesPort = GetInputPortByName(ModulesPort);
+            if (modulesField != null && modulesPort != null && modulesField.GetValue(runtime) is List<ModuleDefinition> modules)
+            {
+                modules.Clear();
+                foreach (ModuleNode moduleNode in PrefabEntryNode.Chain<ModuleNode>(modulesPort, ModulesPort))
+                {
+                    var module = new ModuleDefinition();
+                    moduleNode.ApplySettings(module, resolver, bindings, $"{ModulesPort}[{modules.Count}].");
+                    modules.Add(module);
+                }
             }
             return runtime;
         }

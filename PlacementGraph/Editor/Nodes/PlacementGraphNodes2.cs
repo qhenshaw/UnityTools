@@ -42,6 +42,7 @@ namespace UnityTools.Placement.Editor
         protected override void DefineSettings(IPortDefinitionContext context)
         {
             AddSetting<float>(context, "Radius", "Minimum distance between kept points, in metres.");
+            AddSetting<bool>(context, "Use Point Bounds", "Points with BoundsMin and BoundsMax (from Subdivide) keep their bounds at least Radius apart.");
         }
     }
 
