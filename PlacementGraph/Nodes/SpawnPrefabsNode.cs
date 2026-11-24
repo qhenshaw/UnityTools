@@ -32,11 +32,14 @@ namespace UnityTools.Placement
             uint seed = PlacementRandom.Hash(context.SeedHash, NodeSeed);
             foreach (PlacementPoint point in inputs[0].Points)
             {
-                GameObject prefab = Palette.Pick(PlacementRandom.Value(PlacementRandom.Hash(point.Seed, seed)));
-                if (prefab == null) continue;
+                PrefabPalette.Entry entry = Palette.PickEntry(PlacementRandom.Value(PlacementRandom.Hash(point.Seed, seed)));
+                if (entry == null) continue;
+                GameObject prefab = entry.Prefab;
                 Transform root = prefab.transform;
                 Quaternion rotation = KeepPrefabRotation ? point.Rotation * root.localRotation : point.Rotation;
                 Vector3 scale = KeepPrefabScale ? Vector3.Scale(root.localScale, point.Scale) : point.Scale;
+                // The entry's own scale variation uses its own random channel, so turning it on doesn't change the picks.
+                if (entry.RandomScale) scale *= PlacementRandom.Range(point.Seed, seed, 11u, entry.ScaleMin, entry.ScaleMax);
                 context.Output.Spawn(prefab, point.Position, rotation, scale);
             }
         }

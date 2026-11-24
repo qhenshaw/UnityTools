@@ -15,6 +15,7 @@ All notable changes to Unity Tools. Versions are git tags: install one with `htt
 - Placement Graph: new Blackboard variables are made Input (Graph Toolkit creates them Local), so they become subgraph ports; existing variables keep their kind.
 - Placement Graph: more rotation and scale control. Transform Points has Rotation Mode (Add or Replace), Uniform Scale with per-axis Axis Scale Min and Max, and Scale Mode (Multiply or Replace); Spawn Prefabs has Keep Prefab Rotation (off) and Keep Prefab Scale (on). The defaults match the earlier behaviour, so existing graphs place the same.
 - Placement Graph sample: a forest floor graph (trees, undergrowth, rocks) with prefab palettes, primitive-based prefabs and a demo scene, in the Package Manager's Samples tab.
+- Prefab Palette: each entry has an optional Random Scale (off by default) with Scale Min and Max, applied by Spawn Prefabs on top of the point's scale. Picks don't change when it is turned on. `PickEntry(value)` returns the picked entry.
 
 ## 7.0.0 - 2026-11-15
 - **Breaking** Every tool now uses a `UnityTools.*` namespace, and every assembly is named after its namespace. Scripts need their `using` lines updated, and your own assembly definitions that reference these assemblies by name need the new names (references by GUID, Unity's default, keep working). Scene, prefab and asset references are unaffected.

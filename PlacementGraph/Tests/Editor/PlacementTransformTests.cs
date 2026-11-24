@@ -130,6 +130,42 @@ namespace UnityTools.Placement.Tests
         }
 
         [Test]
+        public void PaletteEntry_RandomScale_OnlyForThatEntry()
+        {
+            var plain = Track(new GameObject("Plain"));
+            var varied = Track(new GameObject("Varied"));
+            var palette = Track(ScriptableObject.CreateInstance<PrefabPalette>());
+            palette.Entries.Add(new PrefabPalette.Entry { Prefab = plain, Weight = 1f });
+            palette.Entries.Add(new PrefabPalette.Entry { Prefab = varied, Weight = 1f, RandomScale = true, ScaleMin = 0.5f, ScaleMax = 2f });
+
+            var input = new PointData();
+            for (uint i = 0; i < 200; i++) input.Points.Add(PlacementPoint.At(Vector3.zero, i + 1));
+
+            var spawned = new List<(GameObject prefab, Vector3 scale)>();
+            var output = new PrefabRecorder(spawned);
+            Run(new SpawnPrefabsNode { Palette = palette }, new PlacementContext { Output = output }, input);
+
+            Assert.IsTrue(spawned.Where(s => s.prefab == plain).All(s => s.scale == Vector3.one));
+            List<Vector3> variedScales = spawned.Where(s => s.prefab == varied).Select(s => s.scale).ToList();
+            Assert.Greater(variedScales.Count, 50);
+            Assert.IsTrue(variedScales.All(s => s.x >= 0.5f && s.x <= 2f && s.x == s.y && s.y == s.z));
+            Assert.Greater(variedScales.Select(s => s.x).Distinct().Count(), 20);
+
+            // Turning variation off again doesn't change which prefab each point gets.
+            palette.Entries[1].RandomScale = false;
+            var again = new List<(GameObject prefab, Vector3 scale)>();
+            Run(new SpawnPrefabsNode { Palette = palette }, new PlacementContext { Output = new PrefabRecorder(again) }, input);
+            CollectionAssert.AreEqual(spawned.Select(s => s.prefab), again.Select(s => s.prefab));
+        }
+
+        private sealed class PrefabRecorder : IPlacementOutput
+        {
+            private readonly List<(GameObject, Vector3)> _spawned;
+            public PrefabRecorder(List<(GameObject, Vector3)> spawned) => _spawned = spawned;
+            public void Spawn(GameObject prefab, Vector3 position, Quaternion rotation, Vector3 scale) => _spawned.Add((prefab, scale));
+        }
+
+        [Test]
         public void Component_SpawnedObjectsGetTheGraphsRotationAndScale()
         {
             GameObject ground = Track(GameObject.CreatePrimitive(PrimitiveType.Cube));

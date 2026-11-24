@@ -16,6 +16,10 @@ namespace UnityTools.Placement
         {
             public GameObject Prefab;
             [Min(0f)] public float Weight = 1f;
+            [Tooltip("Give this prefab a random uniform scale between Scale Min and Scale Max, on top of the point's scale.")]
+            public bool RandomScale;
+            [Min(0f)] public float ScaleMin = 1f;
+            [Min(0f)] public float ScaleMax = 1f;
         }
 
         [SerializeField] private List<Entry> _entries = new List<Entry>();
@@ -38,17 +42,20 @@ namespace UnityTools.Placement
         }
 
         /// <summary>Picks a prefab from a value in [0, 1), by weight. Null when nothing can be picked.</summary>
-        public GameObject Pick(float value)
+        public GameObject Pick(float value) => PickEntry(value)?.Prefab;
+
+        /// <summary>Picks an entry from a value in [0, 1), by weight. Null when nothing can be picked.</summary>
+        public Entry PickEntry(float value)
         {
             float total = TotalWeight;
             if (total <= 0f) return null;
             float target = Mathf.Clamp01(value) * total;
-            GameObject last = null;
+            Entry last = null;
             foreach (Entry entry in _entries)
             {
                 if (entry == null || entry.Prefab == null || entry.Weight <= 0f) continue;
-                last = entry.Prefab;
-                if (target < entry.Weight) return entry.Prefab;
+                last = entry;
+                if (target < entry.Weight) return entry;
                 target -= entry.Weight;
             }
             return last;

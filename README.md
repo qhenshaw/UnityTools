@@ -602,7 +602,7 @@ Drops, throws and settles the selected objects with physics in edit mode, so pro
 
 ## Placement Graph
 Places prefabs procedurally with a node graph, in the spirit of Unreal's PCG: nodes sample points in a volume, weight and filter them, adjust them, then spawn prefabs on what's left. Graphs are edited in Unity's Graph Toolkit window and run by a **Placement Graph** component in the scene.
-1. Create a graph with **Assets > Create > UnityTools > Placement Graph** and double-click it to edit. Create a **Prefab Palette** (Assets > Create > UnityTools > Prefab Palette) and fill it with weighted prefabs.
+1. Create a graph with **Assets > Create > UnityTools > Placement Graph** and double-click it to edit. Create a **Prefab Palette** (Assets > Create > UnityTools > Prefab Palette) and fill it with weighted prefabs. To vary the size of only some prefabs, tick **Random Scale** on their entries and set Scale Min and Max: each placed copy gets a random uniform scale from that range, on top of the graph's scale.
 2. Add nodes and wire them, for example Surface Sampler > Noise Density > Density Filter > Transform Points > Spawn Prefabs, and set the Spawn Prefabs node's Palette. Save the graph.
 3. Create a **GameObject > Placement Graph**, assign the graph, and size the box with its handles. With **Auto Generate** on (default), it regenerates whenever the graph is saved, a palette changes, or it moves, resizes or has its settings changed. **Generate** and **Clear** are each one Undo step.
 
