@@ -267,13 +267,17 @@ namespace UnityTools.Placement.Editor
             }
         }
 
-        /// <summary>The graph's Input variables of a parameter type, with their defaults, in Blackboard order.</summary>
+        /// <summary>
+        /// The graph's Blackboard variables of a parameter type, with their defaults, in Blackboard order. Local and Input
+        /// variables both count (Graph Toolkit makes new variables Local); Output variables and point variables are for
+        /// subgraphs.
+        /// </summary>
         public static List<PlacementParameter> CollectParameters(Graph graph, List<string> warnings)
         {
             var parameters = new List<PlacementParameter>();
             foreach (IVariable variable in graph.GetVariables(SortMethod.Display))
             {
-                if (variable.VariableKind != VariableKind.Input || variable.DataType == typeof(PointData)) continue;
+                if (variable.VariableKind == VariableKind.Output || variable.DataType == typeof(PointData)) continue;
                 if (!PlacementParameter.TryGetType(variable.DataType, out PlacementParameterType type))
                 {
                     warnings?.Add($"Variable '{variable.Name}' is a {variable.DataType?.Name}, which can't be a parameter. Use float, int, bool, Vector3, Prefab Palette or LayerMask.");

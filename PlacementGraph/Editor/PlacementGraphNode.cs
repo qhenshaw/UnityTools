@@ -168,7 +168,7 @@ namespace UnityTools.Placement.Editor
 
     /// <summary>
     /// Works out a setting port's value: its inline field when unconnected, or what's wired into it (a constant, or a
-    /// Blackboard variable's default). A variable of kind Input also names the graph parameter the setting reads.
+    /// Blackboard variable's default). The variable also names the graph parameter the setting reads.
     /// </summary>
     internal class SettingResolver
     {
@@ -197,10 +197,10 @@ namespace UnityTools.Placement.Editor
             }
         }
 
-        /// <summary>A variable's default; an Input variable also names the parameter.</summary>
+        /// <summary>A variable's default; a Local or Input variable also names the parameter it is.</summary>
         protected virtual bool TryResolveVariable(IVariable variable, Type type, out object value, out string parameter)
         {
-            parameter = variable.VariableKind == VariableKind.Input ? variable.Name : null;
+            parameter = variable.VariableKind != VariableKind.Output ? variable.Name : null;
             return Invoke(VariableValue, type, variable, out value);
         }
 

@@ -13,6 +13,7 @@ namespace UnityTools.Placement.Tests
     public class PlacementParameterTests
     {
         private const string GraphPath = "Assets/__PlacementParameterTests.placegraph";
+        private const string PalettePath = "Assets/__PlacementParameterTests_Palette.asset";
         private readonly List<Object> _created = new();
 
         [TearDown]
@@ -24,6 +25,7 @@ namespace UnityTools.Placement.Tests
             }
             _created.Clear();
             AssetDatabase.DeleteAsset(GraphPath);
+            AssetDatabase.DeleteAsset(PalettePath);
         }
 
         private T Track<T>(T obj) where T : Object
@@ -86,10 +88,69 @@ namespace UnityTools.Placement.Tests
         [Test]
         public void LocalVariable_SetsValueButIsNotAParameter()
         {
+            // Graph Toolkit makes new Blackboard variables Local, so those are parameters too.
             (_, PlacementGraphAsset asset) = SpacingGraph(VariableKind.Local, 4f, Palette());
-            Assert.AreEqual(0, asset.Parameters.Count);
-            Assert.AreEqual(0, asset.Bindings.Count);
+            Assert.AreEqual("Spacing", asset.Parameters.Single().Name);
+            Assert.AreEqual(4f, asset.Parameters[0].FloatValue);
+            Assert.AreEqual(1, asset.Bindings.Count);
             Assert.AreEqual(4f, ((Placement.VolumeSamplerNode)asset.Nodes[0]).Spacing);
+        }
+
+        [Test]
+        public void NewVariables_DefaultToInput_ExistingOnesAreKept()
+        {
+            var graph = GraphDatabase.CreateGraph<PlacementGraphDefinition>(GraphPath);
+            IVariable old = graph.CreateVariable("Old", 1f, VariableKind.Local);
+            graph.MakeNewVariablesInputs();
+            Assert.AreEqual(VariableKind.Input, old.VariableKind, "New variables become Input.");
+            old.VariableKind = VariableKind.Local;
+            GraphDatabase.SaveGraph(graph);
+
+            // A graph loaded from disk keeps the kinds it had.
+            var loaded = GraphDatabase.LoadGraph<PlacementGraphDefinition>(GraphPath);
+            loaded.MakeNewVariablesInputs();
+            Assert.AreEqual(VariableKind.Local, loaded.GetVariables().Single(v => v.Name == "Old").VariableKind);
+
+            // A variable added afterwards (as the Blackboard's + button does) becomes Input on the next change.
+            loaded.CreateVariable("New", 2f, VariableKind.Local);
+            loaded.MakeNewVariablesInputs();
+            IVariable added = loaded.GetVariables().Single(v => v.Name == "New");
+            Assert.AreEqual(VariableKind.Input, added.VariableKind);
+            Assert.AreEqual(VariableKind.Local, loaded.GetVariables().Single(v => v.Name == "Old").VariableKind);
+
+            // Switching it back to Local sticks.
+            added.VariableKind = VariableKind.Local;
+            loaded.MakeNewVariablesInputs();
+            Assert.AreEqual(VariableKind.Local, loaded.GetVariables().Single(v => v.Name == "New").VariableKind);
+        }
+
+        [Test]
+        public void SavedGraphWithLocalVariables_ShowsParametersOnTheComponent()
+        {
+            // The usual way a graph is made in the window: variables are left Local, the graph is saved and imported.
+            // The palette is saved as an asset, since a saved graph can only reference assets.
+            PrefabPalette palette = Palette();
+            _created.Remove(palette);
+            AssetDatabase.CreateAsset(palette, PalettePath);
+            var graph = GraphDatabase.CreateGraph<PlacementGraphDefinition>(GraphPath);
+            var sampler = Add<Editor.SurfaceSamplerNode>(graph);
+            var spawn = Add<Editor.SpawnPrefabsNode>(graph);
+            Assert.IsTrue(graph.Connect(sampler.GetOutputPortByName("Out"), spawn.GetInputPortByName("In")));
+            IVariable spacing = graph.CreateVariable("Spacing", 3f, VariableKind.Local);
+            Assert.IsTrue(graph.Connect(graph.AddVariableNode(spacing, Vector2.zero).GetOutputPort(0), sampler.GetInputPortByName("Spacing")));
+            IVariable paletteVariable = graph.CreateVariable("Palette", palette, VariableKind.Local);
+            Assert.IsTrue(graph.Connect(graph.AddVariableNode(paletteVariable, Vector2.zero).GetOutputPort(0), spawn.GetInputPortByName("Palette")));
+            GraphDatabase.SaveGraph(graph);
+            AssetDatabase.ImportAsset(GraphPath, ImportAssetOptions.ForceUpdate);
+
+            var asset = AssetDatabase.LoadAssetAtPath<PlacementGraphAsset>(GraphPath);
+            CollectionAssert.AreEqual(new[] { "Spacing", "Palette" }, asset.Parameters.Select(p => p.Name).ToArray());
+            var component = Track(new GameObject("Placement Graph")).AddComponent<PlacementGraph>();
+            component.Graph = asset;
+            component.SyncParameters();
+            CollectionAssert.AreEqual(new[] { "Spacing", "Palette" }, component.ParameterOverrides.Select(p => p.Value.Name).ToArray());
+            Assert.AreEqual(PlacementParameterType.Palette, component.ParameterOverrides[1].Value.Type);
+            Assert.AreEqual(palette, component.ParameterOverrides[1].Value.PaletteValue, "Shows the graph's default.");
         }
 
         [Test]
