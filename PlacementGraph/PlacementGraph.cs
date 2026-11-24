@@ -23,6 +23,14 @@ namespace UnityTools.Placement
         [SerializeField] private bool _autoGenerate = true;
         [Tooltip("Size of the generation volume, centred on this object.")]
         [SerializeField] private Vector3 _size = new Vector3(20f, 10f, 20f);
+        [Tooltip("Optional. The active children of this Transform are the points of Child Markers nodes. If it is a " +
+                 "child of this object it is kept when the graph regenerates.")]
+        [SerializeField] private Transform _markers;
+#if UNITYTOOLS_SPLINES
+        [Tooltip("Optional. The spline Spline Sampler nodes read. If it is a child of this object it is kept when the " +
+                 "graph regenerates.")]
+        [SerializeField] private UnityEngine.Splines.SplineContainer _spline;
+#endif
         [Tooltip("Index of the node whose points are drawn in the Scene view while selected. -1 draws none.")]
         [SerializeField] private int _debugNode = -1;
 
@@ -46,6 +54,22 @@ namespace UnityTools.Placement
             get => _seed;
             set { _seed = value; MarkDirty(); }
         }
+
+        /// <summary>The Transform whose active children are the points of Child Markers nodes. Optional.</summary>
+        public Transform Markers
+        {
+            get => _markers;
+            set { _markers = value; MarkDirty(); }
+        }
+
+#if UNITYTOOLS_SPLINES
+        /// <summary>The spline Spline Sampler nodes read. Optional.</summary>
+        public UnityEngine.Splines.SplineContainer Spline
+        {
+            get => _spline;
+            set { _spline = value; MarkDirty(); }
+        }
+#endif
 
         /// <summary>Size of the generation volume in local space.</summary>
         public Vector3 Size
@@ -84,6 +108,16 @@ namespace UnityTools.Placement
                 Output = output,
                 NodeOutputs = _lastOutputs
             };
+            if (_markers != null)
+            {
+                foreach (Transform marker in _markers)
+                {
+                    if (marker.gameObject.activeSelf) context.Markers.Add(marker);
+                }
+            }
+#if UNITYTOOLS_SPLINES
+            context.Spline = _spline;
+#endif
             PointData[][] outputs = PlacementExecutor.Run(_graph, context);
             _lastCounts.Clear();
             _lastCounts.AddRange(context.NodeOutputCounts);
@@ -163,7 +197,11 @@ namespace UnityTools.Placement
         private void ClearChildren(bool record)
         {
             var children = new List<GameObject>();
-            foreach (Transform child in transform) children.Add(child.gameObject);
+            foreach (Transform child in transform)
+            {
+                if (IsInput(child)) continue;
+                children.Add(child.gameObject);
+            }
             foreach (GameObject child in children)
             {
 #if UNITY_EDITOR
@@ -172,6 +210,16 @@ namespace UnityTools.Placement
 #endif
                 Destroy(child);
             }
+        }
+
+        /// <summary>True for a child that holds the graph's inputs (the Markers or Spline object), which regenerating keeps.</summary>
+        private bool IsInput(Transform child)
+        {
+            if (_markers != null && child == _markers) return true;
+#if UNITYTOOLS_SPLINES
+            if (_spline != null && child == _spline.transform) return true;
+#endif
+            return false;
         }
 
         private void MarkDirty()
@@ -221,6 +269,7 @@ namespace UnityTools.Placement
         {
             _previousPosition = transform.position;
             _previousRotation = transform.rotation;
+            _previousInputsHash = InputsHash();
             EditorApplication.update += EditorUpdate;
         }
 
@@ -236,7 +285,7 @@ namespace UnityTools.Placement
         internal static void MarkUsersDirty(PlacementGraphAsset graph)
         {
             string path = graph != null ? AssetDatabase.GetAssetPath(graph) : null;
-            foreach (PlacementGraph user in FindObjectsByType<PlacementGraph>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            foreach (PlacementGraph user in FindObjectsByType<PlacementGraph>(FindObjectsInactive.Exclude))
             {
                 if (graph == null || user._graph == graph ||
                     (user._graph != null && AssetDatabase.GetAssetPath(user._graph) == path))
@@ -259,6 +308,14 @@ namespace UnityTools.Placement
                 _dirtySince = EditorApplication.timeSinceStartup;
             }
 
+            int inputsHash = InputsHash();
+            if (inputsHash != _previousInputsHash)
+            {
+                _previousInputsHash = inputsHash;
+                _isDirty = true;
+                _dirtySince = EditorApplication.timeSinceStartup;
+            }
+
             if (!_isDirty || EditorApplication.timeSinceStartup - _dirtySince < SettleTime) return;
             _isDirty = false;
             if (_graph == null || !CanRegenerate()) return;
@@ -266,6 +323,39 @@ namespace UnityTools.Placement
             // Automatic runs aren't recorded: undoing the change that caused one marks this dirty and it reruns to match.
             Regenerate(record: false);
             SceneView.RepaintAll();
+        }
+
+        private int _previousInputsHash;
+
+        /// <summary>A hash of the markers' and spline's transforms and knots, so moving them regenerates with Auto Generate.</summary>
+        private int InputsHash()
+        {
+            unchecked
+            {
+                int hash = 17;
+                if (_markers != null)
+                {
+                    foreach (Transform marker in _markers)
+                    {
+                        hash = hash * 31 + marker.position.GetHashCode();
+                        hash = hash * 31 + marker.rotation.GetHashCode();
+                        hash = hash * 31 + marker.lossyScale.GetHashCode();
+                        hash = hash * 31 + (marker.gameObject.activeSelf ? 1 : 0);
+                    }
+                }
+#if UNITYTOOLS_SPLINES
+                if (_spline != null)
+                {
+                    hash = hash * 31 + _spline.transform.localToWorldMatrix.GetHashCode();
+                    foreach (UnityEngine.Splines.Spline spline in _spline.Splines)
+                    {
+                        hash = hash * 31 + (spline.Closed ? 1 : 0);
+                        foreach (UnityEngine.Splines.BezierKnot knot in spline.Knots) hash = hash * 31 + knot.GetHashCode();
+                    }
+                }
+#endif
+                return hash;
+            }
         }
 
         private void OnDrawGizmosSelected()

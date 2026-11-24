@@ -14,7 +14,7 @@ namespace UnityTools.Placement.Editor
         {
             var graph = (PlacementGraph)target;
             EditorGUILayout.HelpBox("The children of a Placement Graph are generated. Anything placed under it is " +
-                                    "destroyed when it regenerates.", MessageType.Info);
+                                    "destroyed when it regenerates, except the Markers and Spline objects.", MessageType.Info);
             if (graph.IsInPrefabInstance)
             {
                 EditorGUILayout.HelpBox("This Placement Graph is inside a prefab instance, so it can't regenerate here. " +

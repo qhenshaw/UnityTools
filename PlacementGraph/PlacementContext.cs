@@ -25,6 +25,14 @@ namespace UnityTools.Placement
         /// <summary>Where spawner nodes send objects. Null skips spawning (points are still computed).</summary>
         public IPlacementOutput Output;
 
+        /// <summary>Marker transforms for the Child Markers node: the children of the component's Markers transform.</summary>
+        public readonly List<Transform> Markers = new List<Transform>();
+
+#if UNITYTOOLS_SPLINES
+        /// <summary>The spline for the Spline Sampler node: the component's Spline field.</summary>
+        public UnityEngine.Splines.SplineContainer Spline;
+#endif
+
         /// <summary>Points each node produced on its first output, by node index. Filled by the executor.</summary>
         public readonly List<int> NodeOutputCounts = new List<int>();
 

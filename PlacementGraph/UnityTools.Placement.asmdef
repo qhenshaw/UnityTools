@@ -1,7 +1,10 @@
 {
     "name": "UnityTools.Placement",
     "rootNamespace": "UnityTools.Placement",
-    "references": [],
+    "references": [
+        "Unity.Splines",
+        "Unity.Mathematics"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
@@ -9,6 +12,12 @@
     "precompiledReferences": [],
     "autoReferenced": true,
     "defineConstraints": [],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.splines",
+            "expression": "2.0.0",
+            "define": "UNITYTOOLS_SPLINES"
+        }
+    ],
     "noEngineReferences": false
 }

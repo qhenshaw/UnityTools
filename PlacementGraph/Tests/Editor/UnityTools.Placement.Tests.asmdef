@@ -5,7 +5,9 @@
         "UnityTools.Placement",
         "UnityTools.Placement.Editor",
         "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner"
+        "UnityEditor.TestRunner",
+        "Unity.Splines",
+        "Unity.Mathematics"
     ],
     "includePlatforms": [
         "Editor"
@@ -20,6 +22,12 @@
     "defineConstraints": [
         "UNITY_INCLUDE_TESTS"
     ],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.splines",
+            "expression": "2.0.0",
+            "define": "UNITYTOOLS_SPLINES"
+        }
+    ],
     "noEngineReferences": false
 }

@@ -606,7 +606,7 @@ Places prefabs procedurally with a node graph, in the spirit of Unreal's PCG: no
 2. Add nodes and wire them, for example Surface Sampler > Noise Density > Density Filter > Transform Points > Spawn Prefabs, and set the Spawn Prefabs node's Palette. Save the graph.
 3. Create a **GameObject > Placement Graph**, assign the graph, and size the box with its handles. With **Auto Generate** on (default), it regenerates whenever the graph is saved, a palette changes, or it moves, resizes or has its settings changed. **Generate** and **Clear** are each one Undo step.
 
-- **Its children are generated.** Generate, Clear and every automatic run replace all of them, so **anything you place under it is destroyed**. Keep hand-placed objects elsewhere.
+- **Its children are generated.** Generate, Clear and every automatic run replace all of them, so **anything you place under it is destroyed**. Keep hand-placed objects elsewhere. The two exceptions are the objects set as **Markers** and **Spline**, which are kept when they are direct children.
 - Results are deterministic: the same graph, **Seed** and volume always give the same placement, and each node draws its own random numbers, so changing one node doesn't reshuffle the others.
 - Placed prefabs keep their prefab connection. Inside a prefab instance it doesn't regenerate (the children belong to the prefab); edit it in prefab mode or unpack the instance.
 - The inspector lists every node with the number of points it produced on the last run. **Show** draws that node's points in the Scene view (red to green by density, with their normals).
@@ -621,9 +621,18 @@ Places prefabs procedurally with a node graph, in the spirit of Unreal's PCG: no
 | Slope Filter | Keeps points whose surface is between Min Angle and Max Angle from flat. Rejected points come out of the Rejected port. |
 | Transform Points | Random offset, rotation (Euler ranges) and uniform scale per point, optionally aligned to the surface normal. |
 | Spawn Prefabs | Spawns a prefab from its Palette at every point, picked by weight, and passes the points on. |
+| Terrain Sampler | A jittered grid (Spacing, Jitter) dropped onto the active terrains, with their height and normal. Set Layer Index (-1 is off) and Min Weight to keep only points where that terrain layer is painted. |
+| Child Markers | One point per active child of the component's **Markers** Transform, at its position, rotation and scale. Use it to place things by hand-placed markers. |
+| Spline Sampler | Needs the Splines package. Reads the component's **Spline** (a Spline Container). Along: a point every Spacing metres along each spline, facing along it. Inside: a grid (Spacing, Jitter) over the volume, kept inside each closed spline seen from above. |
+| Height Filter | Keeps points whose world height is between Min and Max. Rejected points come out of the Rejected port. |
+| Self Pruning | Keeps points at least Radius apart, keeping the densest first. Rejected points come out of the Rejected port. |
+| Difference | Drops the In points within Radius of any Exclude point, for example to keep grass away from trees. Rejected points come out of the Rejected port. |
+| Distance Density | Multiplies density by the distance to the nearest Target point: 1 within Inner Radius, falling to 0 at Outer Radius (Invert flips it). |
+| Merge | Combines A and B into one set, A first. |
+| Copy Points | Places a copy of the Pattern points at every Source point, moved, rotated and scaled by it (pattern positions are relative to the pattern's centre). Densities multiply. |
 
 - Several wires into one input are merged. Samplers stop at 250,000 points and warn, so a tiny Spacing can't freeze the editor.
-- From code: `Generate()`, `Clear()`, `Evaluate()` (runs the graph without touching the scene) and the `Graph`, `Seed` and `Size` properties. A compiled graph (`PlacementGraphAsset`) has no editor dependency.
+- From code: `Generate()`, `Clear()`, `Evaluate()` (runs the graph without touching the scene) and the `Graph`, `Seed`, `Size`, `Markers` and `Spline` properties (`Spline` only with the Splines package). A compiled graph (`PlacementGraphAsset`) has no editor dependency.
 
 ## Snap to Floor
 Press **End** (Tools > LD Shortcuts > Snap to Floor) to drop every selected object onto the first solid surface below it, as one Undo step.

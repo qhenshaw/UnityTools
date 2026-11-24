@@ -4,6 +4,9 @@ All notable changes to Unity Tools. Versions are git tags: install one with `htt
 ## Unreleased
 - **Breaking** The package now needs Unity 6.5 (6000.5) or later (`package.json` `unity` is `6000.5`), for Graph Toolkit.
 - Added the Placement Graph (`UnityTools.Placement`): procedural prefab placement with a Graph Toolkit node graph (.placegraph). Nodes: Volume Sampler, Surface Sampler, Noise Density, Density Filter, Slope Filter, Transform Points and Spawn Prefabs. A Placement Graph component runs a graph in a box volume and keeps the result as its children, regenerating automatically in edit mode. Results are deterministic per seed. Weighted prefab lists are Prefab Palette assets.
+- Placement Graph: new source nodes Terrain Sampler (height, normal and an optional terrain layer filter), Child Markers (the children of the component's new Markers field) and Spline Sampler (along or inside a Spline Container set in the component's new Spline field; only compiled with the Splines package).
+- Placement Graph: new nodes Height Filter, Self Pruning (minimum distance, densest first), Difference (remove points near another set), Distance Density, Merge and Copy Points.
+- Placement Graph: the Markers and Spline objects are kept when the graph regenerates, and moving them regenerates it with Auto Generate on.
 
 ## 7.0.0 - 2026-11-15
 - **Breaking** Every tool now uses a `UnityTools.*` namespace, and every assembly is named after its namespace. Scripts need their `using` lines updated, and your own assembly definitions that reference these assemblies by name need the new names (references by GUID, Unity's default, keep working). Scene, prefab and asset references are unaffected.
