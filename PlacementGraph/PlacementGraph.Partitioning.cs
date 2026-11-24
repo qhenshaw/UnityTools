@@ -69,8 +69,9 @@ namespace UnityTools.Placement
         private Bounds OwnedBoundsOf(Vector2Int index)
         {
             Bounds volume = LocalBounds;
-            float minX = Mathf.Max(volume.min.x, index.x * _cellSize), maxX = Mathf.Min(volume.max.x, (index.x + 1) * _cellSize);
-            float minZ = Mathf.Max(volume.min.z, index.y * _cellSize), maxZ = Mathf.Min(volume.max.z, (index.y + 1) * _cellSize);
+            float size = ActiveCellSize;
+            float minX = Mathf.Max(volume.min.x, index.x * size), maxX = Mathf.Min(volume.max.x, (index.x + 1) * size);
+            float minZ = Mathf.Max(volume.min.z, index.y * size), maxZ = Mathf.Min(volume.max.z, (index.y + 1) * size);
             var bounds = new Bounds();
             bounds.SetMinMax(new Vector3(minX, volume.min.y, minZ), new Vector3(maxX, volume.max.y, maxZ));
             return bounds;
@@ -91,8 +92,9 @@ namespace UnityTools.Placement
         {
             var cells = new List<Vector2Int>();
             Bounds volume = LocalBounds;
-            int x0 = Mathf.FloorToInt(volume.min.x / _cellSize), x1 = Mathf.CeilToInt(volume.max.x / _cellSize);
-            int z0 = Mathf.FloorToInt(volume.min.z / _cellSize), z1 = Mathf.CeilToInt(volume.max.z / _cellSize);
+            float size = ActiveCellSize;
+            int x0 = Mathf.FloorToInt(volume.min.x / size), x1 = Mathf.CeilToInt(volume.max.x / size);
+            int z0 = Mathf.FloorToInt(volume.min.z / size), z1 = Mathf.CeilToInt(volume.max.z / size);
             for (int z = z0; z < z1; z++)
             for (int x = x0; x < x1; x++)
             {
@@ -151,28 +153,7 @@ namespace UnityTools.Placement
                     cell = new CellRecord { Index = index };
                     _cells.Add(cell);
                 }
-                ClearCell(cell, record);
-                cell.Container = new GameObject($"Cell {index.x},{index.y}");
-                cell.Container.transform.SetParent(transform, false);
-                _spawnParent = cell.Container.transform;
-                _currentCell = CellId(index);
-                // Objects are spawned without their own Undo entries: registering the container afterwards covers
-                // them all, which is far cheaper than one entry per object. Instances still record the component.
-                _record = false;
-                try
-                {
-                    EvaluateRegion(this, run, owned);
-                }
-                finally
-                {
-                    _spawnParent = null;
-                    _currentCell = 0;
-                }
-#if UNITY_EDITOR
-                if (record && !Application.isPlaying) Undo.RegisterCreatedObjectUndo(cell.Container, "Generate Placement Graph");
-#endif
-                cell.Signature = signature;
-                _lastRegenerated.Add(index);
+                RunCell(cell, owned, run, signature, record);
                 for (int n = 0; n < _lastCounts.Count; n++)
                 {
                     if (n >= counts.Count) counts.Add(0);
@@ -197,6 +178,34 @@ namespace UnityTools.Placement
 
         private readonly List<string> _cellWarnings = new List<string>();
 
+        /// <summary>Runs the graph for one cell, replacing what it generated before.</summary>
+        private void RunCell(CellRecord cell, Bounds owned, Bounds run, int signature, bool record)
+        {
+            Vector2Int index = cell.Index;
+            ClearCell(cell, record);
+            cell.Container = new GameObject($"Cell {index.x},{index.y}");
+            cell.Container.transform.SetParent(transform, false);
+            _spawnParent = cell.Container.transform;
+            _currentCell = CellId(index);
+            // Objects are spawned without their own Undo entries: registering the container afterwards covers
+            // them all, which is far cheaper than one entry per object. Instances still record the component.
+            _record = false;
+            try
+            {
+                EvaluateRegion(this, run, owned);
+            }
+            finally
+            {
+                _spawnParent = null;
+                _currentCell = 0;
+            }
+#if UNITY_EDITOR
+            if (record && !Application.isPlaying) Undo.RegisterCreatedObjectUndo(cell.Container, "Generate Placement Graph");
+#endif
+            cell.Signature = signature;
+            _lastRegenerated.Add(index);
+        }
+
         private void RecountInstances()
         {
             int count = 0;
@@ -211,6 +220,7 @@ namespace UnityTools.Placement
 
         private void ClearCell(CellRecord cell, bool record)
         {
+            if (cell.Container != null) ReleaseToPool(cell.Container);
             if (cell.Container != null) DestroyGenerated(cell.Container, record);
             cell.Container = null;
             PlacementInstances instances = GetComponent<PlacementInstances>();

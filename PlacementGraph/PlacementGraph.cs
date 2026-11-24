@@ -206,7 +206,7 @@ namespace UnityTools.Placement
         {
             GameObject instance;
 #if UNITY_EDITOR
-            if (!Application.isPlaying)
+            if (!IsRuntime)
             {
                 // Prefab assets keep their prefab connection; a part inside a prefab (from Assembly) keeps the link to
                 // its own prefab when it is a nested prefab, and is copied otherwise, as is any scene object.
@@ -227,7 +227,7 @@ namespace UnityTools.Placement
             else
 #endif
             {
-                instance = Instantiate(prefab, SpawnParent);
+                instance = SpawnRuntime(prefab);
             }
             instance.transform.SetPositionAndRotation(position, rotation);
             instance.transform.localScale = scale;
@@ -331,7 +331,7 @@ namespace UnityTools.Placement
 
         private void Regenerate(bool record, bool force)
         {
-            if (_cellSize > 0f)
+            if (ActiveCellSize > 0f)
             {
                 RegeneratePartitioned(record, force);
                 return;
@@ -380,6 +380,7 @@ namespace UnityTools.Placement
         private bool IsInput(Transform child)
         {
             if (_markers != null && child == _markers) return true;
+            if (_poolRoot != null && child == _poolRoot) return true;
 #if UNITYTOOLS_SPLINES
             if (_spline != null && child == _spline.transform) return true;
 #endif
@@ -388,6 +389,7 @@ namespace UnityTools.Placement
 
         private void MarkDirty()
         {
+            _runtimeDirty = true;
 #if UNITY_EDITOR
             _isDirty = true;
             _dirtySince = EditorApplication.timeSinceStartup;

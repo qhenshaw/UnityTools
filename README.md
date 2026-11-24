@@ -660,6 +660,15 @@ Places prefabs procedurally with a node graph, in the spirit of Unreal's PCG: no
 - Each input takes one wire in the graph window; combine point sets with **Merge**. Samplers stop at 250,000 points and warn, so a tiny Spacing can't freeze the editor.
 - From code: `Generate()`, `Clear()`, `Evaluate()` (runs the graph without touching the scene) and the `Graph`, `Seed`, `Size`, `Markers` and `Spline` properties (`Spline` only with the Splines package). A compiled graph (`PlacementGraphAsset`) has no editor dependency.
 
+### Runtime generation
+**Generate On** on the component chooses whether the graph also runs in builds and Play mode. The runtime path uses only the compiled graph, so it works in players (it has no editor or Graph Toolkit dependency).
+- **Editor Only** (default): generated in the editor and saved with the scene.
+- **On Load**: also generated when the scene loads if nothing was saved with it, and again whenever a parameter changes (`SetParameter`).
+- **Near Player**: cells around each **Generation Source** (Add Component > UnityTools > Generation Source on the player or camera; without one, the main camera) are generated when their centre comes within **Load Radius** and unloaded beyond **Unload Radius**, nearest first, spending at most **Frame Budget Ms** per frame (at least one cell per frame when there's work). It uses Cell Size, or 32 m when that's 0. Cells generated in the editor and saved are kept while they're near. `SetParameter` reruns the loaded cells within the budget.
+- **Pooling** (on): at runtime the objects of unloaded cells are deactivated and reused for new cells instead of destroyed and created. Spawn Instanced draws without GameObjects either way.
+- Results are the same in the editor and at runtime for the same seed (compare with the same Cell Size, since partitioned grids are anchored at the component's origin).
+- Limits: at runtime, markers, splines and zones that move don't regenerate cells that are already loaded (call `SetParameter`, or change the graph); `RuntimeTick(budgetMs, sources)` can drive Near Player yourself.
+
 ### Authoring graphs from code
 Editor scripts and AI agents can build and edit graphs with `UnityTools.Placement.Editor.PlacementGraphAuthoring`. The result is an ordinary .placegraph asset that opens in the graph window; it uses Graph Toolkit's own editing API. Node names are the titles in the graph window, and port and setting names are as shown on the nodes (matching ignores case and spaces).
 
