@@ -21,7 +21,17 @@ namespace UnityTools.Placement.Editor
                                         "Edit it in prefab mode, or unpack the prefab instance.", MessageType.Warning);
             }
 
-            base.OnInspectorGUI();
+            if (graph.Graph != null && NeedsSync(graph))
+            {
+                Undo.RecordObject(graph, "Sync Placement Graph Parameters");
+                graph.SyncParameters();
+                EditorUtility.SetDirty(graph);
+            }
+
+            serializedObject.Update();
+            DrawPropertiesExcluding(serializedObject, "_parameters");
+            DrawParameters(graph);
+            serializedObject.ApplyModifiedProperties();
 
             using (new EditorGUILayout.HorizontalScope())
             {
@@ -58,6 +68,86 @@ namespace UnityTools.Placement.Editor
                         }
                     }
                 }
+            }
+        }
+
+        private static bool NeedsSync(PlacementGraph graph)
+        {
+            var declared = graph.Graph.Parameters;
+            var overrides = graph.ParameterOverrides;
+            if (declared.Count != overrides.Count) return true;
+            for (int i = 0; i < declared.Count; i++)
+            {
+                if (overrides[i]?.Value == null || overrides[i].Value.Name != declared[i].Name || overrides[i].Value.Type != declared[i].Type)
+                    return true;
+            }
+            return false;
+        }
+
+        /// <summary>Each parameter on one line: an override toggle, then the value (the graph's default while off).</summary>
+        private void DrawParameters(PlacementGraph graph)
+        {
+            if (graph.Graph == null || graph.Graph.Parameters.Count == 0) return;
+            EditorGUILayout.LabelField("Parameters", EditorStyles.boldLabel);
+            SerializedProperty list = serializedObject.FindProperty("_parameters");
+            for (int i = 0; i < list.arraySize && i < graph.Graph.Parameters.Count; i++)
+            {
+                SerializedProperty entry = list.GetArrayElementAtIndex(i);
+                SerializedProperty overrideOn = entry.FindPropertyRelative("Override");
+                SerializedProperty value = entry.FindPropertyRelative("Value");
+                PlacementParameter declared = graph.Graph.Parameters[i];
+                string field = ValueField(declared.Type);
+
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    overrideOn.boolValue = EditorGUILayout.Toggle(overrideOn.boolValue, GUILayout.Width(16));
+                    if (overrideOn.boolValue)
+                    {
+                        EditorGUILayout.PropertyField(value.FindPropertyRelative(field), new GUIContent(declared.Name));
+                    }
+                    else
+                    {
+                        // Shows the default from the graph; turning the toggle on starts from it.
+                        using (new EditorGUI.DisabledScope(true)) DrawValue(declared, declared.Name);
+                        CopyDefault(value, declared);
+                    }
+                }
+            }
+        }
+
+        private static string ValueField(PlacementParameterType type) => type switch
+        {
+            PlacementParameterType.Float => nameof(PlacementParameter.FloatValue),
+            PlacementParameterType.Int => nameof(PlacementParameter.IntValue),
+            PlacementParameterType.Bool => nameof(PlacementParameter.BoolValue),
+            PlacementParameterType.Vector3 => nameof(PlacementParameter.Vector3Value),
+            PlacementParameterType.Palette => nameof(PlacementParameter.PaletteValue),
+            _ => nameof(PlacementParameter.LayerMaskValue)
+        };
+
+        private static void DrawValue(PlacementParameter parameter, string label)
+        {
+            switch (parameter.Type)
+            {
+                case PlacementParameterType.Float: EditorGUILayout.FloatField(label, parameter.FloatValue); break;
+                case PlacementParameterType.Int: EditorGUILayout.IntField(label, parameter.IntValue); break;
+                case PlacementParameterType.Bool: EditorGUILayout.Toggle(label, parameter.BoolValue); break;
+                case PlacementParameterType.Vector3: EditorGUILayout.Vector3Field(label, parameter.Vector3Value); break;
+                case PlacementParameterType.Palette: EditorGUILayout.ObjectField(label, parameter.PaletteValue, typeof(PrefabPalette), false); break;
+                default: EditorGUILayout.MaskField(label, parameter.LayerMaskValue.value, UnityEditorInternal.InternalEditorUtility.layers); break;
+            }
+        }
+
+        private static void CopyDefault(SerializedProperty value, PlacementParameter declared)
+        {
+            switch (declared.Type)
+            {
+                case PlacementParameterType.Float: value.FindPropertyRelative(nameof(PlacementParameter.FloatValue)).floatValue = declared.FloatValue; break;
+                case PlacementParameterType.Int: value.FindPropertyRelative(nameof(PlacementParameter.IntValue)).intValue = declared.IntValue; break;
+                case PlacementParameterType.Bool: value.FindPropertyRelative(nameof(PlacementParameter.BoolValue)).boolValue = declared.BoolValue; break;
+                case PlacementParameterType.Vector3: value.FindPropertyRelative(nameof(PlacementParameter.Vector3Value)).vector3Value = declared.Vector3Value; break;
+                case PlacementParameterType.Palette: value.FindPropertyRelative(nameof(PlacementParameter.PaletteValue)).objectReferenceValue = declared.PaletteValue; break;
+                default: value.FindPropertyRelative(nameof(PlacementParameter.LayerMaskValue)).intValue = declared.LayerMaskValue.value; break;
             }
         }
 

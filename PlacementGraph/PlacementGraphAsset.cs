@@ -11,6 +11,8 @@ namespace UnityTools.Placement
     {
         [SerializeReference] private List<PlacementNode> _nodes = new List<PlacementNode>();
         [SerializeField] private List<PlacementEdge> _edges = new List<PlacementEdge>();
+        [SerializeField] private List<PlacementParameter> _parameters = new List<PlacementParameter>();
+        [SerializeField] private List<PlacementParameterBinding> _bindings = new List<PlacementParameterBinding>();
 
         /// <summary>Nodes in execution order: every node comes after the nodes that feed it.</summary>
         public IReadOnlyList<PlacementNode> Nodes => _nodes;
@@ -18,11 +20,30 @@ namespace UnityTools.Placement
         /// <summary>Wires, as indices into <see cref="Nodes"/>.</summary>
         public IReadOnlyList<PlacementEdge> Edges => _edges;
 
+        /// <summary>The exposed parameters with their default values, in Blackboard order.</summary>
+        public IReadOnlyList<PlacementParameter> Parameters => _parameters;
+
+        /// <summary>Which node settings read which parameter. Node fields already hold the defaults.</summary>
+        public IReadOnlyList<PlacementParameterBinding> Bindings => _bindings;
+
         /// <summary>Replaces the contents. Nodes must already be in execution order.</summary>
-        public void SetContents(List<PlacementNode> nodes, List<PlacementEdge> edges)
+        public void SetContents(List<PlacementNode> nodes, List<PlacementEdge> edges,
+            List<PlacementParameter> parameters = null, List<PlacementParameterBinding> bindings = null)
         {
             _nodes = nodes ?? new List<PlacementNode>();
             _edges = edges ?? new List<PlacementEdge>();
+            _parameters = parameters ?? new List<PlacementParameter>();
+            _bindings = bindings ?? new List<PlacementParameterBinding>();
+        }
+
+        /// <summary>The parameter called <paramref name="name"/>, or null.</summary>
+        public PlacementParameter FindParameter(string name)
+        {
+            foreach (PlacementParameter parameter in _parameters)
+            {
+                if (parameter != null && parameter.Name == name) return parameter;
+            }
+            return null;
         }
 
         /// <summary>

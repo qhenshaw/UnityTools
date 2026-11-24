@@ -25,6 +25,12 @@ namespace UnityTools.Placement
         /// <summary>Where spawner nodes send objects. Null skips spawning (points are still computed).</summary>
         public IPlacementOutput Output;
 
+        /// <summary>
+        /// Values that replace the graph's parameter defaults for this run, matched by name and type. The component
+        /// fills it from its overrides.
+        /// </summary>
+        public readonly List<PlacementParameter> ParameterOverrides = new List<PlacementParameter>();
+
         /// <summary>Marker transforms for the Child Markers node: the children of the component's Markers transform.</summary>
         public readonly List<Transform> Markers = new List<Transform>();
 

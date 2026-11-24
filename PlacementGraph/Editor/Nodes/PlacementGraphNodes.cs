@@ -5,35 +5,30 @@ using UnityEngine;
 
 namespace UnityTools.Placement.Editor
 {
-    // The Graph Toolkit nodes. Each one mirrors a runtime node: same point ports in the same order, and one option per
-    // runtime setting. Option defaults come from a fresh runtime node so the two can't drift apart.
+    // The Graph Toolkit nodes for the samplers, noise, filters, Transform Points and Spawn Prefabs. Each one mirrors a
+    // runtime node: the same point ports in the same order, then one setting port per runtime setting (named after
+    // the field, defaulting to a fresh runtime node's value). Enums are options.
 
     [Node("Sources", null, "Volume Sampler")]
     [Serializable]
     internal class VolumeSamplerNode : PlacementGraphNode
     {
-        private static readonly Placement.VolumeSamplerNode Defaults = new Placement.VolumeSamplerNode();
+        protected override PlacementNode CreateRuntimeInstance() => new Placement.VolumeSamplerNode();
 
         protected override void DefinePointPorts(IPortDefinitionContext context) => AddPointOutput(context, OutPort);
 
-        protected override void OnDefineOptions(IOptionDefinitionContext context)
+        protected override void DefineSettings(IPortDefinitionContext context)
         {
-            context.AddOption<float>("Spacing").WithDefaultValue(Defaults.Spacing).Delayed();
-            context.AddOption<float>("Jitter").WithDefaultValue(Defaults.Jitter).Delayed();
+            AddSetting<float>(context, "Spacing", "Distance between grid points, in metres.");
+            AddSetting<float>(context, "Jitter", "0 is a regular grid; 1 moves each point anywhere in its cell.");
         }
-
-        public override PlacementNode CreateRuntimeNode() => new Placement.VolumeSamplerNode
-        {
-            Spacing = GetOption("Spacing", Defaults.Spacing),
-            Jitter = GetOption("Jitter", Defaults.Jitter)
-        };
     }
 
     [Node("Sources", null, "Surface Sampler")]
     [Serializable]
     internal class SurfaceSamplerNode : PlacementGraphNode
     {
-        private static readonly Placement.SurfaceSamplerNode Defaults = new Placement.SurfaceSamplerNode();
+        protected override PlacementNode CreateRuntimeInstance() => new Placement.SurfaceSamplerNode();
 
         protected override void DefinePointPorts(IPortDefinitionContext context)
         {
@@ -41,26 +36,19 @@ namespace UnityTools.Placement.Editor
             AddPointOutput(context, OutPort);
         }
 
-        protected override void OnDefineOptions(IOptionDefinitionContext context)
+        protected override void DefineSettings(IPortDefinitionContext context)
         {
-            context.AddOption<float>("Spacing").WithDefaultValue(Defaults.Spacing).Delayed();
-            context.AddOption<float>("Jitter").WithDefaultValue(Defaults.Jitter).Delayed();
-            context.AddOption<LayerMask>("Layer Mask").WithDefaultValue(Defaults.LayerMask);
+            AddSetting<float>(context, "Spacing", "Grid spacing in metres, when nothing is wired into In.");
+            AddSetting<float>(context, "Jitter");
+            AddSetting<LayerMask>(context, "Layer Mask", "Colliders on these layers are hit.");
         }
-
-        public override PlacementNode CreateRuntimeNode() => new Placement.SurfaceSamplerNode
-        {
-            Spacing = GetOption("Spacing", Defaults.Spacing),
-            Jitter = GetOption("Jitter", Defaults.Jitter),
-            LayerMask = GetOption("Layer Mask", Defaults.LayerMask)
-        };
     }
 
     [Node("Density", null, "Noise Density")]
     [Serializable]
     internal class NoiseDensityNode : PlacementGraphNode
     {
-        private static readonly Placement.NoiseDensityNode Defaults = new Placement.NoiseDensityNode();
+        protected override PlacementNode CreateRuntimeInstance() => new Placement.NoiseDensityNode();
 
         protected override void DefinePointPorts(IPortDefinitionContext context)
         {
@@ -68,26 +56,19 @@ namespace UnityTools.Placement.Editor
             AddPointOutput(context, OutPort);
         }
 
-        protected override void OnDefineOptions(IOptionDefinitionContext context)
+        protected override void DefineSettings(IPortDefinitionContext context)
         {
-            context.AddOption<float>("Scale").WithDefaultValue(Defaults.Scale).Delayed();
-            context.AddOption<float>("Contrast").WithDefaultValue(Defaults.Contrast).Delayed();
-            context.AddOption<bool>("Invert").WithDefaultValue(Defaults.Invert);
+            AddSetting<float>(context, "Scale", "Size of one noise feature, in metres.");
+            AddSetting<float>(context, "Contrast", "Above 1 pushes values towards 0 and 1, for sharper patches.");
+            AddSetting<bool>(context, "Invert");
         }
-
-        public override PlacementNode CreateRuntimeNode() => new Placement.NoiseDensityNode
-        {
-            Scale = GetOption("Scale", Defaults.Scale),
-            Contrast = GetOption("Contrast", Defaults.Contrast),
-            Invert = GetOption("Invert", Defaults.Invert)
-        };
     }
 
     [Node("Filters", null, "Density Filter")]
     [Serializable]
     internal class DensityFilterNode : PlacementGraphNode
     {
-        private static readonly Placement.DensityFilterNode Defaults = new Placement.DensityFilterNode();
+        protected override PlacementNode CreateRuntimeInstance() => new Placement.DensityFilterNode();
 
         protected override void DefinePointPorts(IPortDefinitionContext context)
         {
@@ -96,24 +77,29 @@ namespace UnityTools.Placement.Editor
             AddPointOutput(context, RejectedPort);
         }
 
-        protected override void OnDefineOptions(IOptionDefinitionContext context)
+        protected override void DefineSettings(IPortDefinitionContext context)
         {
-            context.AddOption<Placement.DensityFilterNode.FilterMode>("Mode").WithDefaultValue(Defaults.Mode);
-            context.AddOption<float>("Threshold").WithDefaultValue(Defaults.Threshold).Delayed();
+            AddSetting<float>(context, "Threshold", "Threshold mode: points at or above this density are kept.");
         }
 
-        public override PlacementNode CreateRuntimeNode() => new Placement.DensityFilterNode
+        protected override void OnDefineOptions(IOptionDefinitionContext context)
         {
-            Mode = GetOption("Mode", Defaults.Mode),
-            Threshold = GetOption("Threshold", Defaults.Threshold)
-        };
+            context.AddOption<Placement.DensityFilterNode.FilterMode>("Mode")
+                .WithDefaultValue(((Placement.DensityFilterNode)Defaults).Mode);
+        }
+
+        protected override void ApplyOptions(PlacementNode runtime)
+        {
+            var node = (Placement.DensityFilterNode)runtime;
+            node.Mode = GetOption("Mode", node.Mode);
+        }
     }
 
     [Node("Filters", null, "Slope Filter")]
     [Serializable]
     internal class SlopeFilterNode : PlacementGraphNode
     {
-        private static readonly Placement.SlopeFilterNode Defaults = new Placement.SlopeFilterNode();
+        protected override PlacementNode CreateRuntimeInstance() => new Placement.SlopeFilterNode();
 
         protected override void DefinePointPorts(IPortDefinitionContext context)
         {
@@ -122,24 +108,18 @@ namespace UnityTools.Placement.Editor
             AddPointOutput(context, RejectedPort);
         }
 
-        protected override void OnDefineOptions(IOptionDefinitionContext context)
+        protected override void DefineSettings(IPortDefinitionContext context)
         {
-            context.AddOption<float>("Min Angle").WithDefaultValue(Defaults.MinAngle).Delayed();
-            context.AddOption<float>("Max Angle").WithDefaultValue(Defaults.MaxAngle).Delayed();
+            AddSetting<float>(context, "Min Angle", "Degrees from flat.");
+            AddSetting<float>(context, "Max Angle", "Degrees from flat.");
         }
-
-        public override PlacementNode CreateRuntimeNode() => new Placement.SlopeFilterNode
-        {
-            MinAngle = GetOption("Min Angle", Defaults.MinAngle),
-            MaxAngle = GetOption("Max Angle", Defaults.MaxAngle)
-        };
     }
 
     [Node("Points", null, "Transform Points")]
     [Serializable]
     internal class TransformPointsNode : PlacementGraphNode
     {
-        private static readonly Placement.TransformPointsNode Defaults = new Placement.TransformPointsNode();
+        protected override PlacementNode CreateRuntimeInstance() => new Placement.TransformPointsNode();
 
         protected override void DefinePointPorts(IPortDefinitionContext context)
         {
@@ -147,52 +127,42 @@ namespace UnityTools.Placement.Editor
             AddPointOutput(context, OutPort);
         }
 
-        protected override void OnDefineOptions(IOptionDefinitionContext context)
+        protected override void DefineSettings(IPortDefinitionContext context)
         {
-            context.AddOption<Vector3>("Offset Min").WithDefaultValue(Defaults.OffsetMin).Delayed();
-            context.AddOption<Vector3>("Offset Max").WithDefaultValue(Defaults.OffsetMax).Delayed();
-            context.AddOption<Vector3>("Rotation Min").WithDefaultValue(Defaults.RotationMin).Delayed();
-            context.AddOption<Vector3>("Rotation Max").WithDefaultValue(Defaults.RotationMax).Delayed();
-            context.AddOption<float>("Scale Min").WithDefaultValue(Defaults.ScaleMin).Delayed();
-            context.AddOption<float>("Scale Max").WithDefaultValue(Defaults.ScaleMax).Delayed();
-            context.AddOption<bool>("Align To Normal").WithDefaultValue(Defaults.AlignToNormal);
+            AddSetting<Vector3>(context, "Offset Min", "World-space offset range.");
+            AddSetting<Vector3>(context, "Offset Max");
+            AddSetting<Vector3>(context, "Rotation Min", "Euler angle range in degrees, applied after alignment.");
+            AddSetting<Vector3>(context, "Rotation Max");
+            AddSetting<float>(context, "Scale Min", "Uniform scale range, multiplied into the point's scale.");
+            AddSetting<float>(context, "Scale Max");
+            AddSetting<bool>(context, "Align To Normal", "Rotate each point so its up axis follows the surface normal.");
         }
-
-        public override PlacementNode CreateRuntimeNode() => new Placement.TransformPointsNode
-        {
-            OffsetMin = GetOption("Offset Min", Defaults.OffsetMin),
-            OffsetMax = GetOption("Offset Max", Defaults.OffsetMax),
-            RotationMin = GetOption("Rotation Min", Defaults.RotationMin),
-            RotationMax = GetOption("Rotation Max", Defaults.RotationMax),
-            ScaleMin = GetOption("Scale Min", Defaults.ScaleMin),
-            ScaleMax = GetOption("Scale Max", Defaults.ScaleMax),
-            AlignToNormal = GetOption("Align To Normal", Defaults.AlignToNormal)
-        };
     }
 
     [Node("Spawners", null, "Spawn Prefabs")]
     [Serializable]
     internal class SpawnPrefabsNode : PlacementGraphNode
     {
+        public const string PalettePort = "Palette";
+
+        protected override PlacementNode CreateRuntimeInstance() => new Placement.SpawnPrefabsNode();
+
         protected override void DefinePointPorts(IPortDefinitionContext context)
         {
             AddPointInput(context, InPort);
             AddPointOutput(context, OutPort);
         }
 
-        protected override void OnDefineOptions(IOptionDefinitionContext context)
+        protected override void DefineSettings(IPortDefinitionContext context)
         {
-            context.AddOption<PrefabPalette>("Palette");
+            AddSetting<PrefabPalette>(context, PalettePort, "The weighted prefabs to pick from.");
         }
-
-        public override PlacementNode CreateRuntimeNode() => new Placement.SpawnPrefabsNode
-        {
-            Palette = GetOption<PrefabPalette>("Palette", null)
-        };
 
         public override void Validate(List<string> problems)
         {
-            if (GetOption<PrefabPalette>("Palette", null) == null)
+            IPort port = GetInputPortByName(PalettePort);
+            if (port == null || port.IsConnected) return;
+            if (!port.TryGetValue(out PrefabPalette palette) || palette == null)
                 problems.Add("Spawn Prefabs has no Palette. Create one with Assets > Create > UnityTools > Prefab Palette.");
         }
     }

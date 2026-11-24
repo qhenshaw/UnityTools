@@ -345,8 +345,20 @@ namespace UnityTools.Placement.Tests
                 graph.AddNode(node);
                 INode added = graph.GetNodes().Last();
                 PlacementNode runtime = ((Editor.PlacementGraphNode)added).CreateRuntimeNode();
-                Assert.AreEqual(runtime.InputCount, added.InputPortCount, $"{type.Name} inputs");
-                Assert.AreEqual(runtime.OutputCount, added.OutputPortCount, $"{type.Name} outputs");
+                Assert.AreEqual(runtime.InputCount, Editor.PlacementGraphCompiler.PointInputs(added).Count, $"{type.Name} point inputs");
+                Assert.AreEqual(runtime.OutputCount, Editor.PlacementGraphCompiler.PointOutputs(added).Count, $"{type.Name} point outputs");
+                Assert.AreEqual(added.OutputPortCount, runtime.OutputCount, $"{type.Name} has only point outputs");
+
+                // Every setting port sets a runtime field of its type, and its inline field starts at the runtime default.
+                PlacementNode defaults = runtime;
+                foreach (IPort port in ((Editor.PlacementGraphNode)added).GetSettingPorts())
+                {
+                    var field = runtime.GetType().GetField(Editor.PlacementGraphNode.FieldNameOf(port.Name));
+                    Assert.IsNotNull(field, $"{type.Name}.{port.Name} has no field");
+                    Assert.AreEqual(field.FieldType, port.DataType, $"{type.Name}.{port.Name} type");
+                    object fresh = field.GetValue(System.Activator.CreateInstance(runtime.GetType()));
+                    Assert.AreEqual(fresh, field.GetValue(defaults), $"{type.Name}.{port.Name} default");
+                }
             }
         }
     }

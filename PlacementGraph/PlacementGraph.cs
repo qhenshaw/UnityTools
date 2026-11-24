@@ -33,6 +33,8 @@ namespace UnityTools.Placement
 #endif
         [Tooltip("Index of the node whose points are drawn in the Scene view while selected. -1 draws none.")]
         [SerializeField] private int _debugNode = -1;
+        [Tooltip("Per-instance values for the graph's parameters (its Input variables).")]
+        [SerializeField] private List<PlacementParameterOverride> _parameters = new List<PlacementParameterOverride>();
 
         [field: SerializeField] public int InstanceCount { get; private set; }
 
@@ -93,6 +95,56 @@ namespace UnityTools.Placement
         /// <summary>Warnings from the last run.</summary>
         public IReadOnlyList<string> LastWarnings => _lastWarnings;
 
+        /// <summary>One entry per graph parameter, in the graph's order. Call <see cref="SyncParameters"/> after changing the graph.</summary>
+        public IReadOnlyList<PlacementParameterOverride> ParameterOverrides => _parameters;
+
+        /// <summary>
+        /// Makes the override list match the graph's parameters: adds new ones, drops removed ones and keeps the
+        /// values of parameters that still exist with the same type. Returns true if the list changed.
+        /// </summary>
+        public bool SyncParameters()
+        {
+            IReadOnlyList<PlacementParameter> declared = _graph != null ? _graph.Parameters : Array.Empty<PlacementParameter>();
+            bool inSync = declared.Count == _parameters.Count;
+            for (int i = 0; inSync && i < declared.Count; i++)
+            {
+                PlacementParameter value = _parameters[i]?.Value;
+                inSync = value != null && declared[i] != null && value.Name == declared[i].Name && value.Type == declared[i].Type;
+            }
+            if (inSync) return false;
+
+            var synced = new List<PlacementParameterOverride>(declared.Count);
+            foreach (PlacementParameter parameter in declared)
+            {
+                if (parameter == null) continue;
+                PlacementParameterOverride existing = _parameters.Find(p =>
+                    p?.Value != null && p.Value.Name == parameter.Name && p.Value.Type == parameter.Type);
+                synced.Add(existing ?? new PlacementParameterOverride { Override = false, Value = parameter.Clone() });
+            }
+            _parameters = synced;
+            return true;
+        }
+
+        /// <summary>Overrides the parameter called <paramref name="name"/> with <paramref name="value"/>. Throws if the graph has no such parameter.</summary>
+        public void SetParameter(string name, object value)
+        {
+            SyncParameters();
+            PlacementParameterOverride entry = _parameters.Find(p => p.Value.Name == name)
+                ?? throw new ArgumentException($"The graph has no parameter called '{name}'.", nameof(name));
+            entry.Value.Value = value;
+            entry.Override = true;
+            MarkDirty();
+        }
+
+        /// <summary>Stops overriding the parameter called <paramref name="name"/>, so the graph's default is used.</summary>
+        public void ClearParameter(string name)
+        {
+            PlacementParameterOverride entry = _parameters.Find(p => p?.Value != null && p.Value.Name == name);
+            if (entry == null) return;
+            entry.Override = false;
+            MarkDirty();
+        }
+
         private static Vector3 ClampSize(Vector3 size) =>
             new Vector3(Mathf.Max(0.1f, size.x), Mathf.Max(0.1f, size.y), Mathf.Max(0.1f, size.z));
 
@@ -118,6 +170,10 @@ namespace UnityTools.Placement
 #if UNITYTOOLS_SPLINES
             context.Spline = _spline;
 #endif
+            foreach (PlacementParameterOverride entry in _parameters)
+            {
+                if (entry != null && entry.Override && entry.Value != null) context.ParameterOverrides.Add(entry.Value);
+            }
             PointData[][] outputs = PlacementExecutor.Run(_graph, context);
             _lastCounts.Clear();
             _lastCounts.AddRange(context.NodeOutputCounts);
@@ -261,6 +317,7 @@ namespace UnityTools.Placement
         private void OnValidate()
         {
             _size = ClampSize(_size);
+            SyncParameters();
             _isDirty = true;
             _dirtySince = EditorApplication.timeSinceStartup;
         }

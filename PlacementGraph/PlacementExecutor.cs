@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 
 namespace UnityTools.Placement
 {
@@ -15,6 +16,59 @@ namespace UnityTools.Placement
             if (graph == null) throw new ArgumentNullException(nameof(graph));
             if (context == null) throw new ArgumentNullException(nameof(context));
 
+            // Overrides are written into the asset's nodes for the run and put back afterwards, so the asset never
+            // keeps an instance's values.
+            List<(PlacementNode node, FieldInfo field, object previous)> applied = ApplyOverrides(graph, context);
+            try
+            {
+                return RunNodes(graph, context);
+            }
+            finally
+            {
+                for (int i = applied.Count - 1; i >= 0; i--) applied[i].field.SetValue(applied[i].node, applied[i].previous);
+            }
+        }
+
+        private static readonly Dictionary<(Type, string), FieldInfo> FieldCache = new Dictionary<(Type, string), FieldInfo>();
+
+        /// <summary>The public instance field a binding names, or null.</summary>
+        internal static FieldInfo FindField(Type type, string name)
+        {
+            if (FieldCache.TryGetValue((type, name), out FieldInfo field)) return field;
+            field = type.GetField(name, BindingFlags.Public | BindingFlags.Instance);
+            FieldCache[(type, name)] = field;
+            return field;
+        }
+
+        private static List<(PlacementNode, FieldInfo, object)> ApplyOverrides(PlacementGraphAsset graph, PlacementContext context)
+        {
+            var applied = new List<(PlacementNode, FieldInfo, object)>();
+            if (context.ParameterOverrides.Count == 0 || graph.Bindings.Count == 0) return applied;
+
+            foreach (PlacementParameterBinding binding in graph.Bindings)
+            {
+                if (binding.Node < 0 || binding.Node >= graph.Nodes.Count || graph.Nodes[binding.Node] == null) continue;
+                PlacementParameter declared = graph.FindParameter(binding.Parameter);
+                if (declared == null) continue;
+                PlacementParameter value = null;
+                foreach (PlacementParameter candidate in context.ParameterOverrides)
+                {
+                    if (candidate != null && candidate.Name == binding.Parameter && candidate.Type == declared.Type) value = candidate;
+                }
+                if (value == null) continue;
+
+                PlacementNode node = graph.Nodes[binding.Node];
+                FieldInfo field = FindField(node.GetType(), binding.Field);
+                Type valueType = PlacementParameter.SystemTypeOf(value.Type);
+                if (field == null || !field.FieldType.IsAssignableFrom(valueType)) continue;
+                applied.Add((node, field, field.GetValue(node)));
+                field.SetValue(node, value.Value);
+            }
+            return applied;
+        }
+
+        private static PointData[][] RunNodes(PlacementGraphAsset graph, PlacementContext context)
+        {
             IReadOnlyList<PlacementNode> nodes = graph.Nodes;
             IReadOnlyList<PlacementEdge> edges = graph.Edges;
             var outputs = new PointData[nodes.Count][];

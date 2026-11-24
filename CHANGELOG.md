@@ -8,6 +8,8 @@ All notable changes to Unity Tools. Versions are git tags: install one with `htt
 - Placement Graph: new nodes Height Filter, Self Pruning (minimum distance, densest first), Difference (remove points near another set), Distance Density, Merge and Copy Points.
 - Placement Graph: the Markers and Spline objects are kept when the graph regenerates, and moving them regenerates it with Auto Generate on.
 - Placement Graph: nodes show readable titles in the graph window ("Volume Sampler" instead of the class name) and are grouped in the add-node menu under Sources, Density, Filters, Points and Spawners. Existing graphs are unaffected.
+- Placement Graph: node settings are now input ports with inline fields instead of node options, so they can be wired. Mode choices stay options. Graphs made before this change lose their option values (for example the Spawn Prefabs palette) and need them set again on the ports.
+- Placement Graph: graph parameters. Blackboard variables of kind Input (float, int, bool, Vector3, Prefab Palette, LayerMask) wired into settings are compiled into the graph as parameters with defaults, and the Placement Graph component can override each one per instance (inspector list, `SetParameter`, `ClearParameter`).
 
 ## 7.0.0 - 2026-11-15
 - **Breaking** Every tool now uses a `UnityTools.*` namespace, and every assembly is named after its namespace. Scripts need their `using` lines updated, and your own assembly definitions that reference these assemblies by name need the new names (references by GUID, Unity's default, keep working). Scene, prefab and asset references are unaffected.

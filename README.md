@@ -631,6 +631,9 @@ Places prefabs procedurally with a node graph, in the spirit of Unreal's PCG: no
 | Merge | Combines A and B into one set, A first. |
 | Copy Points | Places a copy of the Pattern points at every Source point, moved, rotated and scaled by it (pattern positions are relative to the pattern's centre). Densities multiply. |
 
+- **Settings are ports.** Each node's numbers, toggles, vectors, layer masks and palettes are input ports with an inline field, so you can type a value or wire something into them. Mode choices (Density Filter, Spline Sampler) are in the node's inspector.
+- **Parameters.** To expose a setting per component, add a variable in the graph's Blackboard, set its kind to **Input**, and drag it onto the graph and wire it into the setting. Input variables of type float, int, bool, Vector3, Prefab Palette or LayerMask become the graph's parameters, with the variable's value as the default. One variable can drive several settings. Local variables set values too but aren't exposed.
+- The Placement Graph component lists the graph's parameters under **Parameters**: tick one to override it for this instance, untick it to go back to the graph's default. From code: `SetParameter(name, value)`, `ClearParameter(name)` and `ParameterOverrides`; `SyncParameters()` matches the list to the graph after it changes (the inspector does this for you).
 - Several wires into one input are merged. Samplers stop at 250,000 points and warn, so a tiny Spacing can't freeze the editor.
 - From code: `Generate()`, `Clear()`, `Evaluate()` (runs the graph without touching the scene) and the `Graph`, `Seed`, `Size`, `Markers` and `Spline` properties (`Spline` only with the Splines package). A compiled graph (`PlacementGraphAsset`) has no editor dependency.
 
