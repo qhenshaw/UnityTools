@@ -36,11 +36,21 @@ namespace UnityTools.Placement
         public float Steepness => Vector3.Angle(Normal, Vector3.up);
     }
 
-    /// <summary>The data that flows along the wires of a placement graph: a set of points.</summary>
+    /// <summary>
+    /// The data that flows along the wires of a placement graph: a set of points and, optionally, named attributes
+    /// with a value per point (see <see cref="PointAttribute"/>).
+    /// </summary>
     public sealed class PointData
     {
-        /// <summary>The points. Nodes build new lists rather than editing their inputs.</summary>
+        /// <summary>The points. Nodes build new sets rather than editing their inputs.</summary>
         public readonly List<PlacementPoint> Points;
+
+        /// <summary>The attribute columns, each parallel to <see cref="Points"/>.</summary>
+        public readonly List<PointAttribute> Attributes = new List<PointAttribute>();
+
+        // The last source copied from with AddFrom, and where each of this set's columns is in it.
+        private PointData _mapSource;
+        private int[] _map;
 
         public PointData() => Points = new List<PlacementPoint>();
         public PointData(int capacity) => Points = new List<PlacementPoint>(capacity);
@@ -51,7 +61,95 @@ namespace UnityTools.Placement
         /// <summary>An empty set, used for unconnected inputs.</summary>
         public static PointData Empty => new PointData();
 
-        /// <summary>Concatenates sets, in order. Used when several wires feed one input.</summary>
+        /// <summary>
+        /// An empty set with the same attribute columns as <paramref name="source"/>, for a node that keeps, drops or
+        /// reorders its points. Fill it with <see cref="AddFrom(PointData, int)"/>.
+        /// </summary>
+        public static PointData Derive(PointData source, int capacity = 0)
+        {
+            var result = new PointData(capacity);
+            if (source == null) return result;
+            foreach (PointAttribute attribute in source.Attributes) result.Attributes.Add(attribute.CreateEmpty(capacity));
+            return result;
+        }
+
+        /// <summary>A copy of <paramref name="source"/> with its own point list and attribute columns, for a node that adds attributes.</summary>
+        public static PointData Copy(PointData source)
+        {
+            var result = new PointData(new List<PlacementPoint>(source.Points));
+            foreach (PointAttribute attribute in source.Attributes) result.Attributes.Add(attribute.Clone());
+            return result;
+        }
+
+        /// <summary>Adds point <paramref name="index"/> of <paramref name="source"/> with its attribute values.</summary>
+        public void AddFrom(PointData source, int index) => AddFrom(source, index, source.Points[index]);
+
+        /// <summary>Adds <paramref name="point"/> with the attribute values of point <paramref name="index"/> of <paramref name="source"/>.</summary>
+        public void AddFrom(PointData source, int index, PlacementPoint point)
+        {
+            int at = Points.Count;
+            Points.Add(point);
+            if (Attributes.Count == 0) return;
+            if (!ReferenceEquals(source, _mapSource) || _map == null || _map.Length != Attributes.Count)
+            {
+                _mapSource = source;
+                _map = new int[Attributes.Count];
+                for (int i = 0; i < Attributes.Count; i++) _map[i] = source.IndexOfAttribute(Attributes[i].Name, Attributes[i].Type);
+            }
+            for (int i = 0; i < Attributes.Count; i++)
+            {
+                int column = _map[i];
+                if (column >= 0) Attributes[i].CopyValue(source.Attributes[column], index, at);
+            }
+        }
+
+        private int IndexOfAttribute(string name, PointAttributeType type)
+        {
+            for (int i = 0; i < Attributes.Count; i++)
+            {
+                if (Attributes[i].Name == name && Attributes[i].Type == type) return i;
+            }
+            return -1;
+        }
+
+        /// <summary>The attribute called <paramref name="name"/>, of any type, or null.</summary>
+        public PointAttribute GetAttribute(string name)
+        {
+            foreach (PointAttribute attribute in Attributes)
+            {
+                if (attribute.Name == name) return attribute;
+            }
+            return null;
+        }
+
+        /// <summary>The attribute called <paramref name="name"/> if it has type <typeparamref name="T"/>, or null.</summary>
+        public PointAttribute<T> GetAttribute<T>(string name) => GetAttribute(name) as PointAttribute<T>;
+
+        /// <summary>
+        /// The attribute called <paramref name="name"/>, added with <paramref name="defaultValue"/> if it doesn't exist.
+        /// An existing attribute of another type is replaced. Only call this on a set the node created.
+        /// </summary>
+        public PointAttribute<T> GetOrAddAttribute<T>(string name, T defaultValue = default)
+        {
+            for (int i = 0; i < Attributes.Count; i++)
+            {
+                if (Attributes[i].Name != name) continue;
+                if (Attributes[i] is PointAttribute<T> existing) return existing;
+                var replacement = new PointAttribute<T>(name, defaultValue, Points.Count);
+                Attributes[i] = replacement;
+                _map = null;
+                return replacement;
+            }
+            var added = new PointAttribute<T>(name, defaultValue, Points.Count);
+            Attributes.Add(added);
+            _map = null;
+            return added;
+        }
+
+        /// <summary>
+        /// Concatenates sets, in order. Used when several wires feed one input. The result has every attribute any set
+        /// has; points from a set without one get its default.
+        /// </summary>
         public static PointData Merge(IReadOnlyList<PointData> sets)
         {
             if (sets == null || sets.Count == 0) return Empty;
@@ -59,9 +157,19 @@ namespace UnityTools.Placement
             int total = 0;
             for (int i = 0; i < sets.Count; i++) total += sets[i]?.Count ?? 0;
             var merged = new PointData(total);
-            for (int i = 0; i < sets.Count; i++)
+            foreach (PointData set in sets)
             {
-                if (sets[i] != null) merged.Points.AddRange(sets[i].Points);
+                if (set == null) continue;
+                foreach (PointAttribute attribute in set.Attributes)
+                {
+                    if (merged.IndexOfAttribute(attribute.Name, attribute.Type) < 0) merged.Attributes.Add(attribute.CreateEmpty(total));
+                }
+            }
+            foreach (PointData set in sets)
+            {
+                if (set == null) continue;
+                if (merged.Attributes.Count == 0) { merged.Points.AddRange(set.Points); continue; }
+                for (int i = 0; i < set.Count; i++) merged.AddFrom(set, i);
             }
             return merged;
         }

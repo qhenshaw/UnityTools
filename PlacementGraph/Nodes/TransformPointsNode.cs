@@ -54,9 +54,11 @@ namespace UnityTools.Placement
         public override void Execute(PlacementContext context, PointData[] inputs, PointData[] outputs)
         {
             uint seed = PlacementRandom.Hash(context.SeedHash, NodeSeed);
-            var result = new PointData(inputs[0].Count);
-            foreach (PlacementPoint point in inputs[0].Points)
+            PointData input = inputs[0];
+            var result = PointData.Derive(input, input.Count);
+            for (int i = 0; i < input.Count; i++)
             {
+                PlacementPoint point = input.Points[i];
                 uint s = point.Seed;
                 var offset = new Vector3(
                     PlacementRandom.Range(s, seed, 1u, OffsetMin.x, OffsetMax.x),
@@ -89,7 +91,7 @@ namespace UnityTools.Placement
                 changed.Position += offset;
                 changed.Rotation = baseRotation * Quaternion.Euler(euler);
                 changed.Scale = ScaleMode == ScaleModes.Multiply ? Vector3.Scale(point.Scale, scale) : scale;
-                result.Points.Add(changed);
+                result.AddFrom(input, i, changed);
             }
             outputs[0] = result;
         }

@@ -24,15 +24,17 @@ namespace UnityTools.Placement
             float offsetZ = PlacementRandom.Value(PlacementRandom.Hash(seed, 2u)) * 10000f;
             float scale = Mathf.Max(0.01f, Scale);
 
-            var result = new PointData(inputs[0].Count);
-            foreach (PlacementPoint point in inputs[0].Points)
+            PointData input = inputs[0];
+            var result = PointData.Derive(input, input.Count);
+            for (int i = 0; i < input.Count; i++)
             {
+                PlacementPoint point = input.Points[i];
                 float noise = Mathf.Clamp01(Mathf.PerlinNoise(point.Position.x / scale + offsetX, point.Position.z / scale + offsetZ));
                 noise = Mathf.Clamp01((noise - 0.5f) * Contrast + 0.5f);
                 if (Invert) noise = 1f - noise;
                 PlacementPoint changed = point;
                 changed.Density *= noise;
-                result.Points.Add(changed);
+                result.AddFrom(input, i, changed);
             }
             outputs[0] = result;
         }
@@ -60,14 +62,16 @@ namespace UnityTools.Placement
         public override void Execute(PlacementContext context, PointData[] inputs, PointData[] outputs)
         {
             uint seed = PlacementRandom.Hash(context.SeedHash, NodeSeed);
-            var kept = new PointData(inputs[0].Count);
-            var rejected = new PointData();
-            foreach (PlacementPoint point in inputs[0].Points)
+            PointData input = inputs[0];
+            var kept = PointData.Derive(input, input.Count);
+            var rejected = PointData.Derive(input);
+            for (int i = 0; i < input.Count; i++)
             {
+                PlacementPoint point = input.Points[i];
                 bool keep = Mode == FilterMode.Threshold
                     ? point.Density >= Threshold
                     : PlacementRandom.Value(PlacementRandom.Hash(point.Seed, seed)) < point.Density;
-                (keep ? kept : rejected).Points.Add(point);
+                (keep ? kept : rejected).AddFrom(input, i);
             }
             outputs[0] = kept;
             outputs[1] = rejected;
@@ -87,13 +91,14 @@ namespace UnityTools.Placement
 
         public override void Execute(PlacementContext context, PointData[] inputs, PointData[] outputs)
         {
-            var kept = new PointData(inputs[0].Count);
-            var rejected = new PointData();
-            foreach (PlacementPoint point in inputs[0].Points)
+            PointData input = inputs[0];
+            var kept = PointData.Derive(input, input.Count);
+            var rejected = PointData.Derive(input);
+            for (int i = 0; i < input.Count; i++)
             {
-                float angle = point.Steepness;
+                float angle = input.Points[i].Steepness;
                 bool keep = angle >= MinAngle && angle <= MaxAngle;
-                (keep ? kept : rejected).Points.Add(point);
+                (keep ? kept : rejected).AddFrom(input, i);
             }
             outputs[0] = kept;
             outputs[1] = rejected;

@@ -17,12 +17,13 @@ namespace UnityTools.Placement
 
         public override void Execute(PlacementContext context, PointData[] inputs, PointData[] outputs)
         {
-            var kept = new PointData(inputs[0].Count);
-            var rejected = new PointData();
-            foreach (PlacementPoint point in inputs[0].Points)
+            PointData input = inputs[0];
+            var kept = PointData.Derive(input, input.Count);
+            var rejected = PointData.Derive(input);
+            for (int i = 0; i < input.Count; i++)
             {
-                float y = point.Position.y;
-                (y >= Min && y <= Max ? kept : rejected).Points.Add(point);
+                float y = input.Points[i].Position.y;
+                (y >= Min && y <= Max ? kept : rejected).AddFrom(input, i);
             }
             outputs[0] = kept;
             outputs[1] = rejected;
@@ -74,9 +75,9 @@ namespace UnityTools.Placement
                 keep[index] = true;
             }
 
-            var kept = new PointData();
-            var rejected = new PointData();
-            for (int i = 0; i < points.Count; i++) (keep[i] ? kept : rejected).Points.Add(points[i]);
+            var kept = PointData.Derive(inputs[0]);
+            var rejected = PointData.Derive(inputs[0]);
+            for (int i = 0; i < points.Count; i++) (keep[i] ? kept : rejected).AddFrom(inputs[0], i);
             outputs[0] = kept;
             outputs[1] = rejected;
         }
@@ -104,11 +105,12 @@ namespace UnityTools.Placement
             }
 
             var grid = new PointGrid(Radius, inputs[1]);
-            var kept = new PointData(inputs[0].Count);
-            var rejected = new PointData();
-            foreach (PlacementPoint point in inputs[0].Points)
+            PointData input = inputs[0];
+            var kept = PointData.Derive(input, input.Count);
+            var rejected = PointData.Derive(input);
+            for (int i = 0; i < input.Count; i++)
             {
-                (grid.AnyWithin(point.Position, Radius) ? rejected : kept).Points.Add(point);
+                (grid.AnyWithin(input.Points[i].Position, Radius) ? rejected : kept).AddFrom(input, i);
             }
             outputs[0] = kept;
             outputs[1] = rejected;
@@ -159,13 +161,25 @@ namespace UnityTools.Placement
             foreach (PlacementPoint point in pattern.Points) centre += point.Position;
             if (pattern.Count > 0) centre /= pattern.Count;
 
-            var result = new PointData((int)total);
-            foreach (PlacementPoint source in sources.Points)
+            // Copies keep the source point's attributes, plus any the pattern has that the sources don't.
+            var result = PointData.Derive(sources, (int)total);
+            var patternOnly = new List<(PointAttribute from, PointAttribute to)>();
+            foreach (PointAttribute attribute in pattern.Attributes)
             {
-                foreach (PlacementPoint item in pattern.Points)
+                if (result.GetAttribute(attribute.Name) != null) continue;
+                PointAttribute column = attribute.CreateEmpty((int)total);
+                result.Attributes.Add(column);
+                patternOnly.Add((attribute, column));
+            }
+            for (int s = 0; s < sources.Count; s++)
+            {
+                PlacementPoint source = sources.Points[s];
+                for (int p = 0; p < pattern.Count; p++)
                 {
+                    PlacementPoint item = pattern.Points[p];
                     Vector3 offset = Vector3.Scale(source.Scale, item.Position - centre);
-                    result.Points.Add(new PlacementPoint
+                    int at = result.Count;
+                    result.AddFrom(sources, s, new PlacementPoint
                     {
                         Position = source.Position + source.Rotation * offset,
                         Rotation = source.Rotation * item.Rotation,
@@ -174,6 +188,7 @@ namespace UnityTools.Placement
                         Density = source.Density * item.Density,
                         Seed = PlacementRandom.Hash(source.Seed, item.Seed)
                     });
+                    foreach ((PointAttribute from, PointAttribute to) in patternOnly) to.CopyValue(from, p, at);
                 }
             }
             outputs[0] = result;
@@ -209,15 +224,17 @@ namespace UnityTools.Placement
             float outer = Mathf.Max(inner, OuterRadius);
             PointGrid grid = inputs[1].Count > 0 ? new PointGrid(Mathf.Max(outer, 0.01f), inputs[1]) : null;
 
-            var result = new PointData(inputs[0].Count);
-            foreach (PlacementPoint point in inputs[0].Points)
+            PointData input = inputs[0];
+            var result = PointData.Derive(input, input.Count);
+            for (int i = 0; i < input.Count; i++)
             {
+                PlacementPoint point = input.Points[i];
                 float distance = grid?.NearestDistance(point.Position, Mathf.Max(outer, 0.01f)) ?? float.PositiveInfinity;
                 float falloff = Falloff(distance, inner, outer);
                 if (Invert) falloff = 1f - falloff;
                 PlacementPoint changed = point;
                 changed.Density *= falloff;
-                result.Points.Add(changed);
+                result.AddFrom(input, i, changed);
             }
             outputs[0] = result;
         }

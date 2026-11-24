@@ -89,9 +89,10 @@ namespace UnityTools.Placement
             float distance = down.magnitude * bounds.size.y;
             down.Normalize();
 
-            var result = new PointData(source.Count);
-            foreach (PlacementPoint point in source.Points)
+            var result = PointData.Derive(source, source.Count);
+            for (int i = 0; i < source.Count; i++)
             {
+                PlacementPoint point = source.Points[i];
                 // Start every ray at the top face, above the point, so wired-in points project the same way.
                 Vector3 local = worldToLocal.MultiplyPoint3x4(point.Position);
                 local.y = bounds.max.y;
@@ -101,7 +102,7 @@ namespace UnityTools.Placement
                 PlacementPoint projected = point;
                 projected.Position = hit.point;
                 projected.Normal = hit.normal;
-                result.Points.Add(projected);
+                result.AddFrom(source, i, projected);
             }
             outputs[0] = result;
         }
