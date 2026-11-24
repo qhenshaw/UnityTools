@@ -169,6 +169,46 @@ namespace UnityTools.Placement.Tests
         }
 
         [Test]
+        public void TransformPoints_ApplyToPrefab_TransformsOnlyThose_InPlace()
+        {
+            (PrefabPalette palette, GameObject a, GameObject b) = TwoPrefabPalette();
+            PointData selected = Run(new SelectPrefabNode { Palette = palette }, new PlacementContext(), Grid(50))[0];
+            PointAttribute<Object> prefabs = selected.GetAttribute<Object>(PointAttributeNames.Prefab);
+            TransformPointsNode Make(TransformPointsNode.ApplyModes mode) => new TransformPointsNode
+            {
+                RotationMax = new Vector3(0f, 360f, 0f), ScaleMin = 0.5f, ScaleMax = 2f, ApplyTo = mode, Prefab = a
+            };
+
+            PointData all = Run(Make(TransformPointsNode.ApplyModes.All), new PlacementContext(), selected)[0];
+            PointData onlyA = Run(Make(TransformPointsNode.ApplyModes.OnlyPrefab), new PlacementContext(), selected)[0];
+            PointData exceptA = Run(Make(TransformPointsNode.ApplyModes.AllExceptPrefab), new PlacementContext(), selected)[0];
+
+            Assert.AreEqual(selected.Count, onlyA.Count);
+            for (int i = 0; i < selected.Count; i++)
+            {
+                bool isA = prefabs.Get(i) == a;
+                // Matching points get exactly the values they get with no filter; the others are untouched.
+                Assert.AreEqual(isA ? all.Points[i] : selected.Points[i], onlyA.Points[i]);
+                Assert.AreEqual(isA ? selected.Points[i] : all.Points[i], exceptA.Points[i]);
+                Assert.AreEqual(prefabs.Get(i), onlyA.GetAttribute<Object>(PointAttributeNames.Prefab).Get(i), "Order and attributes kept.");
+            }
+
+            // Chained, one node per prefab.
+            PointData chained = Run(new TransformPointsNode { RotationMax = Vector3.zero, ScaleMin = 3f, ScaleMax = 3f, ApplyTo = TransformPointsNode.ApplyModes.OnlyPrefab, Prefab = b },
+                new PlacementContext(), onlyA)[0];
+            for (int i = 0; i < selected.Count; i++)
+            {
+                if (prefabs.Get(i) == b) Assert.AreEqual(Vector3.one * 3f, chained.Points[i].Scale);
+                else Assert.AreEqual(onlyA.Points[i], chained.Points[i]);
+            }
+
+            var context = new PlacementContext();
+            PointData noSelect = Run(Make(TransformPointsNode.ApplyModes.OnlyPrefab), context, Grid(5))[0];
+            Assert.AreEqual(Grid(5).Points, noSelect.Points, "Nothing matches without a Prefab attribute.");
+            CollectionAssert.AreEqual(new[] { "TransformPointsNode: Transform Points filters by prefab, but no Select Prefab runs before it" }, context.Warnings);
+        }
+
+        [Test]
         public void FilterByAttribute_NumberComparisons()
         {
             PointData input = PlacementAttributeTests.Tagged(10);

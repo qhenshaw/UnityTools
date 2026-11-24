@@ -135,6 +135,8 @@ namespace UnityTools.Placement.Editor
             AddSetting<string>(context, "Offset Attribute", "Optional. A Vector3 attribute added to the random offset, in world space.");
             AddSetting<string>(context, "Rotation Attribute", "Optional. A Vector3 attribute of Euler degrees added to the random rotation.");
             AddSetting<string>(context, "Scale Attribute", "Optional. A Float or Vector3 attribute multiplied into the random scale.");
+            AddSetting<Placement.TransformPointsNode.ApplyModes>(context, "Apply To", "All, or only the points whose Prefab attribute (from Select Prefab) is or isn't Prefab.");
+            AddSetting<GameObject>(context, "Prefab", "The prefab Apply To filters by.");
         }
     }
 

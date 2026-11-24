@@ -19,6 +19,16 @@ namespace UnityTools.Placement
             Replace
         }
 
+        public enum ApplyModes
+        {
+            /// <summary>Every point is transformed.</summary>
+            All,
+            /// <summary>Only points whose Prefab attribute is <see cref="Prefab"/>.</summary>
+            OnlyPrefab,
+            /// <summary>Every point except those whose Prefab attribute is <see cref="Prefab"/>.</summary>
+            AllExceptPrefab
+        }
+
         public enum ScaleModes
         {
             /// <summary>The random scale multiplies the point's scale.</summary>
@@ -53,6 +63,10 @@ namespace UnityTools.Placement
         public string RotationAttribute = "";
         [Tooltip("Optional. A Float or Vector3 attribute multiplied into each point's random scale (e.g. EntryScale).")]
         public string ScaleAttribute = "";
+        [Tooltip("All: every point. Only Prefab / All Except Prefab: filter by the point's Prefab attribute (from Select Prefab); other points pass through unchanged.")]
+        public ApplyModes ApplyTo = ApplyModes.All;
+        [Tooltip("The prefab Apply To compares the point's Prefab attribute with.")]
+        public GameObject Prefab;
 
         public override int InputCount => 1;
         public override int OutputCount => 1;
@@ -66,9 +80,22 @@ namespace UnityTools.Placement
             PointAttribute<Vector3> rotationAttribute = Named<Vector3>(input, RotationAttribute);
             PointAttribute<float> scaleFloat = Named<float>(input, ScaleAttribute);
             PointAttribute<Vector3> scaleVector = Named<Vector3>(input, ScaleAttribute);
+            PointAttribute<UnityEngine.Object> prefabs = input.GetAttribute<UnityEngine.Object>(PointAttributeNames.Prefab);
+            if (ApplyTo != ApplyModes.All && prefabs == null)
+                context.Warn(this, "Transform Points filters by prefab, but no Select Prefab runs before it");
             for (int i = 0; i < input.Count; i++)
             {
                 PlacementPoint point = input.Points[i];
+                if (ApplyTo != ApplyModes.All)
+                {
+                    // A point without a Prefab attribute never matches. Skipped points keep their place and attributes.
+                    bool matches = prefabs != null && prefabs.Get(i) != null && prefabs.Get(i) == Prefab;
+                    if (matches != (ApplyTo == ApplyModes.OnlyPrefab))
+                    {
+                        result.AddFrom(input, i);
+                        continue;
+                    }
+                }
                 uint s = point.Seed;
                 var offset = new Vector3(
                     PlacementRandom.Range(s, seed, 1u, OffsetMin.x, OffsetMax.x),
