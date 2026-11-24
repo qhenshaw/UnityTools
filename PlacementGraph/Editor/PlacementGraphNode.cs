@@ -34,6 +34,9 @@ namespace UnityTools.Placement.Editor
         /// <summary>The node's stable id, created the first time its ports are defined.</summary>
         public string Id => _id;
 
+        /// <summary>Gives the node a new id, e.g. when it turns out to be a copy of another node (copy and paste copies the id).</summary>
+        internal void RenewId() => _id = Guid.NewGuid().ToString("N");
+
         /// <summary>Name shown in logs and the component's node list: the title from <see cref="NodeAttribute"/>, as in the graph window.</summary>
         public virtual string DisplayName => TitleOf(GetType());
 

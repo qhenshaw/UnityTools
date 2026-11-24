@@ -59,6 +59,7 @@ namespace UnityTools.Placement.Editor
             var runtimeNodes = new List<PlacementNode>(units.Count);
             var nodeBindings = new List<(PlacementNode node, string field, string parameter)>();
             var bindings = new List<(string field, string parameter)>();
+            var usedSeeds = new HashSet<string>();
             for (int i = 0; i < units.Count; i++)
             {
                 Unit unit = units[i];
@@ -68,7 +69,15 @@ namespace UnityTools.Placement.Editor
                 string id = string.IsNullOrEmpty(unit.Node.Id) ? i.ToString() : unit.Node.Id;
                 runtime.Name = $"{i}: {unit.Scope.Title}{unit.Node.DisplayName}";
                 // Nodes in the main graph hash their id alone, so adding subgraph support didn't reshuffle old graphs.
-                runtime.NodeSeed = StableHash(unit.Scope.Path + id);
+                // A copy that still has its original's id (a graph not edited since the paste) gets its own seed too.
+                string key = unit.Scope.Path + id;
+                if (!usedSeeds.Add(key))
+                {
+                    int copy = 1;
+                    while (!usedSeeds.Add($"{key}#{copy}")) copy++;
+                    key = $"{key}#{copy}";
+                }
+                runtime.NodeSeed = StableHash(key);
                 runtimeNodes.Add(runtime);
                 foreach ((string field, string parameter) in bindings) nodeBindings.Add((runtime, field, parameter));
             }

@@ -138,6 +138,15 @@ namespace UnityTools.Placement.Editor
             AddSetting<Placement.TransformPointsNode.ApplyModes>(context, "Apply To", "All, or only the points whose Prefab attribute (from Select Prefab) is or isn't Prefab.");
             AddSetting<GameObject>(context, "Prefab", "The prefab Apply To filters by.");
         }
+
+        public override void Validate(List<string> problems)
+        {
+            IPort port = GetInputPortByName("Apply To");
+            if (port == null || port.IsConnected || !port.TryGetValue(out Placement.TransformPointsNode.ApplyModes mode)) return;
+            if (mode == Placement.TransformPointsNode.ApplyModes.All) return;
+            if (Graph != null && Graph.GetNodes().Any(n => n is SelectPrefabNode || n is ISubgraphNode)) return;
+            problems.Add("Transform Points filters by prefab (Apply To), but there's no Select Prefab before it, so no point has a Prefab and nothing is transformed. Add a Select Prefab node before it.");
+        }
     }
 
     [Node("Spawners", null, "Spawn Prefabs")]

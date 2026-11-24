@@ -151,6 +151,35 @@ namespace UnityTools.Placement.Tests
         }
 
         [Test]
+        public void CopiedNodes_GetTheirOwnRandomNumbers()
+        {
+            PlacementGraphHandle graph = PlacementGraphAuthoring.Create(GraphPath);
+            PlacementNodeHandle first = graph.AddNode("Transform Points");
+            PlacementNodeHandle second = graph.AddNode("Transform Points");
+            // What copy and paste does: the copy keeps the original's id.
+            typeof(PlacementGraphNode).GetField("_id", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                .SetValue(second.Node, ((PlacementGraphNode)first.Node).Id);
+
+            PlacementGraphAsset compiled = graph.Compile();
+            _created.Add(compiled);
+            Assert.AreNotEqual(compiled.Nodes[0].NodeSeed, compiled.Nodes[1].NodeSeed, "Compiling a graph with a copied id still separates the seeds.");
+
+            Assert.AreEqual(1, ((PlacementGraphDefinition)graph.Graph).RenewDuplicateIds());
+            Assert.AreNotEqual(((PlacementGraphNode)first.Node).Id, ((PlacementGraphNode)second.Node).Id);
+            Assert.AreEqual(0, ((PlacementGraphDefinition)graph.Graph).RenewDuplicateIds());
+        }
+
+        [Test]
+        public void ApplyToPrefab_WithoutSelectPrefab_IsReported()
+        {
+            PlacementGraphHandle graph = PlacementGraphAuthoring.Create(GraphPath);
+            PlacementNodeHandle transform = graph.AddNode("Transform Points").Set("Apply To", "OnlyPrefab");
+            Assert.IsTrue(graph.Validate().Any(p => p.Contains("no Select Prefab")));
+            graph.AddNode("Select Prefab");
+            Assert.IsFalse(graph.Validate().Any(p => p.Contains("no Select Prefab")));
+        }
+
+        [Test]
         public void Mistakes_ThrowClearErrors()
         {
             PlacementGraphHandle graph = PlacementGraphAuthoring.Create(GraphPath);

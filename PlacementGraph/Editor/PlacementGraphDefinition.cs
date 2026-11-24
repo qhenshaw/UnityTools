@@ -54,9 +54,29 @@ namespace UnityTools.Placement.Editor
             }
         }
 
+        /// <summary>
+        /// A pasted or duplicated node arrives with the original's id, which would give both the same random numbers.
+        /// The copy (the later node) gets a new id. Returns how many ids changed.
+        /// </summary>
+        internal int RenewDuplicateIds()
+        {
+            var seen = new HashSet<string>();
+            int renewed = 0;
+            foreach (INode node in GetNodes())
+            {
+                if (node is not PlacementGraphNode placementNode || string.IsNullOrEmpty(placementNode.Id)) continue;
+                if (seen.Add(placementNode.Id)) continue;
+                placementNode.RenewId();
+                seen.Add(placementNode.Id);
+                renewed++;
+            }
+            return renewed;
+        }
+
         public override void OnGraphChanged(GraphLogger graphLogger)
         {
             MakeNewVariablesInputs();
+            RenewDuplicateIds();
             var problems = new List<string>();
             PlacementGraphCompiler.Validate(this, problems);
             foreach (string problem in problems) graphLogger.LogError(problem);
