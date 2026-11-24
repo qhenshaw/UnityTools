@@ -118,6 +118,43 @@ namespace UnityTools.Placement.Tests
         }
 
         [Test]
+        public void SceneInput_Jitter_MovesPointsWithinTheirCells_InsideTheZone_WithFalloffAtTheJitteredPosition()
+        {
+            var zone = Track(new GameObject("Zone")).AddComponent<PlacementZone>();
+            zone.transform.position = Origin;
+            zone.Shape = PlacementZone.ZoneShape.Sphere;
+            zone.Radius = 3f;
+            PlacementContext Volume() => Context(Origin, new Vector3(20f, 10f, 20f));
+            SceneInputNode Node(float jitter) => new SceneInputNode
+            {
+                Output = SceneInputNode.OutputMode.PointsInsideZones, Spacing = 0.5f, Jitter = jitter, EdgeFalloffDistance = 2f
+            };
+
+            // Jitter 0 is the regular grid: points at cell centres.
+            PointData grid = Run(Node(0f), Volume())[0];
+            Assert.IsTrue(grid.Points.All(p => Mathf.Abs(Mathf.Repeat(p.Position.x / 0.5f, 1f) - 0.5f) < 1e-3f), "cell centres");
+
+            PointData jittered = Run(Node(0.8f), Volume())[0];
+            Assert.Greater(jittered.Count, 50);
+            Assert.IsTrue(jittered.Points.Any(p => Mathf.Abs(Mathf.Repeat(p.Position.x / 0.5f, 1f) - 0.5f) > 0.05f), "points moved");
+            float[] values = Values(jittered);
+            for (int i = 0; i < jittered.Count; i++)
+            {
+                Vector3 p = jittered.Points[i].Position;
+                // Within ±Spacing*Jitter/2 of a cell centre on each axis.
+                Assert.LessOrEqual(Mathf.Abs(Mathf.Repeat(p.x / 0.5f, 1f) - 0.5f) * 0.5f, 0.5f * 0.8f / 2f + 1e-3f);
+                Assert.LessOrEqual(Mathf.Abs(Mathf.Repeat(p.z / 0.5f, 1f) - 0.5f) * 0.5f, 0.5f * 0.8f / 2f + 1e-3f);
+                Assert.IsTrue(zone.Contains(p), "every jittered point is inside the zone");
+                Vector3 offset = p - Origin;
+                Assert.AreEqual(Mathf.Clamp01((3f - new Vector2(offset.x, offset.z).magnitude) / 2f), values[i], 1e-3f, "falloff at the jittered position");
+            }
+
+            PointData again = Run(Node(0.8f), Volume())[0];
+            CollectionAssert.AreEqual(jittered.Points.Select(p => p.Position), again.Points.Select(p => p.Position), "deterministic");
+            CollectionAssert.AreEqual(grid.Points.Select(p => p.Seed).Take(10), Run(Node(0f), Volume())[0].Points.Select(p => p.Seed).Take(10));
+        }
+
+        [Test]
         public void SceneInput_OnePointPerObject_GetsNoFalloff()
         {
             var zone = Track(new GameObject("Zone")).AddComponent<PlacementZone>();

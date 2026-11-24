@@ -44,6 +44,8 @@ namespace UnityTools.Placement
         public OutputMode Output = OutputMode.OnePointPerObject;
         [Tooltip("Points Inside Zones: grid spacing in metres.")]
         [Min(0.01f)] public float Spacing = 1f;
+        [Tooltip("Points Inside Zones: how far points move from their grid cell centres (0 = a regular grid, 1 = anywhere in the cell).")]
+        [Range(0f, 1f)] public float Jitter = 0f;
         [Tooltip("Only objects whose bounds overlap the generation volume.")]
         public bool OnlyOverlapping = true;
         [Tooltip("Points Inside Zones: metres inward from the zone's sides (seen from above) over which the Edge Falloff attribute rises to 1. 0 turns it off.")]
@@ -179,6 +181,7 @@ namespace UnityTools.Placement
                 PointAttribute<UnityEngine.Object> zones = result.GetOrAddAttribute<UnityEngine.Object>(ZoneAttribute);
                 uint nodeSeed = PlacementRandom.Hash(context.SeedHash, NodeSeed);
                 float spacing = Mathf.Max(0.01f, Spacing);
+                float jitter = Mathf.Clamp01(Jitter);
                 bool falloff = Output == OutputMode.PointsInsideZones && EdgeFalloffDistance > 0f && !string.IsNullOrEmpty(EdgeFalloffAttribute);
                 PointAttribute<float> edge = falloff ? result.GetOrAddAttribute<float>(EdgeFalloffAttribute) : null;
 
@@ -212,9 +215,14 @@ namespace UnityTools.Placement
                     for (int z = z0; z < z1; z++)
                     for (int x = x0; x < x1; x++)
                     {
-                        var position = new Vector3((x + 0.5f) * spacing, bounds.center.y, (z + 0.5f) * spacing);
+                        // The cell's seed doesn't depend on the zone, so jittered points stay put when the zone moves.
+                        uint cellSeed = PlacementRandom.Hash(objectSeed, unchecked((uint)x), unchecked((uint)z));
+                        float jx = jitter > 0f ? (PlacementRandom.Value(PlacementRandom.Hash(cellSeed, 1u)) - 0.5f) * jitter : 0f;
+                        float jz = jitter > 0f ? (PlacementRandom.Value(PlacementRandom.Hash(cellSeed, 2u)) - 0.5f) * jitter : 0f;
+                        var position = new Vector3((x + 0.5f + jx) * spacing, bounds.center.y, (z + 0.5f + jz) * spacing);
+                        // Tested after jittering, so every point is inside the zone.
                         if (!match.Zone.Contains(position)) continue;
-                        PlacementPoint point = PlacementPoint.At(position, PlacementRandom.Hash(objectSeed, unchecked((uint)x), unchecked((uint)z)));
+                        PlacementPoint point = PlacementPoint.At(position, cellSeed);
                         if (falloff)
                         {
                             float inside = match.Zone.InsideDistanceFromAbove(position);

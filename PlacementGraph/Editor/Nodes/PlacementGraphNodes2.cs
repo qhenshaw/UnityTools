@@ -133,6 +133,7 @@ namespace UnityTools.Placement.Editor
             AddSetting<string>(context, "Tag", "Tagged Objects: the Unity tag to match.");
             AddSetting<Placement.SceneInputNode.OutputMode>(context, "Output", "One point per object, or a grid of points inside each zone.");
             AddSetting<float>(context, "Spacing", "Points Inside Zones: grid spacing in metres.");
+            AddSetting<float>(context, "Jitter", "Points Inside Zones: how far points move from their grid cell centres (0 = a regular grid, 1 = anywhere in the cell).");
             AddSetting<bool>(context, "Only Overlapping", "Only objects whose bounds overlap the generation volume.");
             AddEdgeFalloffSettings(context, "Points Inside Zones: ");
         }
