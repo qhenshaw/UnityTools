@@ -1,0 +1,25 @@
+{
+    "name": "UnityTools.Placement.Tests",
+    "rootNamespace": "UnityTools.Placement.Tests",
+    "references": [
+        "UnityTools.Placement",
+        "UnityTools.Placement.Editor",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -29,6 +29,7 @@ A collection of gameplay systems, debugging tools and editor tools for Unity, bu
 - **Level design**
   - [Projection Scatter](#projection-scatter)
   - [Physics Scatter](#physics-scatter)
+  - [Placement Graph](#placement-graph)
   - [Snap to Floor](#snap-to-floor)
 - **Art pipeline**
   - [Mesh Importer](#mesh-importer)
@@ -48,7 +49,7 @@ A collection of gameplay systems, debugging tools and editor tools for Unity, bu
 - [Assemblies and namespaces](#assemblies-and-namespaces)
 
 ## Requirements
-- **Unity 6**, developed and tested on 6000.5. Some tools use APIs from recent Unity 6 releases, so early 6.0 versions may not compile.
+- **Unity 6.5 (6000.5) or later.** The Placement Graph is built on Graph Toolkit, which is part of the editor from 6000.5.
 - **URP or HDRP.** The lighting tools reference the Scriptable Render Pipeline core package, so the Built-in Render Pipeline isn't supported.
 - Installed automatically: Input System, Cinemachine, TextMeshPro, uGUI, 2D Sprite and the UI Toolkit, UnityWebRequest, Image Conversion, Screen Capture and Audio modules.
 - Optional: **HDRP** enables the APV Bake Checklist and Assign Volume to Open Scenes. The **Pipeline** package (`com.unity.pipeline`) adds CLI commands for the Debug Menu.
@@ -599,6 +600,31 @@ Drops, throws and settles the selected objects with physics in edit mode, so pro
 - Copy (C) duplicates like Edit > Duplicate, keeping scale, prefab overrides and components.
 - The overlay settings reset when scripts recompile.
 
+## Placement Graph
+Places prefabs procedurally with a node graph, in the spirit of Unreal's PCG: nodes sample points in a volume, weight and filter them, adjust them, then spawn prefabs on what's left. Graphs are edited in Unity's Graph Toolkit window and run by a **Placement Graph** component in the scene.
+1. Create a graph with **Assets > Create > UnityTools > Placement Graph** and double-click it to edit. Create a **Prefab Palette** (Assets > Create > UnityTools > Prefab Palette) and fill it with weighted prefabs.
+2. Add nodes and wire them, for example Surface Sampler > Noise Density > Density Filter > Transform Points > Spawn Prefabs, and set the Spawn Prefabs node's Palette. Save the graph.
+3. Create a **GameObject > Placement Graph**, assign the graph, and size the box with its handles. With **Auto Generate** on (default), it regenerates whenever the graph is saved, a palette changes, or it moves, resizes or has its settings changed. **Generate** and **Clear** are each one Undo step.
+
+- **Its children are generated.** Generate, Clear and every automatic run replace all of them, so **anything you place under it is destroyed**. Keep hand-placed objects elsewhere.
+- Results are deterministic: the same graph, **Seed** and volume always give the same placement, and each node draws its own random numbers, so changing one node doesn't reshuffle the others.
+- Placed prefabs keep their prefab connection. Inside a prefab instance it doesn't regenerate (the children belong to the prefab); edit it in prefab mode or unpack the instance.
+- The inspector lists every node with the number of points it produced on the last run. **Show** draws that node's points in the Scene view (red to green by density, with their normals).
+- Nodes:
+
+| Node | What it does |
+|---|---|
+| Volume Sampler | A jittered grid of points (Spacing, Jitter) on the top face of the volume. |
+| Surface Sampler | Drops points straight down through the volume onto colliders (Layer Mask) and keeps the hits with their surface normals. Makes its own grid (Spacing, Jitter), or projects the points wired into it. |
+| Noise Density | Multiplies density by world-space Perlin noise (Scale in metres, Contrast, Invert). |
+| Density Filter | Keeps points by density: at or above a Threshold, or at random with density as the chance. Rejected points come out of the Rejected port. |
+| Slope Filter | Keeps points whose surface is between Min Angle and Max Angle from flat. Rejected points come out of the Rejected port. |
+| Transform Points | Random offset, rotation (Euler ranges) and uniform scale per point, optionally aligned to the surface normal. |
+| Spawn Prefabs | Spawns a prefab from its Palette at every point, picked by weight, and passes the points on. |
+
+- Several wires into one input are merged. Samplers stop at 250,000 points and warn, so a tiny Spacing can't freeze the editor.
+- From code: `Generate()`, `Clear()`, `Evaluate()` (runs the graph without touching the scene) and the `Graph`, `Seed` and `Size` properties. A compiled graph (`PlacementGraphAsset`) has no editor dependency.
+
 ## Snap to Floor
 Press **End** (Tools > LD Shortcuts > Snap to Floor) to drop every selected object onto the first solid surface below it, as one Undo step.
 - Triggers and the other selected objects are ignored, and objects sunk into the floor come up to its surface. A selected child of another selected object moves with its parent.
@@ -738,6 +764,7 @@ Every tool's namespace and assembly start with `UnityTools.`. The runtime assemb
 | Playtest Feedback | `UnityTools.PlaytestFeedback` |
 | Scenes, Prefab Spawner, Scene Dropdown | `UnityTools.Scenes` |
 | Projection Scatter, Physics Scatter | `UnityTools.Scatter` |
+| Placement Graph | `UnityTools.Placement` |
 | Mesh Importer, Material Creator, Vertex Painter, Gradient Editor | `UnityTools.Art` |
 | Lighting tools | `UnityTools.Lighting` |
 | Inspector Attributes | `UnityTools.Attributes` |

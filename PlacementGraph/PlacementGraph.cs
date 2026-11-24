@@ -1,0 +1,304 @@
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
+
+namespace UnityTools.Placement
+{
+    /// <summary>
+    /// Runs a placement graph inside a box volume and keeps the result as its children. Its children are generated:
+    /// Generate and Clear replace all of them, and with Auto Generate on, any change regenerates them.
+    /// </summary>
+    [ExecuteAlways]
+    [DisallowMultipleComponent]
+    [AddComponentMenu("UnityTools/Placement Graph")]
+    public class PlacementGraph : MonoBehaviour, IPlacementOutput
+    {
+        [Tooltip("The compiled graph: a .placegraph asset.")]
+        [SerializeField] private PlacementGraphAsset _graph;
+        [SerializeField] private int _seed;
+        [Tooltip("Regenerate in edit mode whenever the graph, the settings or the transform change.")]
+        [SerializeField] private bool _autoGenerate = true;
+        [Tooltip("Size of the generation volume, centred on this object.")]
+        [SerializeField] private Vector3 _size = new Vector3(20f, 10f, 20f);
+        [Tooltip("Index of the node whose points are drawn in the Scene view while selected. -1 draws none.")]
+        [SerializeField] private int _debugNode = -1;
+
+        [field: SerializeField] public int InstanceCount { get; private set; }
+
+        private readonly List<PointData[]> _lastOutputs = new List<PointData[]>();
+        private readonly List<int> _lastCounts = new List<int>();
+        private readonly List<string> _lastWarnings = new List<string>();
+        private bool _record;
+
+        /// <summary>The compiled graph this component runs.</summary>
+        public PlacementGraphAsset Graph
+        {
+            get => _graph;
+            set { _graph = value; MarkDirty(); }
+        }
+
+        /// <summary>Seed for every random choice the graph makes. The same seed gives the same result.</summary>
+        public int Seed
+        {
+            get => _seed;
+            set { _seed = value; MarkDirty(); }
+        }
+
+        /// <summary>Size of the generation volume in local space.</summary>
+        public Vector3 Size
+        {
+            get => _size;
+            set { _size = ClampSize(value); MarkDirty(); }
+        }
+
+        /// <summary>The generation volume in local space.</summary>
+        public Bounds LocalBounds => new Bounds(Vector3.zero, _size);
+
+        /// <summary>The node drawn in the Scene view, or -1.</summary>
+        public int DebugNode { get => _debugNode; set => _debugNode = value; }
+
+        /// <summary>Points on each node's first output from the last run, by node index.</summary>
+        public IReadOnlyList<int> LastNodeCounts => _lastCounts;
+
+        /// <summary>Every node's outputs from the last run, by node index, for the debug view.</summary>
+        public IReadOnlyList<PointData[]> LastOutputs => _lastOutputs;
+
+        /// <summary>Warnings from the last run.</summary>
+        public IReadOnlyList<string> LastWarnings => _lastWarnings;
+
+        private static Vector3 ClampSize(Vector3 size) =>
+            new Vector3(Mathf.Max(0.1f, size.x), Mathf.Max(0.1f, size.y), Mathf.Max(0.1f, size.z));
+
+        /// <summary>Runs the graph without touching the scene and returns every node's outputs, by node index.</summary>
+        public PointData[][] Evaluate(IPlacementOutput output = null)
+        {
+            if (_graph == null) return Array.Empty<PointData[]>();
+            var context = new PlacementContext
+            {
+                LocalToWorld = Matrix4x4.TRS(transform.position, transform.rotation, Vector3.one),
+                LocalBounds = LocalBounds,
+                Seed = _seed,
+                Output = output,
+                NodeOutputs = _lastOutputs
+            };
+            PointData[][] outputs = PlacementExecutor.Run(_graph, context);
+            _lastCounts.Clear();
+            _lastCounts.AddRange(context.NodeOutputCounts);
+            _lastWarnings.Clear();
+            _lastWarnings.AddRange(context.Warnings);
+            return outputs;
+        }
+
+        void IPlacementOutput.Spawn(GameObject prefab, Vector3 position, Quaternion rotation, Vector3 scale)
+        {
+            GameObject instance;
+#if UNITY_EDITOR
+            if (!Application.isPlaying)
+            {
+                // Prefab assets keep their prefab connection; anything else (a scene object) is copied.
+                instance = PrefabUtility.IsPartOfPrefabAsset(prefab)
+                    ? PrefabUtility.InstantiatePrefab(prefab, transform) as GameObject
+                    : Instantiate(prefab, transform);
+                if (instance == null) return;
+                if (_record) Undo.RegisterCreatedObjectUndo(instance, "Generate Placement Graph");
+            }
+            else
+#endif
+            {
+                instance = Instantiate(prefab, transform);
+            }
+            instance.transform.SetPositionAndRotation(position, rotation);
+            instance.transform.localScale = Vector3.Scale(prefab.transform.localScale, scale);
+            InstanceCount++;
+        }
+
+        /// <summary>Destroys every child (they're all generated) and runs the graph again. One Undo step in the editor.</summary>
+        public void Generate()
+        {
+#if UNITY_EDITOR
+            if (!CanRegenerate()) return;
+            Undo.SetCurrentGroupName("Generate Placement Graph");
+            Regenerate(record: true);
+#else
+            Regenerate(record: false);
+#endif
+        }
+
+        /// <summary>Destroys every child (they're all generated). One Undo step in the editor.</summary>
+        public void Clear()
+        {
+#if UNITY_EDITOR
+            if (!CanRegenerate()) return;
+            Undo.SetCurrentGroupName("Clear Placement Graph");
+            Undo.RecordObject(this, "Clear Placement Graph");
+            ClearChildren(record: true);
+#else
+            ClearChildren(record: false);
+#endif
+            InstanceCount = 0;
+        }
+
+        private void Regenerate(bool record)
+        {
+#if UNITY_EDITOR
+            if (record) Undo.RecordObject(this, "Generate Placement Graph");
+#endif
+            ClearChildren(record);
+            InstanceCount = 0;
+            _record = record;
+            try
+            {
+                Evaluate(this);
+            }
+            finally
+            {
+                _record = false;
+            }
+            foreach (string warning in _lastWarnings) Debug.LogWarning($"{name}: {warning}", this);
+        }
+
+        private void ClearChildren(bool record)
+        {
+            var children = new List<GameObject>();
+            foreach (Transform child in transform) children.Add(child.gameObject);
+            foreach (GameObject child in children)
+            {
+#if UNITY_EDITOR
+                if (record && !Application.isPlaying) { Undo.DestroyObjectImmediate(child); continue; }
+                if (!Application.isPlaying) { DestroyImmediate(child); continue; }
+#endif
+                Destroy(child);
+            }
+        }
+
+        private void MarkDirty()
+        {
+#if UNITY_EDITOR
+            _isDirty = true;
+            _dirtySince = EditorApplication.timeSinceStartup;
+#endif
+        }
+
+#if UNITY_EDITOR
+        private bool _isDirty;
+        private double _dirtySince;
+        private Vector3 _previousPosition;
+        private Quaternion _previousRotation;
+        [NonSerialized] private bool _warnedAboutPrefab;
+
+        /// <summary>Seconds a change has to settle before Auto Generate reruns the graph, so dragging stays smooth.</summary>
+        private const double SettleTime = 0.15;
+
+        /// <summary>
+        /// True when this component is part of a prefab instance in a scene. Its children belong to the prefab there
+        /// and can't be destroyed, so it doesn't regenerate.
+        /// </summary>
+        public bool IsInPrefabInstance => PrefabUtility.IsPartOfPrefabInstance(gameObject);
+
+        private bool CanRegenerate()
+        {
+            if (!IsInPrefabInstance) return true;
+            if (!_warnedAboutPrefab)
+            {
+                _warnedAboutPrefab = true;
+                Debug.LogWarning($"{name} is inside a prefab instance, so it can't regenerate its children here. " +
+                                 "Edit it in prefab mode, or unpack the prefab instance.", this);
+            }
+            return false;
+        }
+
+        private void OnValidate()
+        {
+            _size = ClampSize(_size);
+            _isDirty = true;
+            _dirtySince = EditorApplication.timeSinceStartup;
+        }
+
+        private void OnEnable()
+        {
+            _previousPosition = transform.position;
+            _previousRotation = transform.rotation;
+            EditorApplication.update += EditorUpdate;
+        }
+
+        private void OnDisable()
+        {
+            EditorApplication.update -= EditorUpdate;
+        }
+
+        /// <summary>
+        /// Marks every enabled component that runs <paramref name="graph"/> to regenerate, e.g. after a reimport.
+        /// Null marks every component.
+        /// </summary>
+        internal static void MarkUsersDirty(PlacementGraphAsset graph)
+        {
+            string path = graph != null ? AssetDatabase.GetAssetPath(graph) : null;
+            foreach (PlacementGraph user in FindObjectsByType<PlacementGraph>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            {
+                if (graph == null || user._graph == graph ||
+                    (user._graph != null && AssetDatabase.GetAssetPath(user._graph) == path))
+                {
+                    user._isDirty = true;
+                    user._dirtySince = EditorApplication.timeSinceStartup;
+                }
+            }
+        }
+
+        private void EditorUpdate()
+        {
+            if (this == null || Application.isPlaying || !_autoGenerate) return;
+
+            if (transform.position != _previousPosition || transform.rotation != _previousRotation)
+            {
+                _previousPosition = transform.position;
+                _previousRotation = transform.rotation;
+                _isDirty = true;
+                _dirtySince = EditorApplication.timeSinceStartup;
+            }
+
+            if (!_isDirty || EditorApplication.timeSinceStartup - _dirtySince < SettleTime) return;
+            _isDirty = false;
+            if (_graph == null || !CanRegenerate()) return;
+
+            // Automatic runs aren't recorded: undoing the change that caused one marks this dirty and it reruns to match.
+            Regenerate(record: false);
+            SceneView.RepaintAll();
+        }
+
+        private void OnDrawGizmosSelected()
+        {
+            Gizmos.matrix = Matrix4x4.TRS(transform.position, transform.rotation, Vector3.one);
+            Gizmos.color = new Color(0.3f, 0.8f, 1f, 0.8f);
+            Gizmos.DrawWireCube(Vector3.zero, _size);
+            Gizmos.matrix = Matrix4x4.identity;
+
+            if (_debugNode < 0 || _debugNode >= _lastOutputs.Count || _lastOutputs[_debugNode] == null) return;
+            PointData[] outputs = _lastOutputs[_debugNode];
+            if (outputs.Length == 0) return;
+            float size = Mathf.Clamp(Mathf.Min(_size.x, _size.z) / 200f, 0.05f, 0.5f);
+            foreach (PlacementPoint point in outputs[0].Points)
+            {
+                Gizmos.color = Color.Lerp(Color.red, Color.green, point.Density);
+                Gizmos.DrawCube(point.Position, Vector3.one * size);
+                Gizmos.DrawLine(point.Position, point.Position + point.Normal * size * 4f);
+            }
+        }
+
+        /// <summary>Creates an empty Placement Graph at the Scene view's pivot, as one Undo step.</summary>
+        [MenuItem("GameObject/Placement Graph", false, 0)]
+        private static void CreateFromMenu(MenuCommand command)
+        {
+            var go = new GameObject("Placement Graph");
+            GameObjectUtility.SetParentAndAlign(go, command.context as GameObject);
+            if (command.context == null && SceneView.lastActiveSceneView != null)
+                go.transform.position = SceneView.lastActiveSceneView.pivot;
+            go.AddComponent<PlacementGraph>();
+            Undo.RegisterCreatedObjectUndo(go, "Create " + go.name);
+            Selection.activeGameObject = go;
+        }
+#endif
+    }
+}
