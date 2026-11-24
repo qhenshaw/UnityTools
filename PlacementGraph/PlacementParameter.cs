@@ -6,13 +6,13 @@ namespace UnityTools.Placement
     /// <summary>The value types a placement graph parameter can have.</summary>
     public enum PlacementParameterType
     {
-        Float,
-        Int,
-        Bool,
-        Vector3,
-        Palette,
-        LayerMask,
-        Prefab
+        Float = 0,
+        Int = 1,
+        Bool = 2,
+        Vector3 = 3,
+        // 4 was Prefab Palette, which was removed; the numbers are kept so saved parameters keep their types.
+        LayerMask = 5,
+        Prefab = 6
     }
 
     /// <summary>
@@ -28,7 +28,6 @@ namespace UnityTools.Placement
         public int IntValue;
         public bool BoolValue;
         public Vector3 Vector3Value;
-        public PrefabPalette PaletteValue;
         public LayerMask LayerMaskValue;
         public GameObject PrefabValue;
 
@@ -50,7 +49,6 @@ namespace UnityTools.Placement
                 PlacementParameterType.Int => IntValue,
                 PlacementParameterType.Bool => BoolValue,
                 PlacementParameterType.Vector3 => Vector3Value,
-                PlacementParameterType.Palette => PaletteValue,
                 PlacementParameterType.LayerMask => LayerMaskValue,
                 PlacementParameterType.Prefab => PrefabValue,
                 _ => null
@@ -63,7 +61,6 @@ namespace UnityTools.Placement
                     case PlacementParameterType.Int: IntValue = Convert.ToInt32(value); break;
                     case PlacementParameterType.Bool: BoolValue = Convert.ToBoolean(value); break;
                     case PlacementParameterType.Vector3: Vector3Value = (Vector3)value; break;
-                    case PlacementParameterType.Palette: PaletteValue = value as PrefabPalette; break;
                     case PlacementParameterType.LayerMask:
                         LayerMaskValue = value is LayerMask mask ? mask : (LayerMask)Convert.ToInt32(value);
                         break;
@@ -79,7 +76,6 @@ namespace UnityTools.Placement
             PlacementParameterType.Int => typeof(int),
             PlacementParameterType.Bool => typeof(bool),
             PlacementParameterType.Vector3 => typeof(Vector3),
-            PlacementParameterType.Palette => typeof(PrefabPalette),
             PlacementParameterType.LayerMask => typeof(LayerMask),
             PlacementParameterType.Prefab => typeof(GameObject),
             _ => null

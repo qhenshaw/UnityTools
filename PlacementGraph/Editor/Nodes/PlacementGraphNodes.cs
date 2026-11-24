@@ -153,7 +153,6 @@ namespace UnityTools.Placement.Editor
     [Serializable]
     internal class SpawnPrefabsNode : PlacementGraphNode
     {
-        public const string PalettePort = "Palette";
 
         protected override PlacementNode CreateRuntimeInstance() => new Placement.SpawnPrefabsNode();
 
@@ -166,7 +165,6 @@ namespace UnityTools.Placement.Editor
 
         protected override void DefineSettings(IPortDefinitionContext context)
         {
-            AddSetting<PrefabPalette>(context, PalettePort, "Obsolete: convert with Tools > UnityTools > Convert Placement Graph Palettes.");
             AddSetting<bool>(context, "Keep Prefab Rotation", "Apply the prefab's own root rotation after the point's.");
             AddSetting<bool>(context, "Keep Prefab Scale", "Multiply the point's scale by the prefab's own root scale.");
             AddSetting<bool>(context, "Apply Entry Adjustments", "Apply the palette entry's position offset, rotation and scale.");
@@ -174,11 +172,8 @@ namespace UnityTools.Placement.Editor
 
         public override void Validate(List<string> problems)
         {
-            IPort port = GetInputPortByName(PalettePort);
             IPort entries = GetInputPortByName(EntriesPort);
-            bool hasPalette = port != null && (port.IsConnected || (port.TryGetValue(out PrefabPalette palette) && palette != null));
-            if (hasPalette) problems.Add("Spawn Prefabs uses a Prefab Palette, which is obsolete. Run Tools > UnityTools > Convert Placement Graph Palettes.");
-            if (hasPalette || (entries != null && entries.IsConnected)) return;
+            if (entries != null && entries.IsConnected) return;
             // Points can bring their own prefab from Select Prefab, which makes the entries optional.
             if (Graph != null && Graph.GetNodes().Any(n => n is SelectPrefabNode || n is ISubgraphNode)) return;
             problems.Add("Spawn Prefabs has no entries. Wire Prefab Entry nodes into Entries.");

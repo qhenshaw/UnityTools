@@ -33,7 +33,7 @@ namespace UnityTools.Placement.Tests
             return obj;
         }
 
-        private (List<PrefabEntry> palette, GameObject a, GameObject b) TwoPrefabPalette()
+        private (List<PrefabEntry> palette, GameObject a, GameObject b) TwoPrefabEntries()
         {
             GameObject a = Track(new GameObject("A"));
             GameObject b = Track(new GameObject("B"));
@@ -56,7 +56,7 @@ namespace UnityTools.Placement.Tests
         [Test]
         public void SelectPrefab_WritesAttributes_SpawnUsesThem()
         {
-            (List<PrefabEntry> palette, GameObject a, GameObject b) = TwoPrefabPalette();
+            (List<PrefabEntry> palette, GameObject a, GameObject b) = TwoPrefabEntries();
             PointData input = Grid(100);
             PointData selected = Run(new SelectPrefabNode { Entries = palette }, new PlacementContext(), input)[0];
             Assert.AreEqual(0, input.Attributes.Count, "The input isn't changed.");
@@ -76,7 +76,7 @@ namespace UnityTools.Placement.Tests
         [Test]
         public void FilterByPrefab_ThenTransformOneBranch()
         {
-            (List<PrefabEntry> palette, GameObject a, GameObject b) = TwoPrefabPalette();
+            (List<PrefabEntry> palette, GameObject a, GameObject b) = TwoPrefabEntries();
             var nodes = new List<PlacementNode>
             {
                 new VolumeSamplerNode { Spacing = 1f },
@@ -139,7 +139,7 @@ namespace UnityTools.Placement.Tests
         [Test]
         public void SelectPrefab_EntryValuesAndCustomAttributes_UsedDownstream()
         {
-            (List<PrefabEntry> palette, GameObject a, GameObject b) = TwoPrefabPalette();
+            (List<PrefabEntry> palette, GameObject a, GameObject b) = TwoPrefabEntries();
             palette[0].RotationRandomMin = new Vector3(0f, -45f, 0f);
             palette[0].RotationRandomMax = new Vector3(0f, 45f, 0f);
             palette[0].Attributes.Add(new EntryAttribute { Name = "Height", Type = PointAttributeType.Float, FloatValue = 5f });
@@ -170,7 +170,7 @@ namespace UnityTools.Placement.Tests
         [Test]
         public void TransformPoints_ApplyToPrefab_TransformsOnlyThose_InPlace()
         {
-            (List<PrefabEntry> palette, GameObject a, GameObject b) = TwoPrefabPalette();
+            (List<PrefabEntry> palette, GameObject a, GameObject b) = TwoPrefabEntries();
             PointData selected = Run(new SelectPrefabNode { Entries = palette }, new PlacementContext(), Grid(50))[0];
             PointAttribute<Object> prefabs = selected.GetAttribute<Object>(PointAttributeNames.Prefab);
             TransformPointsNode Make(TransformPointsNode.ApplyModes mode) => new TransformPointsNode

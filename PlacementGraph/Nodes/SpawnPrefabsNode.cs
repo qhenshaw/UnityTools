@@ -15,8 +15,6 @@ namespace UnityTools.Placement
     {
         [Tooltip("The prefabs to pick from for points without a Prefab attribute. In a graph: the Prefab Entry nodes wired into Entries.")]
         public List<PrefabEntry> Entries = new List<PrefabEntry>();
-        [Tooltip("Obsolete: used only when Entries is empty, until the palette is converted to Prefab Entry nodes.")]
-        public PrefabPalette Palette;
         [Tooltip("Apply the prefab's own root rotation after the point's.")]
         public bool KeepPrefabRotation;
         [Tooltip("Multiply the point's scale by the prefab's own root scale. Off: the point's scale is used as is.")]
@@ -31,7 +29,7 @@ namespace UnityTools.Placement
         {
             PointData input = inputs[0];
             outputs[0] = input;
-            IReadOnlyList<PrefabEntry> entries = Entries.Count > 0 || Palette == null ? Entries : Palette.Entries;
+            IReadOnlyList<PrefabEntry> entries = Entries;
             PointAttribute<UnityEngine.Object> prefabs = input.GetAttribute<UnityEngine.Object>(PointAttributeNames.Prefab);
             bool hasEntries = PrefabEntry.TotalWeight(entries) > 0f;
             if (prefabs == null && !hasEntries)

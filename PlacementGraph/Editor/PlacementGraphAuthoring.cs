@@ -16,7 +16,8 @@ namespace UnityTools.Placement.Editor
     /// <code>
     /// PlacementGraphHandle graph = PlacementGraphAuthoring.Create("Assets/Forest.placegraph");
     /// PlacementNodeHandle sampler = graph.AddNode("Surface Sampler").Set("Spacing", 2f);
-    /// PlacementNodeHandle spawn = graph.AddNode("Spawn Prefabs").Set("Palette", palette);
+    /// PlacementNodeHandle spawn = graph.AddNode("Spawn Prefabs");
+    /// graph.AddEntry(spawn, "Assets/Rock.prefab").Set("Random Scale", true);
     /// graph.Connect(sampler, "Out", spawn, "In");
     /// graph.Save();
     /// </code>
@@ -336,14 +337,14 @@ namespace UnityTools.Placement.Editor
         }
 
         /// <summary>
-        /// Adds a parameter: an Input variable of type float, int, bool, Vector3, PrefabPalette or LayerMask with a
+        /// Adds a parameter: an Input variable of type float, int, bool, Vector3, GameObject or LayerMask with a
         /// default. Wire it into settings with <see cref="BindParameter"/>. In a graph used as a subgraph, parameters
         /// are the subgraph node's value inputs.
         /// </summary>
         public void AddParameter<T>(string name, T defaultValue)
         {
             if (!PlacementParameter.TryGetType(typeof(T), out _))
-                throw new ArgumentException($"A parameter can't be a {typeof(T).Name}. Use float, int, bool, Vector3, PrefabPalette or LayerMask.", nameof(defaultValue));
+                throw new ArgumentException($"A parameter can't be a {typeof(T).Name}. Use float, int, bool, Vector3, GameObject or LayerMask.", nameof(defaultValue));
             CreateVariable(name, typeof(T), defaultValue, VariableKind.Input);
         }
 

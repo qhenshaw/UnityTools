@@ -9,7 +9,7 @@ using Object = UnityEngine.Object;
 
 namespace UnityTools.Placement.Tests
 {
-    /// <summary>Prefab Entry nodes, parameters bound into entries, the authoring helpers and the palette converter.</summary>
+    /// <summary>Prefab Entry nodes, parameters bound into entries and the authoring helpers.</summary>
     public class PlacementEntryTests
     {
         private const string Folder = "Assets/__PlacementEntryTests";
@@ -109,49 +109,6 @@ namespace UnityTools.Placement.Tests
             Assert.AreEqual(new Vector3(0f, 45f, 0f), built.RotationOffset);
             Assert.AreEqual(2, built.Attributes.Single().IntValue);
             Object.DestroyImmediate(compiled);
-        }
-
-        [Test]
-        public void Converter_CopiesPalettesIntoEntryNodes()
-        {
-            GameObject rock = SavedPrefab("Rock");
-            GameObject tree = SavedPrefab("Tree");
-            var palette = ScriptableObject.CreateInstance<PrefabPalette>();
-            palette.Entries.Add(new PrefabPalette.Entry { Prefab = rock, Weight = 2f, RandomScale = true, ScaleMin = 0.5f, ScaleMax = 0.6f });
-            palette.Entries.Add(new PrefabPalette.Entry { Prefab = tree, Weight = 1f, PositionOffset = Vector3.up });
-            palette.Entries[1].Attributes.Add(new EntryAttribute { Name = "Tall", Type = PointAttributeType.Float, FloatValue = 1f });
-            AssetDatabase.CreateAsset(palette, Folder + "/Palette.asset");
-
-            // A Spawn Prefabs with the palette set directly, and a Select Prefab reading it through a variable.
-            PlacementGraphHandle graph = PlacementGraphAuthoring.Create(GraphPath);
-            PlacementNodeHandle spawn = graph.AddNode("Spawn Prefabs").Set("Palette", palette);
-            PlacementNodeHandle select = graph.AddNode("Select Prefab");
-            IVariable variable = graph.Graph.CreateVariable("Palette", typeof(PrefabPalette), palette, VariableKind.Input);
-            Assert.IsTrue(graph.Graph.Connect(graph.Graph.AddVariableNode(variable, Vector2.zero).GetOutputPort(0), select.Node.GetInputPortByName("Palette")));
-            graph.Connect(select, "Out", spawn, "In");
-            graph.Save();
-            List<PrefabEntry> before = ((SpawnPrefabsNode)graph.Compiled.Nodes[1]).Entries;
-            Assert.AreEqual(0, before.Count, "Before converting, the palette is still used through the obsolete port.");
-
-            List<string> report = PlacementPaletteConverter.ConvertGraph(GraphPath);
-            Assert.AreEqual(4, report.Count, string.Join("\n", report));
-            Assert.IsEmpty(PlacementPaletteConverter.ConvertGraph(GraphPath), "Converting twice changes nothing.");
-
-            PlacementGraphHandle converted = PlacementGraphAuthoring.Open(GraphPath);
-            Assert.IsFalse(converted.Graph.GetVariables().Any(), "The palette variable is removed.");
-            PlacementGraphAsset asset = converted.Compiled;
-            Assert.AreEqual(0, asset.Parameters.Count);
-            foreach (PlacementNode node in asset.Nodes)
-            {
-                List<PrefabEntry> entries = node is SelectPrefabNode s ? s.Entries : ((SpawnPrefabsNode)node).Entries;
-                Assert.IsNull(node is SelectPrefabNode sp ? sp.Palette : ((SpawnPrefabsNode)node).Palette);
-                Assert.AreEqual(new[] { rock, tree }, entries.Select(e => e.Prefab).ToArray());
-                Assert.AreEqual(2f, entries[0].Weight);
-                Assert.IsTrue(entries[0].RandomScale);
-                Assert.AreEqual(0.6f, entries[0].ScaleMax, 1e-6f);
-                Assert.AreEqual(Vector3.up, entries[1].PositionOffset);
-                Assert.AreEqual("Tall", entries[1].Attributes.Single().Name);
-            }
         }
     }
 }

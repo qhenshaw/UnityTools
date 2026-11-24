@@ -22,17 +22,13 @@ namespace UnityTools.Placement.Editor
 
         protected override void DefineSettings(IPortDefinitionContext context)
         {
-            AddSetting<PrefabPalette>(context, "Palette", "Obsolete: convert with Tools > UnityTools > Convert Placement Graph Palettes.");
             AddSetting<bool>(context, "Write Entry Values", "Also write the entry's offset, rotation, scale and custom attributes.");
         }
 
         public override void Validate(List<string> problems)
         {
             IPort entries = GetInputPortByName(EntriesPort);
-            IPort palette = GetInputPortByName("Palette");
-            bool hasPalette = palette != null && (palette.IsConnected || (palette.TryGetValue(out PrefabPalette value) && value != null));
-            if (entries != null && !entries.IsConnected && !hasPalette) problems.Add("Select Prefab has no entries. Wire Prefab Entry nodes into Entries.");
-            if (hasPalette) problems.Add("Select Prefab uses a Prefab Palette, which is obsolete. Run Tools > UnityTools > Convert Placement Graph Palettes.");
+            if (entries != null && !entries.IsConnected) problems.Add("Select Prefab has no entries. Wire Prefab Entry nodes into Entries.");
         }
     }
 

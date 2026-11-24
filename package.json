@@ -33,7 +33,7 @@
     },
     {
       "displayName": "Placement Graph",
-      "description": "A forest floor Placement Graph (trees, undergrowth and rocks) with prefab palettes, primitive-based prefabs and a demo scene. Materials use HDRP/Lit.",
+      "description": "A forest floor Placement Graph (trees, undergrowth and rocks) with Prefab Entry nodes, primitive-based prefabs and a demo scene. Materials use HDRP/Lit.",
       "path": "Samples~/PlacementGraph"
     }
   ]

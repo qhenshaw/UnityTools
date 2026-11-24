@@ -15,8 +15,6 @@ namespace UnityTools.Placement
     {
         [Tooltip("The prefabs to pick from, by weight. In a graph: the Prefab Entry nodes wired into Entries.")]
         public List<PrefabEntry> Entries = new List<PrefabEntry>();
-        [Tooltip("Obsolete: used only when Entries is empty, until the palette is converted to Prefab Entry nodes.")]
-        public PrefabPalette Palette;
         [Tooltip("Also write the entry's offset, rotation and scale (sampled per point) and its custom attributes.")]
         public bool WriteEntryValues = true;
 
@@ -27,7 +25,7 @@ namespace UnityTools.Placement
         {
             PointData result = PointData.Copy(inputs[0]);
             outputs[0] = result;
-            IReadOnlyList<PrefabEntry> entries = Entries.Count > 0 || Palette == null ? Entries : Palette.Entries;
+            IReadOnlyList<PrefabEntry> entries = Entries;
             if (PrefabEntry.TotalWeight(entries) <= 0f)
             {
                 context.Warn(this, "No entries with a prefab and a weight above 0. Wire Prefab Entry nodes into Entries.");

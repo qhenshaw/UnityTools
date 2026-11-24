@@ -164,7 +164,6 @@ namespace UnityTools.Placement.Editor
             PlacementParameterType.Int => nameof(PlacementParameter.IntValue),
             PlacementParameterType.Bool => nameof(PlacementParameter.BoolValue),
             PlacementParameterType.Vector3 => nameof(PlacementParameter.Vector3Value),
-            PlacementParameterType.Palette => nameof(PlacementParameter.PaletteValue),
             PlacementParameterType.Prefab => nameof(PlacementParameter.PrefabValue),
             _ => nameof(PlacementParameter.LayerMaskValue)
         };
@@ -177,7 +176,6 @@ namespace UnityTools.Placement.Editor
                 case PlacementParameterType.Int: EditorGUILayout.IntField(label, parameter.IntValue); break;
                 case PlacementParameterType.Bool: EditorGUILayout.Toggle(label, parameter.BoolValue); break;
                 case PlacementParameterType.Vector3: EditorGUILayout.Vector3Field(label, parameter.Vector3Value); break;
-                case PlacementParameterType.Palette: EditorGUILayout.ObjectField(label, parameter.PaletteValue, typeof(PrefabPalette), false); break;
                 case PlacementParameterType.Prefab: EditorGUILayout.ObjectField(label, parameter.PrefabValue, typeof(GameObject), false); break;
                 default: EditorGUILayout.MaskField(label, parameter.LayerMaskValue.value, UnityEditorInternal.InternalEditorUtility.layers); break;
             }
@@ -191,7 +189,6 @@ namespace UnityTools.Placement.Editor
                 case PlacementParameterType.Int: value.FindPropertyRelative(nameof(PlacementParameter.IntValue)).intValue = declared.IntValue; break;
                 case PlacementParameterType.Bool: value.FindPropertyRelative(nameof(PlacementParameter.BoolValue)).boolValue = declared.BoolValue; break;
                 case PlacementParameterType.Vector3: value.FindPropertyRelative(nameof(PlacementParameter.Vector3Value)).vector3Value = declared.Vector3Value; break;
-                case PlacementParameterType.Palette: value.FindPropertyRelative(nameof(PlacementParameter.PaletteValue)).objectReferenceValue = declared.PaletteValue; break;
                 case PlacementParameterType.Prefab: value.FindPropertyRelative(nameof(PlacementParameter.PrefabValue)).objectReferenceValue = declared.PrefabValue; break;
                 default: value.FindPropertyRelative(nameof(PlacementParameter.LayerMaskValue)).intValue = declared.LayerMaskValue.value; break;
             }

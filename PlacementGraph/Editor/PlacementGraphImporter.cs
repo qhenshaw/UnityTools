@@ -37,7 +37,7 @@ namespace UnityTools.Placement.Editor
         }
     }
 
-    /// <summary>Regenerates Placement Graph components when their graph is reimported or a Prefab Palette changes.</summary>
+    /// <summary>Regenerates Placement Graph components when their graph is reimported.</summary>
     internal class PlacementGraphPostprocessor : AssetPostprocessor
     {
         private static void OnPostprocessAllAssets(string[] imported, string[] deleted, string[] moved, string[] movedFrom)
@@ -48,11 +48,6 @@ namespace UnityTools.Placement.Editor
                 {
                     var asset = AssetDatabase.LoadAssetAtPath<PlacementGraphAsset>(path);
                     if (asset != null) PlacementGraph.MarkUsersDirty(asset);
-                }
-                else if (AssetDatabase.GetMainAssetTypeAtPath(path) == typeof(PrefabPalette))
-                {
-                    // A palette can be used by any graph; rerunning them all is cheap enough for edit time.
-                    PlacementGraph.MarkUsersDirty(null);
                 }
             }
         }
