@@ -59,7 +59,7 @@ namespace UnityTools.Placement.Tests
             Zone("water", PlacementZone.ZoneShape.Box, Vector3.zero, name: "W");
             Zone("rocks", PlacementZone.ZoneShape.Box, new Vector3(500f, 0f, 0f), name: "Far");
 
-            var node = new SceneInputNode { Source = SceneInputNode.SourceMode.ZonesByLabel, Label = "rocks" };
+            var node = new SceneInputNode { Source = SceneInputNode.SceneSource.ZonesByLabel, Label = "rocks" };
             PointData points = Run(node, Context(new Vector3(20f, 10f, 20f)))[0];
             Assert.AreEqual(2, points.Count, "Only rocks zones overlapping the volume.");
             PointAttribute<Object> zones = points.GetAttribute<Object>(SceneInputNode.ZoneAttribute);
@@ -81,14 +81,14 @@ namespace UnityTools.Placement.Tests
             tagged.transform.position = Origin + new Vector3(1f, 0f, 2f);
             Track(new GameObject("Untagged")).transform.position = Origin;
 
-            var node = new SceneInputNode { Source = SceneInputNode.SourceMode.TaggedObjects, Tag = "Respawn" };
+            var node = new SceneInputNode { Source = SceneInputNode.SceneSource.TaggedObjects, Tag = "Respawn" };
             PointData points = Run(node, Context(new Vector3(20f, 10f, 20f)))[0];
             Assert.AreEqual(1, points.Count);
             Assert.AreEqual(tagged.transform.position, points.Points[0].Position);
             Assert.AreEqual(tagged, points.GetAttribute<Object>(SceneInputNode.ObjectAttribute).Get(0));
 
             var missing = Context(new Vector3(20f, 10f, 20f));
-            Run(new SceneInputNode { Source = SceneInputNode.SourceMode.TaggedObjects, Tag = "NoSuchTag12345" }, missing);
+            Run(new SceneInputNode { Source = SceneInputNode.SceneSource.TaggedObjects, Tag = "NoSuchTag12345" }, missing);
             Assert.AreEqual(1, missing.Warnings.Count);
         }
 
@@ -100,7 +100,7 @@ namespace UnityTools.Placement.Tests
             var nodes = new List<PlacementNode>
             {
                 new VolumeSamplerNode { Spacing = 2f, Jitter = 0f },
-                new SceneInputNode { Source = SceneInputNode.SourceMode.TaggedObjects, Tag = "Respawn" },
+                new SceneInputNode { Source = SceneInputNode.SceneSource.TaggedObjects, Tag = "Respawn" },
                 new DifferenceNode { Radius = 0.5f },
                 new SpawnPrefabsNode { Entries = new List<PrefabEntry> { new PrefabEntry { Prefab = prop } } }
             };
@@ -132,7 +132,7 @@ namespace UnityTools.Placement.Tests
         public void EmptyTag_MatchesNothing_AndWarns()
         {
             var context = Context(new Vector3(20f, 10f, 20f));
-            PointData points = Run(new SceneInputNode { Source = SceneInputNode.SourceMode.TaggedObjects }, context)[0];
+            PointData points = Run(new SceneInputNode { Source = SceneInputNode.SceneSource.TaggedObjects }, context)[0];
             Assert.AreEqual(0, points.Count);
             StringAssert.Contains("set a Tag", context.Warnings.Single());
         }

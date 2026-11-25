@@ -80,6 +80,26 @@ namespace UnityTools.Placement.Tests
         }
 
         [Test]
+        public void AddNodeMenu_ItemNamesAreUnique()
+        {
+            IReadOnlyList<PlacementNodeTypeInfo> nodes = PlacementGraphAuthoring.ListNodeTypes();
+            Assert.Greater(nodes.Count, 20);
+
+            // Nodes: by category and title.
+            var paths = nodes.Select(n => (n.Category + "/" + n.Title).ToLowerInvariant()).ToList();
+            CollectionAssert.AllItemsAreUnique(paths, "two node types share a menu path");
+
+            // Constants: Graph Toolkit lists one per setting type, named after the type's short name ("Source Mode
+            // Constant"), so two setting types with the same short name make a duplicate item and a console warning.
+            var settingTypes = nodes.SelectMany(n => n.Settings.Select(s => s.Type)).Distinct().ToList();
+            var clashes = settingTypes.GroupBy(t => ObjectNames.NicifyVariableName(t.Name).ToLowerInvariant())
+                .Where(g => g.Count() > 1)
+                .Select(g => g.Key + ": " + string.Join(", ", g.Select(t => t.FullName)))
+                .ToList();
+            Assert.IsEmpty(clashes, "setting types with the same name: " + string.Join("; ", clashes));
+        }
+
+        [Test]
         public void Duplicate_CopiesTheGraph()
         {
             string source = PlacementGraphTemplates.SuggestPath(Folder, "Source");

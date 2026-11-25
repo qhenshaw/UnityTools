@@ -131,7 +131,7 @@ namespace UnityTools.Placement.Editor
 
         protected override void DefineSettings(IPortDefinitionContext context)
         {
-            AddSetting<Placement.SceneInputNode.SourceMode>(context, "Source", "Placement Zones by label, or GameObjects by tag, in the graph's scene.");
+            AddSetting<Placement.SceneInputNode.SceneSource>(context, "Source", "Placement Zones by label, or GameObjects by tag, in the graph's scene.");
             AddSetting<string>(context, "Label", "Zones By Label: the Placement Zone label to match.");
             AddSetting<string>(context, "Tag", "Tagged Objects: the Unity tag to match.");
             AddSetting<Placement.SceneInputNode.OutputMode>(context, "Output", "One point per object, or a grid of points inside each zone.");

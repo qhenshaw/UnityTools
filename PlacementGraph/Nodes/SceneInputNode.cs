@@ -15,7 +15,8 @@ namespace UnityTools.Placement
     [Serializable]
     public class SceneInputNode : PlacementNode
     {
-        public enum SourceMode
+        [UnityEngine.Scripting.APIUpdating.MovedFrom(false, null, null, "SceneInputNode/SourceMode")]
+        public enum SceneSource
         {
             /// <summary>Placement Zone components whose Label matches.</summary>
             ZonesByLabel,
@@ -36,7 +37,7 @@ namespace UnityTools.Placement
         /// <summary>The attribute holding the GameObject a point came from (Object).</summary>
         public const string ObjectAttribute = "Object";
 
-        public SourceMode Source = SourceMode.ZonesByLabel;
+        public SceneSource Source = SceneSource.ZonesByLabel;
         [Tooltip("Zones by Label: the label to match.")]
         public string Label = "";
         [Tooltip("Tagged Objects: the Unity tag to match.")]
@@ -82,7 +83,7 @@ namespace UnityTools.Placement
         public List<Match> FindMatches(PlacementContext context)
         {
             var matches = new List<Match>();
-            if (Source == SourceMode.ZonesByLabel)
+            if (Source == SceneSource.ZonesByLabel)
             {
                 foreach (PlacementZone zone in PlacementZone.All)
                 {
