@@ -33,8 +33,11 @@ namespace UnityTools.Placement.Tests
             Undo.IncrementCurrentGroup();
             _undoGroup = Undo.GetCurrentGroup();
             _roots = new HashSet<GameObject>(Roots());
+            _graphObjects = new HashSet<Object>(UnityTools.Placement.Editor.PlacementGraphCache.Loaded());
             yield break;
         }
+
+        private HashSet<Object> _graphObjects;
 
         public IEnumerator AfterTest(ITest test)
         {
@@ -49,6 +52,12 @@ namespace UnityTools.Placement.Tests
             {
                 if (!_roots.Contains(root)) Object.DestroyImmediate(root);
             }
+
+            // Graph Toolkit keeps an in-memory copy of every graph the test loaded, even once its temporary asset is
+            // deleted, and re-enables it on every domain reload (where a dangling subgraph reference throws). Free the
+            // ones this test loaded whose file is gone; graphs loaded before the test are left alone.
+            UnityTools.Placement.Editor.PlacementGraphCache.ReleaseDeleted(
+                UnityTools.Placement.Editor.PlacementGraphCache.Loaded().Where(g => !_graphObjects.Contains(g)), _ => true);
 
             if (leaked.Count > 0) Assert.Fail($"The test left {leaked.Count} root object(s) in the scene: {names}");
             yield break;
