@@ -113,6 +113,15 @@ namespace UnityTools.Placement
             /// <summary>The module's length runs along its local Z axis.</summary>
             Z = 2
         }
+
+        /// <summary>What Subdivide puts in an opening.</summary>
+        public enum OpeningMode
+        {
+            /// <summary>Nothing: the wall is left open.</summary>
+            Gap,
+            /// <summary>The module with the Opening Symbol, e.g. a door.</summary>
+            Module
+        }
     }
 
     /// <summary>
@@ -121,6 +130,14 @@ namespace UnityTools.Placement
     /// their length to close the gap (or left at their size with Scale To Fit off). Output points carry the Prefab
     /// attribute (so Spawn Prefabs and Spawn Instanced place the modules), ModuleIndex, and BoundsMin and BoundsMax
     /// (the module's measured bounds, scaled).
+    /// <para>
+    /// Openings (optional, second input) cut doorways and hallways into the walls: Placement Zones from Scene Input
+    /// open the part of each segment their shape crosses, and plain points open Opening Width around where they
+    /// project onto their nearest segment. Each segment is split at its openings and every remaining run is filled with
+    /// the grammar; the opening is left empty (Gap) or gets the Opening Symbol's module (Module), whose points carry
+    /// Opening = 1. Every opening also comes out of the Gaps output as one point at its centre, along the wall, with
+    /// Opening = 1, Width and bounds, for door frames or hallway pieces.
+    /// </para>
     /// </summary>
     [Serializable]
     public class SubdivideNode : PlacementNode
@@ -128,6 +145,8 @@ namespace UnityTools.Placement
         public const string ModuleIndexAttribute = "ModuleIndex";
         public const string BoundsMinAttribute = "BoundsMin";
         public const string BoundsMaxAttribute = "BoundsMax";
+        public const string OpeningAttribute = "Opening";
+        public const string WidthAttribute = "Width";
 
         [Tooltip("The modules the grammar can use. In a graph: the Module nodes chained into Modules.")]
         public List<ModuleDefinition> Modules = new List<ModuleDefinition>();
@@ -144,14 +163,34 @@ namespace UnityTools.Placement
         [Min(0f)] public float CornerTrim;
         [Tooltip("Turns of at least this many degrees count as corners for Corner Trim.")]
         [Range(0f, 180f)] public float CornerAngle = 10f;
+        [Tooltip("Openings: leave them empty (Gap), or place the Opening Symbol's module in them (Module).")]
+        public Subdivide.OpeningMode OpeningMode = Subdivide.OpeningMode.Gap;
+        [Tooltip("Openings, Module mode: the symbol of the module placed in each opening, e.g. Door.")]
+        public string OpeningSymbol = "Door";
+        [Tooltip("Openings: how wide an opening from a plain point is, in metres (zones use the part of the wall they cross).")]
+        [Min(0f)] public float OpeningWidth = 2f;
+        [Tooltip("Openings: make each opening exactly as wide as the Opening Symbol's module, centred where the zone or point is.")]
+        public bool FitToModule;
+        [Tooltip("Openings: how far a zone or point can be from a wall, in metres, and still open it.")]
+        [Min(0f)] public float MaxDistance = 1f;
 
-        public override int InputCount => 1;
-        public override int OutputCount => 1;
+        public override int InputCount => 2;
+        public override int OutputCount => 2;
+
+        /// <summary>An opening on one segment: from <see cref="Start"/> to <see cref="End"/> metres along it.</summary>
+        private struct Span
+        {
+            public float Start;
+            public float End;
+            public Span(float start, float end) { Start = start; End = end; }
+        }
 
         public override void Execute(PlacementContext context, PointData[] inputs, PointData[] outputs)
         {
             var result = new PointData();
+            var gaps = new PointData();
             outputs[0] = result;
+            outputs[1] = gaps;
             if (!ModuleGrammar.TryParse(Grammar, out ModuleGrammar grammar, out string error))
             {
                 context.Warn(this, error);
@@ -168,56 +207,331 @@ namespace UnityTools.Placement
             uint seed = PlacementRandom.Hash(context.SeedHash, NodeSeed);
             int axis = (int)ModuleAxis;
             var slots = new List<ModuleGrammar.Slot>();
-            int segmentNumber = 0;
-            foreach ((List<Vector3> points, bool closed) in Polylines.Gather(context, this, Source, inputs[0], Closed))
+            List<(List<Vector3> points, bool closed)> lines = Polylines.Gather(context, this, Source, inputs[0], Closed);
+
+            // Openings: zones stand for their shape; plain points open a width around their projection.
+            PointData openings = inputs.Length > 1 && inputs[1] != null ? inputs[1] : PointData.Empty;
+            var zones = new List<PlacementZone>();
+            var plain = new List<Vector3>();
+            PointAttribute<UnityEngine.Object> zoneColumn = openings.GetAttribute<UnityEngine.Object>(SceneInputNode.ZoneAttribute);
+            for (int i = 0; i < openings.Count; i++)
             {
-                int segments = closed ? points.Count : points.Count - 1;
-                for (int s = 0; s < segments; s++, segmentNumber++)
+                if (zoneColumn?.Get(i) is PlacementZone zone && zone != null)
                 {
-                    Vector3 a = points[s], b = points[(s + 1) % points.Count];
-                    Vector3 direction = b - a;
-                    float length = direction.magnitude;
-                    if (length < 1e-4f) continue;
-                    direction /= length;
-                    float trimStart = Mathf.Abs(Polylines.TurnAngle(points, closed, s)) >= CornerAngle && (closed || s > 0) ? CornerTrim : 0f;
-                    int endIndex = (s + 1) % points.Count;
-                    float trimEnd = Mathf.Abs(Polylines.TurnAngle(points, closed, endIndex)) >= CornerAngle && (closed || endIndex < points.Count - 1) ? CornerTrim : 0f;
-                    float usable = length - trimStart - trimEnd;
-                    if (usable <= 1e-4f) continue;
+                    if (!zones.Contains(zone)) zones.Add(zone);
+                }
+                else plain.Add(openings.Points[i].Position);
+            }
+            bool hasOpenings = zones.Count > 0 || plain.Count > 0;
+            int openingModule = -1;
+            float openingSize = OpeningWidth;
+            if (hasOpenings && (OpeningMode == Subdivide.OpeningMode.Module || FitToModule))
+            {
+                openingModule = FindModule(OpeningSymbol);
+                if (openingModule >= 0) openingSize = Modules[openingModule].LengthAlong(axis);
+                else if (OpeningMode == Subdivide.OpeningMode.Module)
+                    context.Warn(this, $"No module has the Opening Symbol '{OpeningSymbol}', so openings are left empty.");
+            }
+            Dictionary<(int line, int segment), List<Vector3>> pointsBySegment = hasOpenings ? AssignToSegments(lines, plain) : null;
 
-                    uint segmentSeed = PlacementRandom.Hash(seed, unchecked((uint)segmentNumber));
-                    if (!grammar.TryFit(usable, Modules, axis, ScaleToFit,
-                            pick => PlacementRandom.Value(PlacementRandom.Hash(segmentSeed, unchecked((uint)pick), 77u)), slots, out error))
-                    {
-                        context.Warn(this, error);
-                        return;
-                    }
+            PointAttribute<int> openingFlags = hasOpenings ? result.GetOrAddAttribute<int>(OpeningAttribute) : null;
+            PointAttribute<int> gapFlags = gaps.GetOrAddAttribute<int>(OpeningAttribute);
+            PointAttribute<float> gapWidths = gaps.GetOrAddAttribute<float>(WidthAttribute);
+            PointAttribute<Vector3> gapMin = gaps.GetOrAddAttribute<Vector3>(BoundsMinAttribute);
+            PointAttribute<Vector3> gapMax = gaps.GetOrAddAttribute<Vector3>(BoundsMaxAttribute);
 
-                    Quaternion rotation = Polylines.AlongAxis(direction, axis);
-                    for (int k = 0; k < slots.Count; k++)
+            foreach (PlacementZone zone in zones) zone.BeginQueries();
+            try
+            {
+                int segmentNumber = 0;
+                for (int l = 0; l < lines.Count; l++)
+                {
+                    (List<Vector3> points, bool closed) = lines[l];
+                    int segments = closed ? points.Count : points.Count - 1;
+                    for (int s = 0; s < segments; s++, segmentNumber++)
                     {
-                        ModuleGrammar.Slot slot = slots[k];
-                        ModuleDefinition module = Modules[slot.Module];
-                        Vector3 centre = a + direction * (trimStart + slot.Start + slot.Length * 0.5f);
-                        PlacementPoint point = PlacementPoint.At(centre, PlacementRandom.Hash(segmentSeed, unchecked((uint)k)));
-                        // The module's own centre along its axis sits at the slot centre.
-                        Vector3 scale = Vector3.one;
-                        scale[axis] = slot.Scale;
-                        Vector3 pivotShift = Vector3.zero;
-                        pivotShift[axis] = -measured[slot.Module].center[axis] * slot.Scale;
-                        point.Rotation = rotation * Quaternion.Euler(module.RotationOffset);
-                        point.Position = centre + rotation * (pivotShift + module.PositionOffset);
-                        point.Scale = scale;
-                        point.Normal = Vector3.up;
-                        int index = result.Count;
-                        result.Points.Add(point);
-                        prefabs.Set(index, module.Prefab);
-                        indices.Set(index, slot.Module);
-                        boundsMin.Set(index, Vector3.Scale(measured[slot.Module].min, scale));
-                        boundsMax.Set(index, Vector3.Scale(measured[slot.Module].max, scale));
+                        Vector3 a = points[s], b = points[(s + 1) % points.Count];
+                        Vector3 direction = b - a;
+                        float length = direction.magnitude;
+                        if (length < 1e-4f) continue;
+                        direction /= length;
+                        float trimStart = Mathf.Abs(Polylines.TurnAngle(points, closed, s)) >= CornerAngle && (closed || s > 0) ? CornerTrim : 0f;
+                        int endIndex = (s + 1) % points.Count;
+                        float trimEnd = Mathf.Abs(Polylines.TurnAngle(points, closed, endIndex)) >= CornerAngle && (closed || endIndex < points.Count - 1) ? CornerTrim : 0f;
+                        float usable = length - trimStart - trimEnd;
+                        if (usable <= 1e-4f) continue;
+
+                        uint segmentSeed = PlacementRandom.Hash(seed, unchecked((uint)segmentNumber));
+                        Quaternion rotation = Polylines.AlongAxis(direction, axis);
+                        float from = trimStart, to = length - trimEnd;
+
+                        List<Span> spans = hasOpenings
+                            ? Spans(context, a, direction, length, from, to, zones,
+                                pointsBySegment.TryGetValue((l, s), out List<Vector3> near) ? near : null, openingSize)
+                            : null;
+
+                        // The runs between openings, each filled with the grammar. With no openings it's the whole
+                        // segment with the segment's own seed, exactly as before Openings existed.
+                        float cursor = from;
+                        int runCount = (spans?.Count ?? 0) + 1;
+                        for (int r = 0; r < runCount; r++)
+                        {
+                            float runEnd = spans != null && r < spans.Count ? spans[r].Start : to;
+                            float runLength = runEnd - cursor;
+                            if (runLength > 1e-3f)
+                            {
+                                uint runSeed = r == 0 ? segmentSeed : PlacementRandom.Hash(segmentSeed, unchecked((uint)r), 991u);
+                                if (!grammar.TryFit(runLength, Modules, axis, ScaleToFit,
+                                        pick => PlacementRandom.Value(PlacementRandom.Hash(runSeed, unchecked((uint)pick), 77u)), slots, out error))
+                                {
+                                    context.Warn(this, error);
+                                    return;
+                                }
+                                for (int k = 0; k < slots.Count; k++)
+                                {
+                                    ModuleGrammar.Slot slot = slots[k];
+                                    AddModule(result, prefabs, indices, boundsMin, boundsMax, measured, a, direction, rotation, axis,
+                                        cursor + slot.Start, slot.Length, slot.Scale, slot.Module, PlacementRandom.Hash(runSeed, unchecked((uint)k)));
+                                    openingFlags?.Set(result.Count - 1, 0);
+                                }
+                            }
+                            if (spans == null || r >= spans.Count) break;
+
+                            Span span = spans[r];
+                            float width = span.End - span.Start;
+                            uint openingSeed = PlacementRandom.Hash(segmentSeed, unchecked((uint)r), 503u);
+                            if (OpeningMode == Subdivide.OpeningMode.Module && openingModule >= 0)
+                            {
+                                int module = PickModule(OpeningSymbol, PlacementRandom.Value(PlacementRandom.Hash(openingSeed, 77u)));
+                                float natural = Modules[module].LengthAlong(axis);
+                                float scale = ScaleToFit ? width / natural : 1f;
+                                float slotLength = natural * scale;
+                                AddModule(result, prefabs, indices, boundsMin, boundsMax, measured, a, direction, rotation, axis,
+                                    span.Start + (width - slotLength) * 0.5f, slotLength, scale, module, openingSeed);
+                                openingFlags.Set(result.Count - 1, 1);
+                            }
+
+                            PlacementPoint gap = PlacementPoint.At(a + direction * (span.Start + width * 0.5f), PlacementRandom.Hash(openingSeed, 1u));
+                            gap.Rotation = rotation;
+                            gap.Normal = Vector3.up;
+                            int g = gaps.Count;
+                            gaps.Points.Add(gap);
+                            gapFlags.Set(g, 1);
+                            gapWidths.Set(g, width);
+                            Vector3 half = Vector3.zero;
+                            half[axis] = width * 0.5f;
+                            gapMin.Set(g, -half);
+                            gapMax.Set(g, half);
+                            cursor = span.End;
+                        }
                     }
                 }
             }
+            finally
+            {
+                foreach (PlacementZone zone in zones) zone.EndQueries();
+            }
+        }
+
+        private void AddModule(PointData result, PointAttribute<UnityEngine.Object> prefabs, PointAttribute<int> indices,
+            PointAttribute<Vector3> boundsMin, PointAttribute<Vector3> boundsMax, Bounds[] measured, Vector3 a, Vector3 direction,
+            Quaternion rotation, int axis, float start, float slotLength, float slotScale, int moduleIndex, uint pointSeed)
+        {
+            ModuleDefinition module = Modules[moduleIndex];
+            Vector3 centre = a + direction * (start + slotLength * 0.5f);
+            PlacementPoint point = PlacementPoint.At(centre, pointSeed);
+            // The module's own centre along its axis sits at the slot centre.
+            Vector3 scale = Vector3.one;
+            scale[axis] = slotScale;
+            Vector3 pivotShift = Vector3.zero;
+            pivotShift[axis] = -measured[moduleIndex].center[axis] * slotScale;
+            point.Rotation = rotation * Quaternion.Euler(module.RotationOffset);
+            point.Position = centre + rotation * (pivotShift + module.PositionOffset);
+            point.Scale = scale;
+            point.Normal = Vector3.up;
+            int index = result.Count;
+            result.Points.Add(point);
+            prefabs.Set(index, module.Prefab);
+            indices.Set(index, moduleIndex);
+            boundsMin.Set(index, Vector3.Scale(measured[moduleIndex].min, scale));
+            boundsMax.Set(index, Vector3.Scale(measured[moduleIndex].max, scale));
+        }
+
+        private bool Usable(int m, string symbol) =>
+            Modules[m] != null && Modules[m].Prefab != null && Modules[m].Symbol == symbol && Modules[m].Weight > 0f;
+
+        private int FindModule(string symbol)
+        {
+            for (int m = 0; m < Modules.Count; m++) if (Usable(m, symbol)) return m;
+            return -1;
+        }
+
+        /// <summary>A module with <paramref name="symbol"/>, chosen by weight with <paramref name="random"/> in [0, 1).</summary>
+        private int PickModule(string symbol, float random)
+        {
+            float total = 0f;
+            for (int m = 0; m < Modules.Count; m++) if (Usable(m, symbol)) total += Modules[m].Weight;
+            float target = random * total;
+            int last = -1;
+            for (int m = 0; m < Modules.Count; m++)
+            {
+                if (!Usable(m, symbol)) continue;
+                last = m;
+                if (target < Modules[m].Weight) return m;
+                target -= Modules[m].Weight;
+            }
+            return last;
+        }
+
+        /// <summary>Each plain opening point goes to the segment nearest it (seen from above), if within Max Distance.</summary>
+        private Dictionary<(int, int), List<Vector3>> AssignToSegments(List<(List<Vector3> points, bool closed)> lines, List<Vector3> plain)
+        {
+            var bySegment = new Dictionary<(int, int), List<Vector3>>();
+            foreach (Vector3 p in plain)
+            {
+                float best = float.PositiveInfinity;
+                (int, int) bestKey = (-1, -1);
+                for (int l = 0; l < lines.Count; l++)
+                {
+                    (List<Vector3> points, bool closed) = lines[l];
+                    int segments = closed ? points.Count : points.Count - 1;
+                    for (int s = 0; s < segments; s++)
+                    {
+                        float distance = FlatDistanceToSegment(p, points[s], points[(s + 1) % points.Count]);
+                        // Ties (a point at a corner) go to the earlier segment, so the result doesn't depend on float noise.
+                        if (distance < best - 1e-5f)
+                        {
+                            best = distance;
+                            bestKey = (l, s);
+                        }
+                    }
+                }
+                if (bestKey.Item1 < 0 || best > MaxDistance) continue;
+                if (!bySegment.TryGetValue(bestKey, out List<Vector3> list)) bySegment[bestKey] = list = new List<Vector3>();
+                list.Add(p);
+            }
+            return bySegment;
+        }
+
+        private static float FlatDistanceToSegment(Vector3 p, Vector3 a, Vector3 b)
+        {
+            var flatA = new Vector2(a.x, a.z);
+            var ab = new Vector2(b.x, b.z) - flatA;
+            var ap = new Vector2(p.x, p.z) - flatA;
+            float t = ab.sqrMagnitude > 1e-10f ? Mathf.Clamp01(Vector2.Dot(ap, ab) / ab.sqrMagnitude) : 0f;
+            return (ap - ab * t).magnitude;
+        }
+
+        /// <summary>
+        /// The openings on one segment, as merged spans inside [<paramref name="from"/>, <paramref name="to"/>] metres
+        /// along it, sorted. Spans that reach past the usable part (a corner, or Corner Trim) are clamped, with a warning.
+        /// </summary>
+        private List<Span> Spans(PlacementContext context, Vector3 a, Vector3 direction, float length, float from, float to,
+            List<PlacementZone> zones, List<Vector3> points, float openingSize)
+        {
+            var raw = new List<(Span span, float centre)>();
+            foreach (PlacementZone zone in zones)
+            {
+                if (TryZoneSpan(zone, a, direction, length, out Span span)) raw.Add((span, (span.Start + span.End) * 0.5f));
+            }
+            if (points != null)
+            {
+                var flatDirection = new Vector2(direction.x, direction.z).normalized;
+                foreach (Vector3 p in points)
+                {
+                    float t = Vector2.Dot(new Vector2(p.x - a.x, p.z - a.z), flatDirection);
+                    raw.Add((new Span(t - OpeningWidth * 0.5f, t + OpeningWidth * 0.5f), t));
+                }
+            }
+            if (FitToModule)
+            {
+                for (int i = 0; i < raw.Count; i++)
+                    raw[i] = (new Span(raw[i].centre - openingSize * 0.5f, raw[i].centre + openingSize * 0.5f), raw[i].centre);
+            }
+
+            var spans = new List<Span>();
+            bool clamped = false;
+            foreach ((Span span, float _) in raw)
+            {
+                if (span.End <= from + 1e-4f || span.Start >= to - 1e-4f)
+                {
+                    // Entirely in the trimmed corner (or past the segment): nothing of this wall to open.
+                    if (span.End > 0f && span.Start < length) clamped = true;
+                    continue;
+                }
+                var kept = new Span(Mathf.Max(span.Start, from), Mathf.Min(span.End, to));
+                if (kept.Start > span.Start + 1e-4f || kept.End < span.End - 1e-4f) clamped = true;
+                if (kept.End - kept.Start > 1e-3f) spans.Add(kept);
+            }
+            if (clamped) context.Warn(this, "An opening runs past the end of its wall (a corner, or Corner Trim); it was cut back to that wall.");
+
+            spans.Sort((x, y) => x.Start.CompareTo(y.Start));
+            var merged = new List<Span>(spans.Count);
+            foreach (Span span in spans)
+            {
+                if (merged.Count > 0 && span.Start <= merged[merged.Count - 1].End + 1e-4f)
+                {
+                    Span last = merged[merged.Count - 1];
+                    merged[merged.Count - 1] = new Span(last.Start, Mathf.Max(last.End, span.End));
+                }
+                else merged.Add(span);
+            }
+            return merged;
+        }
+
+        /// <summary>
+        /// Where <paramref name="zone"/>'s shape crosses the segment, seen from above: sampled along the segment and
+        /// refined at the edges. A zone that doesn't cross it but comes within Max Distance opens the part its footprint
+        /// covers. False when the zone is further away.
+        /// </summary>
+        private bool TryZoneSpan(PlacementZone zone, Vector3 a, Vector3 direction, float length, out Span span)
+        {
+            span = default;
+            int samples = Mathf.Clamp(Mathf.CeilToInt(length / 0.05f), 8, 4000);
+            float step = length / samples;
+            float first = float.NaN, last = float.NaN, nearest = float.PositiveInfinity;
+            bool previousInside = false;
+            for (int i = 0; i <= samples; i++)
+            {
+                float t = i * step;
+                float distance = zone.SignedDistanceFromAbove(a + direction * t);
+                nearest = Mathf.Min(nearest, distance);
+                bool inside = distance <= 0f;
+                if (inside && float.IsNaN(first)) first = i == 0 ? -0.01f : Refine(zone, a, direction, t - step, t); // Inside at the start: past it.
+                if (!inside && previousInside) last = Refine(zone, a, direction, t, t - step);
+                previousInside = inside;
+            }
+            if (!float.IsNaN(first))
+            {
+                if (float.IsNaN(last)) last = length + 0.01f; // Still inside at the end: it runs past the wall's end, which Spans reports.
+                span = new Span(first, last);
+                return true;
+            }
+            if (nearest > MaxDistance) return false;
+            // Beside the wall: the footprint's extent along it.
+            Bounds bounds = zone.WorldBounds;
+            float min = float.PositiveInfinity, max = float.NegativeInfinity;
+            for (int corner = 0; corner < 4; corner++)
+            {
+                var p = new Vector3((corner & 1) == 0 ? bounds.min.x : bounds.max.x, a.y, (corner & 2) == 0 ? bounds.min.z : bounds.max.z);
+                float t = Vector3.Dot(p - a, direction);
+                min = Mathf.Min(min, t);
+                max = Mathf.Max(max, t);
+            }
+            span = new Span(min, max);
+            return max > 0f && min < length;
+        }
+
+        /// <summary>The distance along the segment between <paramref name="outside"/> and <paramref name="inside"/> where the zone's edge is.</summary>
+        private static float Refine(PlacementZone zone, Vector3 a, Vector3 direction, float outside, float inside)
+        {
+            for (int i = 0; i < 12; i++)
+            {
+                float middle = (outside + inside) * 0.5f;
+                if (zone.SignedDistanceFromAbove(a + direction * middle) <= 0f) inside = middle;
+                else outside = middle;
+            }
+            return (outside + inside) * 0.5f;
         }
     }
 

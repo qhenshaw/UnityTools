@@ -59,9 +59,17 @@ namespace UnityTools.Placement.Editor
         protected override void DefinePointPorts(IPortDefinitionContext context)
         {
             AddPointInput(context, InPort);
+            AddPointInput(context, OpeningsPort);
             AddLinkInput<ModuleLink>(context, ModulesPort, "Module nodes (a chain): the modules the grammar can use.");
             AddPointOutput(context, OutPort);
+            AddPointOutput(context, GapsPort);
         }
+
+        /// <summary>Optional: Placement Zones (from Scene Input) or points where the walls open.</summary>
+        public const string OpeningsPort = "Openings";
+
+        /// <summary>One point per opening, at its centre along the wall, with Opening, Width and bounds.</summary>
+        public const string GapsPort = "Gaps";
 
         protected override void DefineSettings(IPortDefinitionContext context)
         {
@@ -72,15 +80,40 @@ namespace UnityTools.Placement.Editor
             AddSetting<bool>(context, "Scale To Fit", "Scale modules along their length to fill each segment exactly; off leaves a gap at the end.");
             AddSetting<float>(context, "Corner Trim", "Shorten segments by this much at each corner, to leave room for corner modules.");
             AddSetting<float>(context, "Corner Angle", "Turns of at least this many degrees count as corners.");
+            AddSetting<Placement.Subdivide.OpeningMode>(context, "Opening Mode", "Openings: leave them empty (Gap), or place the Opening Symbol's module in them (Module).");
+            AddSetting<string>(context, "Opening Symbol", "Openings, Module mode: the symbol of the module placed in each opening, e.g. Door.");
+            AddSetting<float>(context, "Opening Width", "Openings: how wide an opening from a plain point is, in metres. Zones use the part of the wall they cross.");
+            AddSetting<bool>(context, "Fit To Module", "Openings: make each opening exactly as wide as the Opening Symbol's module, centred on the zone or point.");
+            AddSetting<float>(context, "Max Distance", "Openings: how far a zone or point can be from a wall, in metres, and still open it.");
         }
 
         public override void Validate(List<string> problems)
         {
+            ValidateOpenings(problems);
             IPort grammar = GetInputPortByName("Grammar");
             if (grammar == null || grammar.IsConnected || !grammar.TryGetValue(out string text)) return;
             if (!ModuleGrammar.TryParse(text, out _, out string error)) problems.Add($"Subdivide grammar: {error}");
             IPort modules = GetInputPortByName(ModulesPort);
             if (modules != null && !modules.IsConnected) problems.Add("Subdivide has no modules. Chain Module nodes into Modules.");
+        }
+
+        /// <summary>With openings wired in and wanting a module (Module mode or Fit To Module), one with the Opening Symbol must be chained in.</summary>
+        private void ValidateOpenings(List<string> problems)
+        {
+            IPort openings = GetInputPortByName(OpeningsPort);
+            if (openings == null || !openings.IsConnected) return;
+            IPort mode = GetInputPortByName("Opening Mode");
+            IPort fit = GetInputPortByName("Fit To Module");
+            bool wantsModule = (mode != null && !mode.IsConnected && mode.TryGetValue(out Placement.Subdivide.OpeningMode value) && value == Placement.Subdivide.OpeningMode.Module) ||
+                               (fit != null && !fit.IsConnected && fit.TryGetValue(out bool fitValue) && fitValue);
+            IPort symbolPort = GetInputPortByName("Opening Symbol");
+            if (!wantsModule || symbolPort == null || symbolPort.IsConnected || !symbolPort.TryGetValue(out string symbol)) return;
+            foreach (ModuleNode module in PrefabEntryNode.Chain<ModuleNode>(GetInputPortByName(ModulesPort), ModulesPort))
+            {
+                IPort moduleSymbol = module.GetInputPortByName("Symbol");
+                if (moduleSymbol != null && moduleSymbol.TryGetValue(out string text) && text == symbol) return;
+            }
+            problems.Add($"Subdivide openings use the module '{symbol}' (Opening Symbol), but no Module in its chain has that symbol.");
         }
     }
 
