@@ -709,6 +709,53 @@ PlacementGraphAsset compiled = graph.Save();      // writes the file and reimpor
 - Subgraphs: in the subgraph, `AddPointInput(name)` and `AddPointOutput(name)` add the point ports and `AddParameter` the value ports; in the graph using it, `AddSubgraph(path)` adds the node, whose ports are named after those variables.
 - Values convert where it's clear: numbers between numeric types, enum names (`"Threshold"`), an int for a LayerMask, three numbers (or one, for all axes) for a Vector3 and an asset path for a prefab. Unknown nodes, ports or settings and mismatched types throw an exception that lists what's available.
 
+### From the command line
+With the Pipeline package (`com.unity.pipeline`) installed, the `placement` command groups edit, inspect and run graphs with no code, in the open editor, including a graph open in the graph window. Every command returns JSON, or `{"error": ...}` with what was expected and the closest match (`Did you mean 'Corner Trim'?`). The same handlers are `UnityTools.Placement.Editor.PlacementGraphJson`, for tests and editor scripts. `unity command placement` (and `placement.node`, `placement.wire`, `placement.entries`, `placement.params`, `placement.component`) lists them, and `--help` on each its options.
+- **Graphs** are a path or a file name: `--graph Room`. **Nodes** are an id from `inspect` (its first few characters do), `#index`, a title when only one node has it (`Subdivide`), or a title and the title of a node wired into it (`"Spawn Prefabs<Merge"`). **Values** are text: numbers, true/false, enum names, `x,y,z`, asset paths or names (`structure-wall`), `none`. Several go in one `--set "Corner Trim=1;Closed=true"` (`\;` keeps a `;` in a value).
+- Edits are saved and the graph reimported (so components with Auto Generate regenerate) unless `--save false`; then `placement save` writes them. Each edit is one Undo step in the graph window, and scene changes (generate, clear, component and override edits) record Undo.
+
+| Command | Example |
+|---|---|
+| `placement list` | `unity command placement list --folder Assets/Levels` |
+| `placement create` | `unity command placement create --path Assets/Graphs/Walls.placegraph --template ModularWall` (Empty, ScatterOnSurface, FillSplineArea, ModularWall) |
+| `placement duplicate` | `unity command placement duplicate --graph Room --path Assets/Graphs/Room2.placegraph` |
+| `placement types` | `unity command placement types --name Filter` (ports, settings, types, defaults, enum choices) |
+| `placement inspect` | `unity command placement inspect --graph Room` (nodes with ids, settings, wires, entries and modules, parameters, problems, compile errors and warnings) |
+| `placement.node get` | `unity command placement.node get --graph Room --node Subdivide` (every setting's type, choices and value) |
+| `placement.node add` | `unity command placement.node add --graph Room --type "Density Filter" --set "Mode=Random" --position 600,200` |
+| `placement.node remove` | `unity command placement.node remove --graph Room --node 6f01b237` (its entries, modules or attributes go too unless `--keep-chain true`) |
+| `placement.node set` | `unity command placement.node set --graph Room --node Subdivide --set "Corner Trim=1;Grammar=[Wall]*"` |
+| `placement.wire connect` | `unity command placement.wire connect --graph Room --from Corner --to Merge --to-port B` (ports default to Out and In) |
+| `placement.wire disconnect` | `unity command placement.wire disconnect --graph Room --to Merge --to-port B [--from Corner]` |
+| `placement.entries list` | `unity command placement.entries list --graph Room --node "Spawn Prefabs<Merge"` (Prefab Entries of a spawner, Modules of Subdivide) |
+| `placement.entries set` | `unity command placement.entries set --graph Room --node Subdivide --prefabs "structure-wall;structure-window" --set "Size=0"` (or `--file entries.json`: `[{"prefab": "...", "set": "Weight=2"}]`) |
+| `placement.entries add` | `unity command placement.entries add --graph Room --node "Spawn Prefabs<Merge" --prefabs crate --set "Weight=0.5" --index 0` |
+| `placement.entries remove` | `unity command placement.entries remove --graph Room --node "Spawn Prefabs<Merge" --prefab crate` (or `--index 1`) |
+| `placement.entries edit` | `unity command placement.entries edit --graph Room --node "Spawn Prefabs<Merge" --index 0 --set "Random Scale=true;Scale Max=1.2"` |
+| `placement.entries attribute` | `unity command placement.entries attribute --graph Room --node "Spawn Prefabs<Merge" --index 0 --name Tint --value 0.5` |
+| `placement.params list` | `unity command placement.params list --graph Forest [--object "Forest Floor"]` |
+| `placement.params add` | `unity command placement.params add --graph Forest --name Spacing --type float --value 2` |
+| `placement.params bind` | `unity command placement.params bind --graph Forest --name Spacing --node "Surface Sampler" --option Spacing` |
+| `placement.params set` | `unity command placement.params set --graph Forest --name Spacing --value 3` (the default), or `--object "Forest Floor"` (an override) |
+| `placement.params clear` | `unity command placement.params clear --object "Forest Floor" --name Spacing` |
+| `placement.params remove` | `unity command placement.params remove --graph Forest --name Spacing` |
+| `placement.component list` | `unity command placement.component list [--graph Room]` (graph, seed, size, cells, Generate On, instances, overrides) |
+| `placement.component create` | `unity command placement.component create --graph Room --position 0,0,0 --size 12,4,10` |
+| `placement.component set` | `unity command placement.component set --object Room --set "Seed=4;Size=12,4,10;Cell Size=0;Generate On=OnLoad"` |
+| `placement generate` | `unity command placement generate --graph Room` (every object using it; or `--object Room`): spawns by prefab and timings |
+| `placement clear` | `unity command placement clear --object Room` |
+| `placement evaluate` | `unity command placement evaluate --graph Room [--object Room]`: a dry run of the graph as it is now, saved or not (per-node points and times, spawns by prefab, warnings), touching nothing |
+| `placement stats` | `unity command placement stats --object Room` (generated objects by prefab, cells, the last run's per-node points and times) |
+| `placement save` | `unity command placement save --graph Room` |
+
+Worked example: put corner posts on a room's Corner branch and trim the walls to fit them (a 2 m wide post, so 1 m at each corner), then regenerate:
+```
+unity command placement.entries set --graph Room --node "Spawn Prefabs<Merge" --prefabs structure-corner-outer --set "Random Scale=false"
+unity command placement.node set --graph Room --node Subdivide --set "Corner Trim=1"
+unity command placement generate --graph Room
+```
+The last command's `byPrefab` gives the counts, e.g. `"structure-corner-outer": 4`. In PowerShell, quote values that contain `;` or `<`.
+
 ## Snap to Floor
 Press **End** (Tools > LD Shortcuts > Snap to Floor) to drop every selected object onto the first solid surface below it, as one Undo step.
 - Triggers and the other selected objects are ignored, and objects sunk into the floor come up to its surface. A selected child of another selected object moves with its parent.

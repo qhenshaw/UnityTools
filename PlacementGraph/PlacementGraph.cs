@@ -381,7 +381,7 @@ namespace UnityTools.Placement
         }
 
         /// <summary>True for a child that holds the graph's inputs (the Markers or Spline object), which regenerating keeps.</summary>
-        private bool IsInput(Transform child)
+        internal bool IsInput(Transform child)
         {
             if (_markers != null && child == _markers) return true;
             if (_poolRoot != null && child == _poolRoot) return true;
